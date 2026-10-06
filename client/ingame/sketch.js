@@ -65,6 +65,11 @@ function setup() {
       floor(random(1, 5))), 
       new card(
       "hand",
+      "Bunny",
+      "blue",
+      floor(random(1, 5))),
+      new card(
+      "hand",
       "Ocelot",
       "red",
       floor(random(1, 5)))]
@@ -72,6 +77,8 @@ function setup() {
     for (let i = 0; i < hand.length; i++){
       cardButton(hand, handGraphic, i)
     }
+
+    scoreButtons();
     
 }
 
