@@ -1,0 +1,29 @@
+name: game-logic
+
+on:
+  push:
+    paths: ["game-logic/**", ".github/workflows/game-logic.yml"]
+  pull_request:
+    paths: ["game-logic/**", ".github/workflows/game-logic.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game-logic
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+      - name: vet
+        run: go vet ./...
+      - name: test (race + cobertura)
+        run: go test -race -cover ./...
+      - name: fuzz corto
+        run: go test ./internal/game -run '^$' -fuzz FuzzValidateMeld -fuzztime 20s
+      - name: simulación
+        run: go run ./cmd/simulate -games 200 -disconnect 0.05

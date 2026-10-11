@@ -1,0 +1,7 @@
+Dockerfile
+.dockerignore
+docs/
+README.md
+Makefile
+*.out
+*.test
