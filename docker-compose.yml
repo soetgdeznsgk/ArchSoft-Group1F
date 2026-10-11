@@ -1,6 +1,5 @@
-# Bololo - despliegue completo (Prototipo 1)
-# Esqueleto: lobby-manager y game-logic usan
-# traefik/whoami como relleno.
+# Bololo - despliegue completo 
+# Esqueleto: 
 
 name: bololo
 
@@ -13,6 +12,7 @@ services:
     volumes:
       # Traefik lee los labels via el socket
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./api-gateway/traefik.yml:/etc/traefik/traefik.yml:ro
     networks:
       - public
       - internal
@@ -21,30 +21,44 @@ services:
   frontend:
     image: nginx:1.30.5-alpine
     volumes:
-      # provisional: en el paso 3 sera Dockerfile
       - ./presentation:/usr/share/nginx/html:ro
     networks:
       - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.web.entrypoints=web"
+      - "traefik.http.routers.web.priority=1"
+      - "traefik.http.services.web.loadbalancer.server.port=80"
 
-  # Logica: salas (Python/FastAPI) - RELLENO
+  # Logica: salas (Python/FastAPI) 
   lobby-manager:
     image: traefik/whoami:v1.12.0
     command: ["--port", "8000"]
     networks:
       - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lobby.rule=PathPrefix(`/api/`)"
+      - "traefik.http.routers.lobby.entrypoints=web"
+      - "traefik.http.services.lobby.loadbalancer.server.port=8000"
 
-  # Logica: partida (Go) - RELLENO
+  # Logica: partida (Go) 
   game-logic:
     image: traefik/whoami:v1.12.0
     command: ["--port", "8080"]
     networks:
       - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.game-ws.rule=PathPrefix(`/ws/games/`)"
+      - "traefik.http.routers.game-ws.entrypoints=web"
+      - "traefik.http.services.game-ws.loadbalancer.server.port=8080"
 
   # Datos: relacional
   postgres:
     image: postgres:16.15-alpine
     environment:
-      # provisional: en el paso 5 pasa a .env
       POSTGRES_USER: bololo
       POSTGRES_PASSWORD: bololo
       POSTGRES_DB: bololo
@@ -63,7 +77,6 @@ services:
 
 networks:
   public:
-  # internal: sin salida a internet ni puertos
   internal:
     internal: true
 
