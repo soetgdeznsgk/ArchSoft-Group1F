@@ -1,3 +1,22 @@
+:root {
+  --bg: radial-gradient(circle at 50% 40%, #0b5c57 0%, #08433f 55%, #052f2d 100%);
+  
+
+  --logo-yellow: #f5c400ff;
+  --logo-red: #e8372cff;
+  --logo-green: #1fa34aff;
+
+  --btn-bg: radial-gradient(#f5c400ff,#FC9700, #644d18);
+}
+
+@font-face {
+  font-family: "Rubik";
+  src: url("assets/Rubik-Black.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -5,4 +24,49 @@ html, body {
 
 canvas {
   display: block;
+  background: var(--bg);
 }
+
+.menu-container {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-input {
+  box-sizing: border-box;
+  width: 240px;
+  font: inherit;
+  border-radius: 8px;
+  
+  font-family: "Rubik", serif;
+}
+
+.menu-navigation-button {
+  --black: #000000;
+
+  padding: 18px 56px;
+  font-family: "Rubik", serif;
+  cursor: pointer;
+
+  background: var(--btn-bg);
+
+  border: 2px solid var(--black);
+  border-radius: 14px;
+
+  transition: transform 0.15s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menu-navigation-button:hover {
+  filter: brightness(1.2);
+}
+
+.menu-navigation-button:active {
+  transform: translateY(2px) scale(0.99);
+}
+
