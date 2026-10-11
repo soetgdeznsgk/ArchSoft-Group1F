@@ -1,58 +1,59 @@
-# Bololó - despliegue completo (Prototipo 1)
-# Esqueleto: lobby-manager y game-logic usan traefik/whoami como relleno.
+# Bololo - despliegue completo (Prototipo 1)
+# Esqueleto: lobby-manager y game-logic usan
+# traefik/whoami como relleno.
 
 name: bololo
 
 services:
-  # --- Gateway: único pertos publicados ---
+  # Gateway: unico con puertos publicados
   traefik:
-    image: traefik:v3.7.
+    image: traefik:v3.7.14
     ports:
       - "80:80"
     volumes:
-      # Traefik lee los través del socket deDocker.
-      - /var/run/docker.
+      # Traefik lee los labels via el socket
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - public
       - internal
 
-  # --- Presentación: estáticos p5.js ---
+  # Presentacion: estaticos p5.js
   frontend:
     image: nginx:1.30.5-alpine
     volumes:
-      - ./presentation:/usr/share/nginx/html:ro   # provisional, paso 3 ->
-Dockerfile
+      # provisional: en el paso 3 sera Dockerfile
+      - ./presentation:/usr/share/nginx/html:ro
     networks:
       - internal
 
-  # --- Lógica: salas (P
+  # Logica: salas (Python/FastAPI) - RELLENO
   lobby-manager:
-    image: traefik/whoamELLENO
+    image: traefik/whoami:v1.12.0
     command: ["--port", "8000"]
     networks:
       - internal
 
-  # --- Lógica: partida (Go) ---
+  # Logica: partida (Go) - RELLENO
   game-logic:
-    image: traefik/whoami:v1.12.0                 # RELLENO
-    command: ["--port",
+    image: traefik/whoami:v1.12.0
+    command: ["--port", "8080"]
     networks:
       - internal
 
-  # --- Datos: relaciona
+  # Datos: relacional
   postgres:
-    image: postgres:16.1
+    image: postgres:16.15-alpine
     environment:
-      POSTGRES_USER: bol
-      POSTGRES_PASSWORD: bololo                   # provisional, paso 5 ->
-.env
+      # provisional: en el paso 5 pasa a .env
+      POSTGRES_USER: bololo
+      POSTGRES_PASSWORD: bololo
       POSTGRES_DB: bololo
     volumes:
       - pg-data:/var/lib/postgresql/data
     networks:
       - internal
 
-  # --- Datos: NoSQL ---
+  # Datos: NoSQL
   redis:
     image: redis:7.4.11-alpine
     volumes:
@@ -62,10 +63,10 @@ Dockerfile
 
 networks:
   public:
+  # internal: sin salida a internet ni puertos
   internal:
-    internal: true   # sos publicables
+    internal: true
 
 volumes:
   pg-data:
   redis-data:
-

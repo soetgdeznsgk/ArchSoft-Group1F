@@ -1,0 +1,35 @@
+# Traefik - configuracion estatica
+# Las rutas van como labels en docker-compose.yml
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+entryPoints:
+  web:
+    address: ":80"
+    transport:
+      respondingTimeouts:
+        readTimeout: 0
+        writeTimeout: 0
+        idleTimeout: 180s
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: bololo_internal
+
+# endpoint /ping para el healthcheck
+ping: {}
+
+log:
+  level: INFO
+
+accessLog:
+  format: json
+  fields:
+    defaultMode: keep
+    names:
+      RequestPath: drop
+    headers:
+      defaultMode: drop
