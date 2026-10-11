@@ -1,0 +1,71 @@
+# Bololó - despliegue completo (Prototipo 1)
+# Esqueleto: lobby-manager y game-logic usan traefik/whoami como relleno.
+
+name: bololo
+
+services:
+  # --- Gateway: único pertos publicados ---
+  traefik:
+    image: traefik:v3.7.
+    ports:
+      - "80:80"
+    volumes:
+      # Traefik lee los través del socket deDocker.
+      - /var/run/docker.
+    networks:
+      - public
+      - internal
+
+  # --- Presentación: estáticos p5.js ---
+  frontend:
+    image: nginx:1.30.5-alpine
+    volumes:
+      - ./presentation:/usr/share/nginx/html:ro   # provisional, paso 3 ->
+Dockerfile
+    networks:
+      - internal
+
+  # --- Lógica: salas (P
+  lobby-manager:
+    image: traefik/whoamELLENO
+    command: ["--port", "8000"]
+    networks:
+      - internal
+
+  # --- Lógica: partida (Go) ---
+  game-logic:
+    image: traefik/whoami:v1.12.0                 # RELLENO
+    command: ["--port",
+    networks:
+      - internal
+
+  # --- Datos: relaciona
+  postgres:
+    image: postgres:16.1
+    environment:
+      POSTGRES_USER: bol
+      POSTGRES_PASSWORD: bololo                   # provisional, paso 5 ->
+.env
+      POSTGRES_DB: bololo
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  # --- Datos: NoSQL ---
+  redis:
+    image: redis:7.4.11-alpine
+    volumes:
+      - redis-data:/data
+    networks:
+      - internal
+
+networks:
+  public:
+  internal:
+    internal: true   # sos publicables
+
+volumes:
+  pg-data:
+  redis-data:
+
