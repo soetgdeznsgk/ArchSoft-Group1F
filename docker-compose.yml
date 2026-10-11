@@ -57,9 +57,9 @@ services:
   postgres:
     image: postgres:16.15-alpine
     environment:
-      POSTGRES_USER: bololo
-      POSTGRES_PASSWORD: bololo
-      POSTGRES_DB: bololo
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en .env}
     volumes:
       - pg-data:/var/lib/postgresql/data
     networks:
@@ -68,10 +68,19 @@ services:
   # Datos: NoSQL
   redis:
     image: redis:7.4.11-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --requirepass
+      - ${REDIS_PASSWORD:?Falta REDIS_PASSWORD en .env}
     volumes:
       - redis-data:/data
     networks:
       - internal
+
 
 networks:
   public:
