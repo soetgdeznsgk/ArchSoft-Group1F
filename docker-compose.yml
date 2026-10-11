@@ -19,9 +19,7 @@ services:
 
   # Presentacion: estaticos p5.js
   frontend:
-    image: nginx:1.30.5-alpine
-    volumes:
-      - ./presentation:/usr/share/nginx/html:ro
+    build: ./presentation
     networks:
       - internal
     labels:
