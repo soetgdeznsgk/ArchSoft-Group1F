@@ -1,0 +1,1205 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Bololó - Lobby Manager",
+    "description": "Gestión de salas: ingreso, salas, sala de espera (SSE), inicio de la partida y registro del resultado.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "salud"
+        ],
+        "summary": "Healthz",
+        "description": "Solo para Docker: no se publica en el gateway.",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/session": {
+      "get": {
+        "tags": [
+          "sesión"
+        ],
+        "summary": "Get Session",
+        "description": "Quién soy y en qué sala estoy. Sirve para restaurar la pantalla tras recargar la página.",
+        "operationId": "get_session_api_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "sesión"
+        ],
+        "summary": "Create Session",
+        "description": "Ingresa con un nombre de jugador, sin cuenta ni contraseña.",
+        "operationId": "create_session_api_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lobbies": {
+      "get": {
+        "tags": [
+          "salas"
+        ],
+        "summary": "List Lobbies",
+        "description": "Salas en espera, con su código y cantidad de jugadores. Las llenas traen playerCount == maxPlayers.",
+        "operationId": "list_lobbies_api_lobbies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LobbySummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Lobbies Api Lobbies Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "salas"
+        ],
+        "summary": "Create Lobby",
+        "description": "Crea una sala y deja al jugador dentro. 409 `lobby_limit_reached` si ya hay 10 salas.",
+        "operationId": "create_lobby_api_lobbies_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/lobbies/join": {
+      "post": {
+        "tags": [
+          "salas"
+        ],
+        "summary": "Join By Code",
+        "description": "Entra a una sala escribiendo su código (no distingue mayúsculas).",
+        "operationId": "join_by_code_api_lobbies_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinByCodeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/lobbies/{lobby_id}": {
+      "get": {
+        "tags": [
+          "salas"
+        ],
+        "summary": "Get Lobby",
+        "description": "Estado de la sala. Si la partida ya inició y eres jugador, `game` trae tu acceso al WebSocket.",
+        "operationId": "get_lobby_api_lobbies__lobby_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lobby_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lobby Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lobbies/{lobby_id}/join": {
+      "post": {
+        "tags": [
+          "salas"
+        ],
+        "summary": "Join Lobby",
+        "description": "Entra a una sala de la lista. 409 `lobby_full`, `lobby_started` o `already_in_lobby`.",
+        "operationId": "join_lobby_api_lobbies__lobby_id__join_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lobby_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lobby Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lobbies/{lobby_id}/leave": {
+      "post": {
+        "tags": [
+          "salas"
+        ],
+        "summary": "Leave Lobby",
+        "description": "Sale de la sala antes de que inicie la partida. La sala se elimina si queda vacía.",
+        "operationId": "leave_lobby_api_lobbies__lobby_id__leave_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lobby_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lobby Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lobbies/{lobby_id}/start": {
+      "post": {
+        "tags": [
+          "salas"
+        ],
+        "summary": "Start Game",
+        "description": "Inicia la partida. Cualquier jugador de la sala puede hacerlo cuando están los 4.\n\nLos demás se enteran por el evento SSE `game_starting`, que trae el token de cada uno.",
+        "operationId": "start_game_api_lobbies__lobby_id__start_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lobby_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lobby Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lobby"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lobbies/{lobby_id}/events": {
+      "get": {
+        "tags": [
+          "salas"
+        ],
+        "summary": "Lobby Events",
+        "description": "Sala de espera en tiempo real (SSE). Solo para jugadores de la sala.\n\nAl conectar llega el estado actual, así que reconectar nunca pierde información.",
+        "operationId": "lobby_events_api_lobbies__lobby_id__events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lobby_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lobby Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Token de sesión. EventSource no permite enviar cabeceras.",
+              "title": "Token"
+            },
+            "description": "Token de sesión. EventSource no permite enviar cabeceras."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eventos `lobby`, `game_starting` y `lobby_closed`.",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/lobbies/{lobby_id}/result": {
+      "post": {
+        "tags": [
+          "interno (Game Logic)"
+        ],
+        "summary": "Record Result",
+        "description": "Go reporta el resultado final. Idempotente por `gameId`: un reintento responde 200 con `recorded: false`.",
+        "operationId": "record_result_internal_lobbies__lobby_id__result_post",
+        "parameters": [
+          {
+            "name": "lobby_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lobby Id"
+            }
+          },
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResultIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "examples": [
+              "lobby_full"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "examples": [
+              "La sala está llena."
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorOut"
+      },
+      "GameAccess": {
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "title": "Gameid",
+            "examples": [
+              "g_7f3a9c1e2b4d"
+            ]
+          },
+          "wsPath": {
+            "type": "string",
+            "title": "Wspath",
+            "examples": [
+              "/ws/games/g_7f3a9c1e2b4d"
+            ]
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "JWT del jugador para Go; va en ?token= al abrir el WebSocket."
+          }
+        },
+        "type": "object",
+        "required": [
+          "gameId",
+          "wsPath",
+          "token"
+        ],
+        "title": "GameAccess",
+        "description": "Lo que el cliente necesita para abrir el WebSocket de la partida."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JoinByCodeIn": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "examples": [
+              "K7QM2X"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "JoinByCodeIn"
+      },
+      "Lobby": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "l_0c5d8e1f2a3b"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "examples": [
+              "K7QM2X"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "WAITING",
+              "IN_GAME",
+              "CLOSED"
+            ],
+            "title": "Status"
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/LobbyPlayer"
+            },
+            "type": "array",
+            "title": "Players"
+          },
+          "playerCount": {
+            "type": "integer",
+            "title": "Playercount"
+          },
+          "maxPlayers": {
+            "type": "integer",
+            "title": "Maxplayers"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "game": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GameAccess"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Solo si la partida inició y quien consulta es jugador de la sala."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "status",
+          "players",
+          "playerCount",
+          "maxPlayers",
+          "createdAt"
+        ],
+        "title": "Lobby"
+      },
+      "LobbyPlayer": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "p_3f9a1c2b7d4e"
+            ]
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "examples": [
+              "Ana"
+            ]
+          },
+          "seat": {
+            "type": "integer",
+            "title": "Seat",
+            "description": "Orden de llegada a la sala; define el orden de la mesa."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nickname",
+          "seat"
+        ],
+        "title": "LobbyPlayer"
+      },
+      "LobbySummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "playerCount": {
+            "type": "integer",
+            "title": "Playercount"
+          },
+          "maxPlayers": {
+            "type": "integer",
+            "title": "Maxplayers"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "playerCount",
+          "maxPlayers",
+          "createdAt"
+        ],
+        "title": "LobbySummary"
+      },
+      "MeOut": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/Player"
+          },
+          "lobby": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lobby"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sala en la que está el jugador, si hay alguna."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "lobby"
+        ],
+        "title": "MeOut"
+      },
+      "Player": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "p_3f9a1c2b7d4e"
+            ]
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "examples": [
+              "Ana"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nickname"
+        ],
+        "title": "Player"
+      },
+      "ResultIn": {
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "title": "Gameid"
+          },
+          "winnerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winnerid"
+          },
+          "winners": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Winners",
+            "description": "Más de uno solo si persiste el empate."
+          },
+          "endReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endreason"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "gameId"
+        ],
+        "title": "ResultIn",
+        "description": "Resultado que reporta Go. Los campos no listados se guardan tal cual en payload."
+      },
+      "ResultOut": {
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "title": "Gameid"
+          },
+          "lobbyId": {
+            "type": "string",
+            "title": "Lobbyid"
+          },
+          "recorded": {
+            "type": "boolean",
+            "title": "Recorded",
+            "description": "false si el resultado ya estaba registrado (reintento)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "gameId",
+          "lobbyId",
+          "recorded"
+        ],
+        "title": "ResultOut"
+      },
+      "SessionIn": {
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "examples": [
+              "Ana"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "nickname"
+        ],
+        "title": "SessionIn"
+      },
+      "SessionOut": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/Player"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "Token de sesión. Se envía como Authorization: Bearer <token>."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "token"
+        ],
+        "title": "SessionOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Token de sesión devuelto por POST /api/session.",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
