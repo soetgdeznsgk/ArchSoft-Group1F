@@ -40,9 +40,15 @@ services:
       start_interval: 2s
 
   lobby-manager:
-    image: traefik/whoami:v1.12.0
-    command: ["--port", "8000"]
+    build: ./lobby-manager
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en .env}
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
+      GAME_LOGIC_URL: http://game-logic:8081
     networks:
       - internal
     labels:
@@ -53,6 +59,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+      start_interval: 2s
 
   game-logic:
     image: traefik/whoami:v1.12.0
