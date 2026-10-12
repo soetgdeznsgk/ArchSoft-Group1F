@@ -216,7 +216,6 @@ Requisitos: Docker Engine con Docker Compose v2 (probado con Docker 29.9 y Compo
 ```bash
 git clone https://github.com/soetgdeznsgk/ArchSoft-Group1F.git
 cd ArchSoft-Group1F
-git switch feature/devops                  # mientras no esté fusionada
 
 cp .env.example .env
 for v in REDIS_PASSWORD POSTGRES_PASSWORD JWT_SECRET SERVICE_SECRET; do
@@ -224,7 +223,8 @@ for v in REDIS_PASSWORD POSTGRES_PASSWORD JWT_SECRET SERVICE_SECRET; do
 done
 
 docker compose up -d --build
-docker compose ps                          # traefik, frontend, postgres y redis en (healthy)
+docker compose ps                          # traefik, frontend, lobby-manager, postgres y redis en (healthy)
+./scripts/e2e.sh                           # prueba de extremo a extremo (§11)
 ```
 
 Abrir `http://localhost` en el navegador (redirige a `/menu/`).
@@ -236,6 +236,7 @@ Abrir `http://localhost` en el navegador (redirige a `/menu/`).
 | Detener, conservando datos | `docker compose down` |
 | Detener y borrar datos (Postgres y Redis) | `docker compose down -v` |
 | Validar el compose sin arrancar | `docker compose config --quiet` |
+| Prueba de extremo a extremo | `./scripts/e2e.sh` (con `--down` detiene el stack al terminar) |
 
 ## 11. Verificación realizada
 
@@ -259,7 +260,27 @@ Pruebas manuales hechas el 11 de octubre de 2026 sobre la rama `feature/devops`:
 | `docker compose up -d` desde cero | `postgres` y `redis` pasan a `Healthy` antes de que arranquen `lobby-manager` y `game-logic` |
 | `docker compose ps` | `traefik`, `frontend`, `postgres` y `redis` en `(healthy)` |
 
-Pendiente: prueba real de *upgrade* WebSocket y de SSE, que necesitan los servidores de Go y Python (script E2E, §14).
+### 11.1 Prueba de extremo a extremo (`scripts/e2e.sh`)
+
+El script levanta el stack con `docker compose up --build --wait` y comprueba el despliegue completo a través de Traefik. Termina con código 0 solo si no hay fallas, así que sirve también en CI.
+
+| Sección | Qué comprueba |
+|---|---|
+| Requisitos | `docker`, `curl`, `openssl`; `.env` existe y tiene las mismas claves que `.env.example` |
+| Arranque | Todos los servicios con healthcheck en `healthy`; solo `traefik` publica puertos |
+| Presentación | `GET /` → `302 /menu/`; `/menu/` y `/ingame/` → `200`; `/internal/games` → `404`; p5.js con gzip |
+| Lobby manager | 4 sesiones (`201`), `401` sin sesión, crear sala, `409` al iniciar con 1 jugador, 3 ingresos por código, `409` al quinto, SSE con `text/event-stream`, sin compresión y con el evento `lobby` |
+| API Gateway | `/ws/games/` llega a `game-logic`; un token en `?token=` no aparece en los logs de Traefik ni del lobby |
+| Inicio de la partida | Con Go real: `200`, `gameId` y Go conoce la partida. Con el relleno: `502`, la sala sigue en `WAITING` y se borra al salir los 4 |
+| WebSocket (solo Go real) | `101` con token válido; `401` con token inválido o con el de sesión; el token no queda en los logs |
+| Fin de la partida (solo Go real) | Simulación hasta el final, sala `CLOSED`, resultado una sola vez en PostgreSQL, partida fuera de `games:active` |
+| Datos | Redis exige contraseña, AOF `yes` / `everysec`; Postgres acepta la contraseña de `.env` y rechaza otra |
+
+El script detecta si `game-logic` es el servicio real consultando `GET http://game-logic:8081/healthz` desde la red interna. Con el relleno, las pruebas de WebSocket y de fin de partida se marcan como **omitidas**; cuando Go reemplace al relleno se ejecutan sin cambiar el script.
+
+Resultado el 12 de octubre de 2026 sobre `main` (`d026fb8`), con `game-logic` como relleno: **44 OK, 0 fallas, 3 omitidas**.
+
+Variables opcionales: `BASE_URL` (por defecto `http://localhost`), `WAIT_TIMEOUT` (300 s) y `P5_PATH` (`/libraries/p5.min.js`; cambia cuando se separen los frontends).
 
 ## 12. Pendientes para los otros componentes
 
@@ -328,7 +349,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 | 4. Datos | Redis con AOF y contraseña; PostgreSQL con credenciales en `.env` | `docker-compose.yml`, `.gitignore` | Hecho |
 | 5. Variables | Plantilla de variables | `.env.example` | Hecho |
 | 6. Salud y arranque | Healthchecks, `depends_on`, `restart` | `docker-compose.yml` | Hecho |
-| 7. Prueba extremo a extremo | Levantar, esperar `healthy`, probar `/`, `/api/`, SSE y WebSocket | `scripts/e2e.sh` | Pendiente |
+| 7. Prueba extremo a extremo | Levantar, esperar `healthy`, probar `/`, `/api/`, SSE y WebSocket | `scripts/e2e.sh` | Hecho (las pruebas que necesitan Go se activan solas cuando reemplace al relleno) |
 | 8. Integración | Reemplazar rellenos por las imágenes reales (§12) | `docker-compose.yml` | Pendiente, depende de Go y Python |
 | 9. Documentación de entrega | Vista de despliegue y comandos para el PDF | Este documento | En curso |
 
