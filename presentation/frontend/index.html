@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#102D25">
+
+    <title>BOLoló | Mesa de juego</title>
+
+    <link rel="stylesheet" href="./style.css">
+
+    <!-- Biblioteca p5.js para dibujar en Canvas -->
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
+
+    <!-- Código de la mesa -->
+    <script src="./client/ingame/sketch.js" defer></script>
+</head>
+<body>
+    <main class="game-shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">MESA DE JUEGO</p>
+                <h1>BOLoló</h1>
+            </div>
+
+            <div class="connection">
+                <span class="status-dot"></span>
+                Modo demostración
+            </div>
+        </header>
+
+        <section class="game-info">
+            <div>
+                <span class="label">RONDA</span>
+                <strong id="round-number">1 de 5</strong>
+            </div>
+
+            <div>
+                <span class="label">OBJETIVO</span>
+                <strong id="round-target">Un trío</strong>
+            </div>
+
+            <div>
+                <span class="label">TIEMPO</span>
+                <strong id="timer">00:30</strong>
+            </div>
+        </section>
+
+        <section class="table-container">
+            <div id="game-canvas" aria-label="Mesa de juego de cartas"></div>
+        </section>
+
+        <section class="controls">
+            <button id="draw-hidden">Tomar del mazo</button>
+            <button id="draw-visible">Tomar carta vista</button>
+            <button id="meld">Bajar jugadas</button>
+            <button id="deposit">Depositar</button>
+            <button id="discard" class="primary">Botar carta</button>
+        </section>
+
+        <p id="game-message" class="message" role="status" aria-live="polite">
+            Bienvenido a BOLoló. Selecciona una carta para comenzar.
+        </p>
+
+        <footer>
+            Prototipo académico · Partida local simulada
+        </footer>
+    </main>
+</body>
+</html>

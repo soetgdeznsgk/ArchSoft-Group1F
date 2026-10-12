@@ -1,0 +1,171 @@
+
+:root {
+    --background: #0b1714;
+    --panel: #142620;
+    --table: #174c39;
+    --table-border: #b89b5b;
+    --gold: #e4c77d;
+    --text: #f4f1e8;
+    --muted: #b6c4bd;
+    --danger: #b95555;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 20px;
+    background: var(--background);
+    color: var(--text);
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.game-shell {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+}
+
+.topbar,
+.game-info,
+.controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.topbar {
+    margin-bottom: 20px;
+}
+
+.eyebrow,
+.label {
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+}
+
+h1 {
+    margin: 4px 0;
+    color: var(--gold);
+    font-size: clamp(1.8rem, 4vw, 2.7rem);
+}
+
+.connection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #76d7a5;
+}
+
+.game-info {
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #2e493e;
+    border-radius: 14px;
+    background: var(--panel);
+}
+
+.game-info > div {
+    display: grid;
+    gap: 6px;
+}
+
+.game-info strong {
+    font-size: 1rem;
+}
+
+.table-container {
+    overflow: hidden;
+    width: 100%;
+    border: 2px solid var(--table-border);
+    border-radius: 22px;
+    background: var(--table);
+    box-shadow: 0 14px 40px #0004;
+}
+
+#game-canvas {
+    width: 100%;
+    min-height: 280px;
+}
+
+#game-canvas canvas {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+}
+
+.controls {
+    justify-content: center;
+    margin-top: 18px;
+}
+
+button {
+    padding: 12px 16px;
+    border: 1px solid #496358;
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: var(--gold);
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+button.primary {
+    background: var(--gold);
+    color: #18251e;
+    border-color: var(--gold);
+    font-weight: 700;
+}
+
+.message {
+    min-height: 48px;
+    padding: 14px;
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+footer {
+    padding: 12px 0;
+    color: var(--muted);
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+
+    .game-info {
+        gap: 18px;
+    }
+
+    .controls button {
+        flex: 1 1 140px;
+    }
+}
