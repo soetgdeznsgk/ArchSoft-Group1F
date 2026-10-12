@@ -1,0 +1,59 @@
+name: bololo-game-dev
+
+services:
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --requirepass
+      - ${REDIS_PASSWORD:?Set REDIS_PASSWORD in game-logic/.env}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in game-logic/.env}
+    volumes:
+      - redis-data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  game-logic:
+    build:
+      context: .
+      args:
+        APP: server
+    restart: unless-stopped
+    environment:
+      GAME_LOGIC_ADDR: ":8081"
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379/0"
+      REDIS_KEY_PREFIX: "bololo:"
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in game-logic/.env}
+      SERVICE_SECRET: ${SERVICE_SECRET:?Set SERVICE_SECRET in game-logic/.env}
+      LOBBY_CALLBACK_URL: "${LOBBY_CALLBACK_URL:-http://lobby-manager:8000}"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+    ports:
+      - "127.0.0.1:${GAME_LOGIC_PORT:-18081}:8081"
+    networks:
+      - internal
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app", "-healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+networks:
+  internal:
+    internal: true
+
+volumes:
+  redis-data:

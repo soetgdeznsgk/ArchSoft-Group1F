@@ -57,6 +57,23 @@ func (m *Match) SetConnected(p PlayerID, connected bool) ([]Event, error) {
 	return m.g.SetConnected(p, connected)
 }
 
+// MarkAllDisconnected is used after a process restart, when no WebSocket
+// sessions can have survived. It records connection state without triggering
+// automatic turns until the regular timer or a reconnect does so.
+func (m *Match) MarkAllDisconnected() []Event {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, p := range m.g.players {
+		if !p.connected {
+			continue
+		}
+		p.connected = false
+		connected := false
+		m.g.emit(Event{Type: EvPlayerConnection, Player: p.id, Connected: &connected})
+	}
+	return m.g.flush()
+}
+
 func (m *Match) ViewFor(p PlayerID) (PlayerView, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

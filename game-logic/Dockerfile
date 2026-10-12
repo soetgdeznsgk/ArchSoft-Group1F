@@ -6,15 +6,15 @@
 #   docker run --rm bololo/game-logic -games 200 -disconnect 0.05
 #   docker build --target test .                                 # solo pruebas
 #
-# Hoy el único ejecutable es cmd/simulate. Cuando exista la capa de red
-# (cmd/server), se construye con: --build-arg APP=server
+# Ejecutables: cmd/simulate y cmd/server. Para el servicio usa:
+# docker build --build-arg APP=server .
 
 ARG GO_VERSION=1.27.2
 
 # --- base: código y dependencias ---------------------------------------------
 FROM golang:${GO_VERSION}-bookworm AS base
 WORKDIR /src
-COPY go.mod ./
+COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 

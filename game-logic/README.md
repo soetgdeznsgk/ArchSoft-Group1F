@@ -1,6 +1,6 @@
-# Bololó: Game Logic Component (Go)
+# Bololó: Game Logic Component (Go + Redis)
 
-Motor autoritativo de la partida de Bololó (5 rondas de tríos y cuartetos, 4 jugadores). Solo lógica de juego: no incluye red ni persistencia, que se conectan encima (ver [docs/DISENO.md §7](docs/DISENO.md#7-guía-de-integración-para-la-capa-de-red)).
+Servicio autoritativo de las partidas de Bololó (cinco rondas, cuatro jugadores). El motor de reglas se conserva en `internal/game`; `cmd/server` lo expone por REST interno y WebSocket y guarda snapshots de las partidas activas en Redis. Los detalles de integración están en [docs/RED_Y_PERSISTENCIA.md](docs/RED_Y_PERSISTENCIA.md).
 
 ## Estructura
 
@@ -26,6 +26,32 @@ go run ./cmd/simulate -games 100
 
 Con `make` (Linux/macOS/CI): `make check`, `make test`, `make race`, `make fuzz`, `make bench`, `make sim`.
 
+### Servicio y Redis en desarrollo
+
+Se requiere Docker Compose. Crea `game-logic/.env` con secretos locales no
+versionados:
+
+```dotenv
+REDIS_PASSWORD=valor_hexadecimal
+JWT_SECRET=secreto_hexadecimal
+SERVICE_SECRET=otro_secreto_hexadecimal
+```
+
+Genera valores aleatorios, por ejemplo, con `openssl rand -hex 32`. Desde la
+raíz del repositorio:
+
+```powershell
+docker compose -f game-logic/compose.dev.yaml up --build --wait
+```
+
+El WebSocket queda disponible en `ws://localhost:18081/ws/games/{gameId}` y
+`/healthz` comprueba Redis. El puerto del servicio se publica solo en
+`127.0.0.1`; Redis no publica puertos. Para construir solo el servicio:
+
+```powershell
+docker build --build-arg APP=server -t bololo/game-logic game-logic
+```
+
 ### Docker
 
 ```powershell
@@ -34,7 +60,9 @@ docker run --rm bololo/game-logic -games 200     # ejecuta el simulador
 docker build --target test .                     # solo la etapa de pruebas
 ```
 
-La imagen final usa `distroless/static` (~1,5 MB, sin shell, usuario `nonroot`). Cuando exista `cmd/server`, se construye con `--build-arg APP=server`.
+La imagen final usa `distroless/static` (sin shell, usuario `nonroot`). El
+Dockerfile mantiene el simulador como ejecutable predeterminado; para el
+servicio usa `--build-arg APP=server`.
 
 ## Ejemplo
 
@@ -54,3 +82,4 @@ view, _ := m.ViewFor("ana") // mano propia, conteos ajenos, bancos, turno, tiemp
 - [docs/PLAN.md](docs/PLAN.md): alcance, ciclo de vida, riesgos, definición de terminado.
 - [docs/DISENO.md](docs/DISENO.md): arquitectura, máquina de estados, API, decisiones sobre reglas.
 - [docs/PRUEBAS.md](docs/PRUEBAS.md): estrategia, trazabilidad RF/RNF → pruebas, resultados.
+- [docs/RED_Y_PERSISTENCIA.md](docs/RED_Y_PERSISTENCIA.md): APIs del servicio, WebSocket, snapshots y recuperación.
