@@ -1,0 +1,12 @@
+tests/
+docs/
+tools/
+README.md
+Dockerfile
+.dockerignore
+compose.dev.yaml
+requirements-dev.txt
+pytest.ini
+.venv/
+.pytest_cache/
+**/__pycache__/

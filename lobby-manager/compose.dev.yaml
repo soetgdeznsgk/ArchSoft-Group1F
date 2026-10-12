@@ -1,0 +1,64 @@
+# Entorno de desarrollo del Lobby Manager, aislado del docker-compose.yml de la raíz.
+# Levanta el servicio con su PostgreSQL y un Game Logic simulado, y publica el puerto 8000.
+#
+#   docker compose -f lobby-manager/compose.dev.yaml up --build
+#   http://localhost:8000/api/docs
+#
+# Los secretos de este archivo son de juguete: no usarlos fuera de desarrollo.
+
+name: bololo-lobby-dev
+
+services:
+  lobby-manager:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_USER: bololo
+      POSTGRES_PASSWORD: dev-password
+      POSTGRES_DB: bololo
+      JWT_SECRET: dev-jwt-secret-solo-para-desarrollo-local-0001
+      SERVICE_SECRET: dev-service-secret-solo-para-desarrollo-0001
+      GAME_LOGIC_URL: http://game-logic:8081
+      # Permite llamar a la API desde las pantallas servidas en otro puerto.
+      CORS_ORIGINS: "*"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+      start_interval: 2s
+
+  # Reemplazo temporal de Go: acepta la partida y, a pedido, reporta un resultado.
+  game-logic:
+    image: python:3.12-slim
+    command: ["python", "/tools/fake_game_logic.py"]
+    ports:
+      - "18081:8081"
+    environment:
+      SERVICE_SECRET: dev-service-secret-solo-para-desarrollo-0001
+      LOBBY_CALLBACK_URL: http://lobby-manager:8000
+    volumes:
+      - ./tools:/tools:ro
+
+  postgres:
+    image: postgres:16.15-alpine
+    ports:
+      - "127.0.0.1:15432:5432"
+    environment:
+      POSTGRES_USER: bololo
+      POSTGRES_PASSWORD: dev-password
+      POSTGRES_DB: bololo
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bololo -d bololo"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+      start_interval: 2s
