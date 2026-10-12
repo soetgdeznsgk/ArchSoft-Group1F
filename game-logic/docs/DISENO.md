@@ -11,7 +11,7 @@ flowchart LR
   M -- "[]Event" --> WS
   M -- "ViewFor(jugador)" --> WS
   M -. "FinalResult" .-> L[REST al Lobby]
-  M -. "snapshot (futuro)" .-> R[(Redis)]
+  M -. "snapshot" .-> R[(Redis)]
 ```
 
 ## 2. Paquetes
@@ -22,14 +22,13 @@ flowchart LR
 | `internal/bot` | Jugador automático para simulaciones y pruebas (no son reglas) |
 | `cmd/simulate` | CLI que juega partidas completas con bots |
 
-Los paquetes van en `internal/` porque solo los usan los ejecutables de este módulo. Las capas que faltan siguen el mismo patrón:
+Los paquetes van en `internal/` porque solo los usan los ejecutables de este módulo. Las capas de integración siguen el mismo patrón:
 
-| Paquete futuro | Responsabilidad |
+| Paquete | Responsabilidad |
 |---|---|
 | `cmd/server` | Ejecutable del servicio (arma las capas y escucha) |
-| `internal/transport/ws` | WebSocket: sesiones, `Action` → `Match.Apply`, difusión de eventos y vistas |
-| `internal/store/redis` | Persistencia del estado de la partida |
-| `internal/lobby` | Cliente REST interno hacia el Lobby Manager |
+| `internal/server` | API REST interna, WebSocket, sesiones, difusión, reloj y callback al Lobby |
+| `internal/store/redis` | Persistencia y recuperación de snapshots de partidas activas |
 
 Archivos de `internal/game`:
 
@@ -46,6 +45,10 @@ Archivos de `internal/game`:
 | `errors.go` | Errores con código estable y mensaje en español | RF-10 |
 | `action.go` | `Action` serializable y `Apply` | integración |
 | `match.go` | Envoltura concurrente (mutex) | RNF-02, RNF-03, RNF-05 |
+| `snapshot.go` | Serialización versionada y restauración del estado completo | Recuperación |
+
+La implementación y los contratos de red y persistencia están documentados en
+[RED_Y_PERSISTENCIA.md](RED_Y_PERSISTENCIA.md).
 
 ## 3. Modelo y máquina de estados
 
