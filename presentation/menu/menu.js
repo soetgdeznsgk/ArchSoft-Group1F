@@ -2,6 +2,8 @@
 let MENUSTATE
 let WINDOW_HEIGHT = 800
 let WINDOW_LENGTH = 1280
+let username;
+let menuContainer;
 
 function setup() {
     createCanvas(WINDOW_LENGTH, WINDOW_HEIGHT)
@@ -56,6 +58,47 @@ async function enterMenuState()
     menuContainer.child(continueButton);
 }
 
+async function enterLobbyPreviewState()
+{
+    try {
+        await createSession(username);
+        const lobbies = await getLobbyList();
+        print(lobbies.length ," were recieved from api");
+
+        menuContainer.hide();
+        menuContainer = createDiv();
+        menuContainer.addClass("menu-container")
+        menuContainer.position(WINDOW_LENGTH / 2, WINDOW_HEIGHT / 3 )
+
+        const title = createElement("h2", "Available Lobbies");
+        menuContainer.child(title);
+
+        if (lobbies.length === 0) {
+            menuContainer.child(createP("No lobbies available."));
+        }
+
+        for (const lobby of lobbies) {
+            const lobbyButton = createButton(
+                `${lobby.code} (${lobby.playerCount}/${lobby.maxPlayers})`
+            );
+            lobbyButton.addClass("menu-navigation-button");
+            menuContainer.child(lobbyButton);
+        }
+        
+        createLobby = createButton("CRéATE LóBBY");
+        createLobby.addClass("menu-navigation-button");
+        createLobby.mousePressed(
+            () => 
+        )
+
+        MENUSTATE = "LOBBY_PREVIEW";
+    }
+    catch (error)
+    {
+        console.error("Failed to load lobby list:", error);
+    }
+}
+
 // State draw behavior
 function drawStart() {
     // DOM nodes handle the draw operation, but for escalability's sake this stays
@@ -65,9 +108,58 @@ function drawLobbyPreview() {
 
 }
 
-// Username validation
-function validateUsername(nameToCheck)
+async function validateUsername(nameToCheck)
 {
     print(nameToCheck);
     // Afterwards, await for backend's confirmation
+    username = nameToCheck.trim();
+    if (!username) return;
+    enterLobbyPreviewState();
+}
+
+// Communication with api gateway
+
+async function createSession(nickname)
+{
+    const response = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Could not create session (${response.status})`);
+    }
+    const session = await response.json();
+    localStorage.setItem("sessionToken", session.token);
+    return session;
+}
+
+async function getLobbyList() {
+    const token = localStorage.getItem("sessionToken");
+    if (!token) {
+        throw new Error("Create or restore a session before loading lobbies.");
+    }
+
+    const response = await fetch("/api/lobbies", {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Could not load lobbies (${response.status})`);
+    }
+
+    return response.json();
+}
+
+async function createLobby() {
+    const response = await fetch("api/lobbies", {
+        method: "POST",
+        headers: {
+            
+        } 
+    })
 }
