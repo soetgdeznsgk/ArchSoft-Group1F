@@ -31,7 +31,7 @@ Fuera de alcance (lo hacen otras piezas):
 | 3. Implementación | Paquete `game`, bot de pruebas, simulador CLI | `internal/game/`, `internal/bot/`, `cmd/simulate/` | Hecho |
 | 4. Pruebas | Unitarias, escenarios, concurrencia, propiedades, fuzz, rendimiento | [PRUEBAS.md](PRUEBAS.md) | Hecho |
 | 5. Integración continua | gofmt, vet, pruebas con `-race`, fuzz corto | `.github/workflows/game-logic.yml` | Hecho |
-| 6. Integración | Conectar WebSocket, Redis y REST con el Lobby (guía en DISENO §7) | Fuera de este entregable | Pendiente |
+| 6. Integración | Conectar WebSocket, Redis y REST con el Lobby | `internal/server/`, `internal/store/redis/`, `cmd/server/` | Hecho; falta validar con Redis real |
 | 7. Mantenimiento | Resolver puntos pendientes del reglamento (DISENO §5) | Cambios acotados en `internal/game/` | Pendiente |
 
 ## 3. Iteraciones realizadas

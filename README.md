@@ -22,7 +22,7 @@ ArchSoft-Group1F/
 │   └── ingame/          mesa de juego
 ├── api-gateway/         Traefik (por implementar)
 ├── lobby-manager/       Gestión de salas en FastAPI + PostgreSQL (por implementar)
-├── game-logic/          Lógica de la partida en Go (+ Redis más adelante)
+├── game-logic/          Lógica de la partida, servicio Go y persistencia Redis
 ├── docs/                Documentación transversal del sistema
 └── .github/workflows/   CI, un workflow por componente
 ```
@@ -39,6 +39,6 @@ Convenciones:
 | Carpeta | Estado | Cómo usarlo |
 |---|---|---|
 | [`presentation/`](presentation) | Pantallas iniciales | Abrir `presentation/menu/index.html` o servir la carpeta: `python -m http.server -d presentation 8080` |
-| [`game-logic/`](game-logic) | Motor completo y probado; falta la capa de red | Ver [game-logic/README.md](game-logic/README.md) |
+| [`game-logic/`](game-logic) | Motor, API interna, WebSocket y persistencia Redis | Ver [game-logic/README.md](game-logic/README.md) |
 | [`lobby-manager/`](lobby-manager) | Por implementar | Ver su README |
 | [`api-gateway/`](api-gateway) | Por implementar | Ver su README |
