@@ -62,7 +62,6 @@ function drawStart() {
 }
 
 function drawLobbyPreview() {
-
 }
 
 // Username validation
