@@ -20,12 +20,11 @@ El pegamento **no está commiteado**: `git status` y `git diff` muestran exactam
 |---|---|---|
 | `docker-compose.yml` | `game-logic`: de relleno (`whoami`) al servicio real (`build` con `APP=server`, variables, healthcheck `/app -healthcheck`). Traefik apunta al puerto **8081** | Go de la rama atiende WebSocket, REST interno y `/healthz` en un solo puerto (`GAME_LOGIC_ADDR=:8081`) |
 | `docker-compose.yml`, `api-gateway/traefik.yml` | Proyecto `bololo-integrado` y red `bololo-integrado_internal` | No mezclar contenedores ni volúmenes con el stack original |
-| `presentation/Dockerfile` | `/ingame/` sirve `presentation/frontend/` (la mesa de `frontend-mesa`) en lugar del `ingame/` antiguo | La mesa nueva es la del rol de mesa de juego. El `ingame/` antiguo sigue en el repo, sin tocar |
-| `presentation/menu/connection.js` (nuevo) | Sesión (`POST /api/session`), crear sala, unirse por código, sala de espera por SSE, iniciar y pasar a `/ingame/` | El menú solo imprimía el nombre |
-| `presentation/menu/menu.js` | `validateUsername` llama a `connectSession` en vez de `print` | Única línea cambiada del menú; usa su estado `LOBBY_PREVIEW` |
-| `presentation/menu/index.html`, `style.css` | Carga `connection.js`; texto blanco en el contenedor | Legibilidad sobre el fondo oscuro |
-| `presentation/frontend/client/ingame/connection.js` (nuevo) | Abre el WebSocket con el `GameSocket` que ya existía; traduce el mensaje `view` de Go al estado `game` de `sketch.js`; los botones envían acciones (`draw`, `discard`, `lay_down`, `deposit`) | `sketch.js` era una partida local simulada. **`sketch.js` no se modificó** |
-| `presentation/frontend/index.html` | Carga `connection.js` como módulo | |
+| `presentation/Dockerfile` | `/ingame/` sirve `presentation/game/`; `/menu/` sirve `presentation/lobby/` | Los nombres de origen distinguen la mesa de juego y la pantalla de ingreso/salas |
+| `presentation/lobby/menu.js` | Integra la sesión (`POST /api/session`), crear y unirse a salas, sala de espera por SSE, iniciar y pasar a `/ingame/` | La conexión REST y el flujo del menú están en el mismo archivo |
+| `presentation/lobby/index.html`, `style.css` | Carga el script del lobby y sus estilos | Pantalla de ingreso y salas |
+| `presentation/game/client/ingame/connection.js` | Abre el WebSocket con `GameSocket`, traduce el mensaje `view` de Go al estado `game` de `sketch.js` y envía las acciones (`draw`, `discard`, `lay_down`, `deposit`) | `sketch.js` es la vista gráfica de la mesa |
+| `presentation/game/index.html` | Carga `connection.js` como módulo | |
 
 Los contratos entre ramas ya coincidían y no hubo que cambiarlos: el Lobby crea la partida con `POST /internal/games {gameId, lobbyId, players:[{id,name}]}`, firma el token con `gameId`/`playerId`/`iat`/`exp`, y Go reporta a `POST /internal/lobbies/{id}/result` con `X-Service-Token`.
 

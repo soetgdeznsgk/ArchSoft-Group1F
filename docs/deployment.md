@@ -139,7 +139,7 @@ El *upgrade* a WebSocket no necesita configuración extra: Traefik lo reenvía d
 
 Archivos: [`presentation/Dockerfile`](../presentation/Dockerfile) y [`presentation/nginx.conf`](../presentation/nginx.conf).
 
-- La imagen copia **solo** `libraries/`, `menu/` e `ingame/`. Así `Dockerfile`, `nginx.conf` y `jsconfig.json` no se sirven al público. Si se crea otra carpeta de pantallas, hay que añadir su `COPY`.
+- La imagen copia **solo** `libraries/`, `lobby/` y `game/` (servidos como `/libraries/`, `/menu/` y `/ingame/`). Así `Dockerfile`, `nginx.conf` y `jsconfig.json` no se sirven al público.
 - `/` redirige con `302` a `/menu/`, porque no existe `index.html` en la raíz.
 - `absolute_redirect off`: las redirecciones usan `Location` relativa y no exponen el host o puerto interno del contenedor.
 - `/healthz` responde `200 ok` sin tocar disco y sin escribir en el log.
@@ -356,7 +356,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 
 | # | Pendiente | Detalle |
 |---|---|---|
-| P1 | Quitar URLs absolutas | `presentation/ingame/action.js:2` usa `http://localhost:3000/score`; debe ser una ruta relativa bajo `/api/` |
+| P1 | Quitar URL absoluta del prototipo antiguo | La referencia `presentation/ingame/action.js` corresponde al prototipo eliminado; confirmar si aún aplica antes de trasladar este cambio al frontend actual |
 | P2 | URL del WebSocket | `` `ws://${location.host}/ws/games/${gameId}?token=${token}` `` |
 | P3 | SSE | `new EventSource("/api/lobbies/<id>/events")` (ruta exacta según L2) |
 | P4 | Carpetas nuevas | Añadir su `COPY` en `presentation/Dockerfile` |

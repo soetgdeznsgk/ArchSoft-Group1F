@@ -18,8 +18,8 @@ flowchart TB
 ArchSoft-Group1F/
 ├── presentation/        Presentación web (p5.js)
 │   ├── libraries/       p5 compartido por todas las pantallas
-│   ├── menu/            pantalla de ingreso y salas
-│   └── ingame/          mesa de juego
+│   ├── lobby/           pantalla de ingreso y salas
+│   └── game/            mesa de juego
 ├── api-gateway/         Traefik (por implementar)
 ├── lobby-manager/       Gestión de salas en FastAPI + PostgreSQL (por implementar)
 ├── game-logic/          Lógica de la partida, servicio Go y persistencia Redis
@@ -38,7 +38,7 @@ Convenciones:
 
 | Carpeta | Estado | Cómo usarlo |
 |---|---|---|
-| [`presentation/`](presentation) | Pantallas iniciales | Abrir `presentation/menu/index.html` o servir la carpeta: `python -m http.server -d presentation 8080` |
+| [`presentation/`](presentation) | Pantallas iniciales | Abrir `presentation/lobby/index.html` o servir la carpeta: `python -m http.server -d presentation 8080` |
 | [`game-logic/`](game-logic) | Motor, API interna, WebSocket y persistencia Redis | Ver [game-logic/README.md](game-logic/README.md) |
 | [`lobby-manager/`](lobby-manager) | Por implementar | Ver su README |
 | [`api-gateway/`](api-gateway) | Por implementar | Ver su README |

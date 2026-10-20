@@ -38,19 +38,18 @@ El módulo debe evolucionar para cumplir los requisitos asignados:
 
 ```text
 presentation/
-└── frontend/
-    ├── index.html
-    ├── style.css
-    ├── README.md
-    ├── client/
-    │   └── ingame/
-    │       ├── sketch.js
-    │       └── game-socket.js
-    ├── assets/
-    │   └── cards/
-    └── libraries/
-        ├── p5.min.js
-        └── p5.sound.min.js
+├── game/
+│   ├── index.html
+│   ├── style.css
+│   ├── README.md
+│   └── client/
+│       └── ingame/
+│           ├── sketch.js
+│           ├── connection.js
+│           └── game-socket.js
+└── libraries/
+    ├── p5.min.js
+    └── p5.sound.min.js
 ```
 
 La estructura anterior describe los archivos previstos para el módulo. Se debe verificar la ubicación real de los recursos y las dependencias en cada entorno.
@@ -76,7 +75,7 @@ La estructura anterior describe los archivos previstos para el módulo. Se debe 
 
 1. Clonar el repositorio del grupo o abrir la copia local existente.
 2. Abrir el repositorio en Visual Studio Code.
-3. Navegar hasta `presentation/frontend/index.html`.
+3. Navegar hasta `presentation/game/index.html`.
 4. Ejecutar el archivo mediante Live Server.
 5. Abrir en el navegador la dirección local proporcionada por la extensión.
 6. Comprobar que la página carga correctamente y revisar la consola del navegador si aparecen errores.
