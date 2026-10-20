@@ -1,4 +1,4 @@
-name: bololo
+name: bololo-integrado
 
 services:
   traefik:
@@ -68,19 +68,35 @@ services:
       start_interval: 2s
 
   game-logic:
-    image: traefik/whoami:v1.12.0
-    command: ["--port", "8080"]
+    build:
+      context: ./game-logic
+      args:
+        APP: server
     restart: unless-stopped
+    environment:
+      GAME_LOGIC_ADDR: ":8081"
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Falta REDIS_PASSWORD en .env}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
+      LOBBY_CALLBACK_URL: http://lobby-manager:8000
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
     networks:
       - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.game-ws.rule=PathPrefix(`/ws/games/`)"
       - "traefik.http.routers.game-ws.entrypoints=web"
-      - "traefik.http.services.game-ws.loadbalancer.server.port=8080"
+      - "traefik.http.services.game-ws.loadbalancer.server.port=8081"
     depends_on:
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app", "-healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+      start_interval: 2s
 
   postgres:
     image: postgres:16.15-alpine

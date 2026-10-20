@@ -47,6 +47,13 @@ canvas {
   font-family: "Rubik", serif;
 }
 
+.menu-container span,
+.menu-container div {
+  color: #ffffff;
+  font-family: "Rubik", serif;
+  text-align: center;
+}
+
 .menu-navigation-button {
   --black: #000000;
 

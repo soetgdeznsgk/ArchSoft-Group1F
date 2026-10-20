@@ -17,7 +17,7 @@ entryPoints:
 providers:
   docker:
     exposedByDefault: false
-    network: bololo_internal
+    network: bololo-integrado_internal
 
 # endpoint /ping para el healthcheck
 ping: {}

@@ -209,34 +209,72 @@ Regla: quien añada una variable a `.env` actualiza también `.env.example`.
 - Las imágenes de Alpine traen `wget` pero no `curl`. Las imágenes distroless (Go) y `traefik/whoami` no tienen shell ni herramientas: el healthcheck debe hacerlo el propio binario.
 - `depends_on` con `condition: service_healthy`: `lobby-manager` arranca cuando `postgres` está `healthy` y `game-logic` cuando `redis` lo está. Esto solo aplica al arranque; si una base se cae después, el servicio debe reintentar la conexión por su cuenta.
 
-## 10. Cómo ejecutar (Prototype)
+## 10. Cómo ejecutar el proyecto
 
-Requisitos: Docker Engine con Docker Compose v2 (probado con Docker 29.9 y Compose v5.4), `git` y `openssl`. En Windows, usar Git Bash o WSL para los comandos.
+### 10.1 Requisitos
+
+- Docker Desktop con Docker Compose en Windows o macOS; Docker Engine y el complemento Docker Compose en Linux.
+- Una conexión a Internet durante la primera construcción para descargar las imágenes y dependencias que no estén en caché. La mesa también carga p5.js desde un CDN, por lo que necesita Internet al abrirse.
+- El puerto 80 disponible en la máquina.
+
+En Windows o macOS, iniciar Docker Desktop y esperar a que indique que Docker está activo. En Linux, comprobar que el servicio de Docker esté iniciado.
+
+### 10.2 Descomprimir y configurar
+
+1. Descomprimir el ZIP con la herramienta del sistema o cualquier descompresor:
+   - **Windows:** clic derecho en el ZIP → **Extraer todo…**
+   - **macOS:** doble clic en el ZIP.
+   - **Linux:** usar el gestor de archivos o la herramienta de archivos comprimidos de la distribución.
+2. Abrir una terminal en la carpeta extraída que contiene `docker-compose.yml` y `.env.example`. No ejecutar los comandos desde una subcarpeta.
+3. Crear `.env` a partir de `.env.example`:
+
+   En PowerShell:
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+   En macOS o Linux:
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Editar `.env` y reemplazar cada valor `change-me` por un secreto local propio. No compartir ni subir este archivo.
+
+### 10.3 Iniciar y comprobar
+
+Desde la carpeta raíz del proyecto:
 
 ```bash
-git clone https://github.com/soetgdeznsgk/ArchSoft-Group1F.git
-cd ArchSoft-Group1F
-
-cp .env.example .env
-for v in REDIS_PASSWORD POSTGRES_PASSWORD JWT_SECRET SERVICE_SECRET; do
-  sed -i "s/^$v=.*/$v=$(openssl rand -hex 24)/" .env
-done
-
-docker compose up -d --build
-docker compose ps                          # traefik, frontend, lobby-manager, postgres y redis en (healthy)
-./scripts/e2e.sh                           # prueba de extremo a extremo (§11)
+docker compose up -d --build --wait
+docker compose ps
 ```
 
-Abrir `http://localhost` en el navegador (redirige a `/menu/`).
+`up` crea e inicia todos los servicios del archivo Compose; `-d` los deja ejecutándose en segundo plano; `--build` construye las imágenes del proyecto; `--wait` espera a que los servicios estén en estado `running` o `healthy`. En `docker compose ps`, los servicios con healthcheck deben aparecer como `healthy`.
+
+Abrir `http://localhost` en el navegador. La dirección redirige al menú de ingreso. Para una partida se necesitan cuatro jugadores, cada uno en una pestaña o navegador distinto y con un nombre diferente.
+
+Para jugar desde otro equipo de la misma red, abrir `http://<IP-de-la-máquina-que-ejecuta-Docker>` en lugar de `localhost`. Permitir el puerto 80 en el firewall de esa máquina si es necesario.
+
+Para detener los servicios sin borrar los datos:
+
+```bash
+docker compose down
+```
+
+La prueba de extremo a extremo es opcional y requiere un entorno con Bash (Linux, macOS, WSL o Git Bash):
+
+```bash
+./scripts/e2e.sh
+```
 
 | Acción | Comando |
 |---|---|
 | Ver logs de un servicio | `docker compose logs -f <servicio>` |
-| Reconstruir tras cambios de código | `docker compose up -d --build` |
+| Reconstruir tras cambios de código | `docker compose up -d --build --wait` |
 | Detener, conservando datos | `docker compose down` |
 | Detener y borrar datos (Postgres y Redis) | `docker compose down -v` |
 | Validar el compose sin arrancar | `docker compose config --quiet` |
-| Prueba de extremo a extremo | `./scripts/e2e.sh` (con `--down` detiene el stack al terminar) |
+| Prueba de extremo a extremo | `./scripts/e2e.sh` |
 
 ## 11. Verificación realizada
 

@@ -68,6 +68,5 @@ function drawLobbyPreview() {
 // Username validation
 function validateUsername(nameToCheck)
 {
-    print(nameToCheck);
-    // Afterwards, await for backend's confirmation
+    connectSession(nameToCheck.trim());
 }
