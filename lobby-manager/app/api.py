@@ -14,6 +14,7 @@ from . import errors, security
 from .events import format_sse
 from .schemas import (
     ErrorOut,
+    AuthSessionIn,
     JoinByCodeIn,
     Lobby,
     LobbySummary,
@@ -79,6 +80,18 @@ CurrentPlayer = Annotated[Player, Depends(current_player)]
 async def create_session(body: SessionIn, service: Service) -> SessionOut:
     """Ingresa con un nombre de jugador, sin cuenta ni contraseña."""
     return await service.create_session(body.nickname)
+
+
+@internal.post("/auth/session", status_code=201, responses=_error(401, 422))
+async def create_account_session(
+    body: AuthSessionIn,
+    request: Request,
+    service: Service,
+    x_service_token: Annotated[str | None, Header()] = None,
+) -> SessionOut:
+    """Provisiona idempotentemente un jugador para una cuenta autenticada por Auth."""
+    security.check_service_token(request.app.state.settings, x_service_token)
+    return await service.create_account_session(body.account_id, body.nickname)
 
 
 @public.get("/session", tags=["sesión"], responses=_error(401))

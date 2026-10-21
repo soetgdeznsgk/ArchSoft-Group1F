@@ -1,6 +1,6 @@
 # Modelo de datos: Lobby Manager (PostgreSQL)
 
-PostgreSQL pertenece solo al Lobby Manager. Guarda jugadores, salas, quién está en cada sala y el resultado de cada partida. El estado de la partida en curso no vive aquí: es de Game Logic (Redis).
+PostgreSQL pertenece solo al Lobby Manager. Guarda jugadores (incluida la referencia a una cuenta de Auth), salas, quién está en cada sala y el resultado de cada partida. Las credenciales de cuenta viven en la base propia de Auth. El estado de la partida en curso no vive aquí: es de Game Logic (Redis).
 
 El esquema está en [`app/schema.sql`](../app/schema.sql) y el servicio lo aplica al arrancar.
 
@@ -16,6 +16,7 @@ erDiagram
     players {
         text id PK "p_ + 12 hex"
         text nickname "1 a 20 caracteres"
+        text account_id UK "nulo para invitados"
         timestamptz created_at
     }
     lobbies {
@@ -47,7 +48,7 @@ erDiagram
 
 ### `players`
 
-Un registro por ingreso con nombre (RF-01). No hay cuentas ni contraseñas: el `id` se genera en el servidor y viaja firmado dentro del token de sesión. Dos jugadores pueden tener el mismo `nickname`.
+Un jugador invitado se crea por ingreso con nombre (RF-01). Para cuentas registradas, `account_id` guarda el UUID externo de Auth y tiene un índice único; es nulo en jugadores invitados. Las contraseñas no se guardan aquí. El `id` de jugador se genera en el Lobby y viaja firmado dentro del token de sesión. Dos jugadores pueden tener el mismo `nickname`.
 
 ### `lobbies`
 

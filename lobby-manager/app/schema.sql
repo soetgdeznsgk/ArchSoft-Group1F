@@ -4,8 +4,12 @@
 CREATE TABLE IF NOT EXISTS players (
     id          TEXT PRIMARY KEY,
     nickname    TEXT NOT NULL CHECK (char_length(nickname) BETWEEN 1 AND 20),
+    account_id  TEXT UNIQUE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE players ADD COLUMN IF NOT EXISTS account_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS players_account_id ON players (account_id);
 
 CREATE TABLE IF NOT EXISTS lobbies (
     id          TEXT PRIMARY KEY,

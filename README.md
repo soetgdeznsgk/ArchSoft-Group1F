@@ -6,9 +6,12 @@ Juego de cartas por rondas para 4 jugadores, construido como sistema distribuido
 flowchart TB
   P[presentation<br/>p5.js] -- "REST / SSE / WebSocket" --> G[api-gateway<br/>Traefik]
   G -- "REST, SSE" --> L[lobby-manager<br/>FastAPI]
+  G -- "registro / login" --> A[auth-service<br/>Java / Spring Boot]
   G -- WebSocket --> GL[game-logic<br/>Go]
+  A -- "REST interno" --> L
   L <-- "REST interno" --> GL
   L --> PG[(PostgreSQL)]
+  A --> APG[(PostgreSQL)]
   GL --> R[(Redis)]
 ```
 
@@ -21,7 +24,8 @@ ArchSoft-Group1F/
 │   ├── lobby/           pantalla de ingreso y salas
 │   └── game/            mesa de juego
 ├── api-gateway/         Traefik (por implementar)
-├── lobby-manager/       Gestión de salas en FastAPI + PostgreSQL (por implementar)
+├── auth-service/        Cuentas y credenciales en Java + Spring Boot
+├── lobby-manager/       Gestión de sesiones y salas en FastAPI + PostgreSQL
 ├── game-logic/          Lógica de la partida, servicio Go y persistencia Redis
 ├── docs/                Documentación transversal del sistema
 └── .github/workflows/   CI, un workflow por componente
@@ -30,7 +34,7 @@ ArchSoft-Group1F/
 Convenciones:
 
 - Cada componente es autocontenido: su código, pruebas, `Dockerfile` y `README.md` viven en su carpeta.
-- Cada base de datos pertenece a un solo componente: PostgreSQL al Lobby y Redis a Game Logic. Su configuración va dentro de la carpeta del componente dueño.
+- Cada base de datos pertenece a un solo componente: PostgreSQL al Auth, PostgreSQL al Lobby y Redis a Game Logic. Su configuración va dentro de la carpeta del componente dueño.
 - La documentación propia de un componente va en `<componente>/docs/`. En `docs/` solo va lo que cruza componentes.
 - El `docker-compose.yml` que levante todo el sistema irá en la raíz cuando haya más de un servicio ejecutable.
 
@@ -39,6 +43,7 @@ Convenciones:
 | Carpeta | Estado | Cómo usarlo |
 |---|---|---|
 | [`presentation/`](presentation) | Pantallas iniciales | Abrir `presentation/lobby/index.html` o servir la carpeta: `python -m http.server -d presentation 8080` |
+| [`auth-service/`](auth-service) | Registro/login, BCrypt y sesión compatible con Lobby | Ver [auth-service/README.md](auth-service/README.md) |
 | [`game-logic/`](game-logic) | Motor, API interna, WebSocket y persistencia Redis | Ver [game-logic/README.md](game-logic/README.md) |
-| [`lobby-manager/`](lobby-manager) | Por implementar | Ver su README |
+| [`lobby-manager/`](lobby-manager) | Sesiones de invitado, identidad de jugador y salas | Ver [lobby-manager/README.md](lobby-manager/README.md) |
 | [`api-gateway/`](api-gateway) | Por implementar | Ver su README |

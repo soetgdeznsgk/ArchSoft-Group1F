@@ -67,6 +67,24 @@ class LobbyService:
         await self._pool.execute("INSERT INTO players (id, nickname) VALUES ($1, $2)", player.id, player.nickname)
         return SessionOut(player=player, token=security.issue_session_token(self._settings, player.id))
 
+    async def create_account_session(self, account_id: str, nickname: str) -> SessionOut:
+        nickname = " ".join(nickname.split())
+        if not nickname or len(nickname) > NICKNAME_MAX:
+            raise errors.invalid_nickname(f"El nombre debe tener entre 1 y {NICKNAME_MAX} caracteres.")
+        row = await self._pool.fetchrow(
+            """
+            INSERT INTO players (id, nickname, account_id)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (account_id) DO UPDATE SET account_id = EXCLUDED.account_id
+            RETURNING id, nickname
+            """,
+            _new_id("p"),
+            nickname,
+            account_id,
+        )
+        player = Player(id=row["id"], nickname=row["nickname"])
+        return SessionOut(player=player, token=security.issue_session_token(self._settings, player.id))
+
     async def get_player(self, player_id: str) -> Player | None:
         row = await self._pool.fetchrow("SELECT id, nickname FROM players WHERE id = $1", player_id)
         return Player(id=row["id"], nickname=row["nickname"]) if row else None

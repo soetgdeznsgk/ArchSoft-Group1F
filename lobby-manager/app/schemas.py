@@ -22,6 +22,11 @@ class SessionIn(ApiModel):
     nickname: str = Field(examples=["Ana"])
 
 
+class AuthSessionIn(ApiModel):
+    account_id: str = Field(examples=["34f1f808-6934-4c15-a267-b6f427cef015"])
+    nickname: str = Field(examples=["ana"])
+
+
 class Player(ApiModel):
     id: str = Field(examples=["p_3f9a1c2b7d4e"])
     nickname: str = Field(examples=["Ana"])

@@ -61,6 +61,8 @@ curl -s -X POST http://localhost:18081/finish/<gameId>
 
 El contrato completo (rutas, eventos SSE, errores y lo que se intercambia con Go) está en [docs/lobby-manager.md](../docs/lobby-manager.md) y en [docs/openapi.json](docs/openapi.json).
 
+Auth dispone de `POST /internal/auth/session`, protegido por `X-Service-Token`, para obtener de forma idempotente un jugador asociado al UUID de cuenta y emitir el mismo token de sesión que usan los invitados. La ruta solo se consume por la red interna; Auth gestiona las contraseñas en su propia base.
+
 ## Configuración
 
 | Variable | Obligatoria | Ejemplo | Uso |

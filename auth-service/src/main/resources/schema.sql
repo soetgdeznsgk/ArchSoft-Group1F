@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS accounts (
+    id UUID PRIMARY KEY,
+    username VARCHAR(20) NOT NULL UNIQUE,
+    password_hash VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);

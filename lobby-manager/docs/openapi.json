@@ -683,6 +683,76 @@
         }
       }
     },
+    "/internal/auth/session": {
+      "post": {
+        "tags": [
+          "interno (Game Logic)"
+        ],
+        "summary": "Create Account Session",
+        "description": "Provisiona idempotentemente un jugador para una cuenta autenticada por Auth.",
+        "operationId": "create_account_session_internal_auth_session_post",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthSessionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
     "/internal/lobbies/{lobby_id}/result": {
       "post": {
         "tags": [
@@ -785,6 +855,30 @@
   },
   "components": {
     "schemas": {
+      "AuthSessionIn": {
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "title": "Accountid",
+            "examples": [
+              "34f1f808-6934-4c15-a267-b6f427cef015"
+            ]
+          },
+          "nickname": {
+            "type": "string",
+            "title": "Nickname",
+            "examples": [
+              "ana"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "accountId",
+          "nickname"
+        ],
+        "title": "AuthSessionIn"
+      },
       "ErrorOut": {
         "properties": {
           "code": {

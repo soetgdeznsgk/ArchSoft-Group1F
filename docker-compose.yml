@@ -39,6 +39,35 @@ services:
       start_period: 10s
       start_interval: 2s
 
+  auth:
+    build: ./auth-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres:5432/${AUTH_POSTGRES_DB:-bololo_auth}
+      SPRING_DATASOURCE_USERNAME: ${AUTH_POSTGRES_USER:-bololo_auth}
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_POSTGRES_PASSWORD:-${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}}
+      LOBBY_MANAGER_URL: http://lobby-manager:8000
+      SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
+    networks:
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=PathPrefix(`/auth/`)"
+      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.routers.auth.priority=10"
+      - "traefik.http.services.auth.loadbalancer.server.port=8080"
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      lobby-manager:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q --spider http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+
   lobby-manager:
     build: ./lobby-manager
     restart: unless-stopped
@@ -66,6 +95,24 @@ services:
       retries: 5
       start_period: 15s
       start_interval: 2s
+
+  auth-postgres:
+    image: postgres:16.15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${AUTH_POSTGRES_USER:-bololo_auth}
+      POSTGRES_PASSWORD: ${AUTH_POSTGRES_PASSWORD:-${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}}
+      POSTGRES_DB: ${AUTH_POSTGRES_DB:-bololo_auth}
+    volumes:
+      - auth-pg-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
 
   game-logic:
     build:
@@ -149,4 +196,5 @@ networks:
 
 volumes:
   pg-data:
+  auth-pg-data:
   redis-data:

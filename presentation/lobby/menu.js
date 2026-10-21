@@ -53,7 +53,7 @@ async function enterMenuState()
 
     continueButton = createButton("LóG AS GUéST");
     continueButton.mousePressed(
-        () => validateUsername(usernameInput.value())
+        () => validateGuestname(usernameGuestInput.value())
     );
     continueButton.addClass("menu-navigation-button")
 
@@ -96,27 +96,12 @@ function validateGuestname(nameToCheck)
     connectSession(nameToCheck.trim());
 }
 
-function signinRequested(username, password) {
-  if (!username || !password) {
-    errorWindow.html("FíLL THE FIéLDS!");
-    errorWindow.show();
-    return;
-  }
-
-  // TODO do signin request to backend
-  errorWindow.hide();
+async function signinRequested(username, password) {
+  await authenticate("register", username, password);
 }
 
-function loginRequested(username, password)
-{
-  if (!username || !password) {
-      errorWindow.html("FíLL THE FIéLDS!");
-      errorWindow.show();
-      return;
-  }
-
-  // TODO do login request to backend
-  errorWindow.hide();
+async function loginRequested(username, password) {
+  await authenticate("login", username, password);
 }
 
 // DATA LAYER
@@ -147,12 +132,41 @@ async function api(method, path, body) {
 async function connectSession(nickname) {
   try {
     const data = await api("POST", "/session", { nickname });
-    session = { token: data.token, player: data.player };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    enterLobbyPreview();
+    beginSession(data);
   } catch (err) {
-    showStatus(err.message);
+    showAuthError(err.message);
   }
+}
+
+async function authenticate(action, username, password) {
+  if (!username || !password) {
+    showAuthError("FíLL THE FIéLDS!");
+    return;
+  }
+  try {
+    const response = await fetch(`/auth/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username.trim(), password }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || `Error ${response.status}`);
+    beginSession(data);
+  } catch (err) {
+    showAuthError(err.message);
+  }
+}
+
+function beginSession(data) {
+  session = { token: data.token, player: data.player };
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  errorWindow.hide();
+  enterLobbyPreview();
+}
+
+function showAuthError(message) {
+  errorWindow.elt.textContent = message;
+  errorWindow.show();
 }
 
 function enterLobbyPreview() {

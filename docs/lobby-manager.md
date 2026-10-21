@@ -13,9 +13,10 @@ Este documento es lo que necesitan los demás componentes para hablar con el Lob
 
 1. [Recorrido completo](#1-recorrido-completo)
 2. [Para Presentación](#2-para-presentación)
-3. [Para Game Logic](#3-para-game-logic)
-4. [Para despliegue](#4-para-despliegue)
-5. [Diferencias con el diseño inicial](#5-diferencias-con-el-diseño-inicial)
+3. [Para Auth](#3-para-auth)
+4. [Para Game Logic](#4-para-game-logic)
+5. [Para despliegue](#5-para-despliegue)
+6. [Diferencias con el diseño inicial](#6-diferencias-con-el-diseño-inicial)
 
 ---
 
@@ -24,12 +25,20 @@ Este documento es lo que necesitan los demás componentes para hablar con el Lob
 ```mermaid
 sequenceDiagram
     participant P as Presentación
+    participant A as Auth
     participant LM as Lobby Manager
     participant PG as PostgreSQL
     participant GO as Game Logic
 
-    P->>LM: POST /api/session {nickname}
-    LM-->>P: 201 {player, token}
+    alt cuenta registrada
+        P->>A: POST /auth/register o /auth/login
+        A->>LM: POST /internal/auth/session (X-Service-Token)
+        LM-->>A: 201 {player, token} compatible con sesión Lobby
+        A-->>P: {player, token}
+    else invitado
+        P->>LM: POST /api/session {nickname}
+        LM-->>P: 201 {player, token}
+    end
     P->>LM: POST /api/lobbies (o /join)
     LM->>PG: transacción con candado
     LM-->>P: sala
@@ -50,7 +59,9 @@ sequenceDiagram
 
 ## 2. Para Presentación
 
-Todas las rutas son relativas (`fetch("/api/...")`) y pasan por el gateway.
+Las rutas públicas pasan por el gateway: Lobby usa `fetch("/api/...")`; Auth usa `/auth/...`.
+
+Registro y login pasan por `/auth/register` y `/auth/login` hacia Auth. Auth conserva las credenciales y solicita al Lobby, por la red interna, el token de sesión común. El flujo invitado existente sigue usando `POST /api/session`.
 
 ### 2.1 Sesión
 
@@ -69,6 +80,8 @@ El token se envía en **todas** las demás peticiones como `Authorization: Beare
 | Método y ruta | Cuerpo | Respuesta | Requisito |
 |---|---|---|---|
 | `POST /api/session` | `{nickname}` | `201` `{player, token}` | RF-01 |
+| `POST /auth/register` | `{username, password}` | `201` `{player, token}` | Auth |
+| `POST /auth/login` | `{username, password}` | `200` `{player, token}` | Auth |
 | `GET /api/session` | | `200` `{player, lobby}` | RF-01 |
 | `GET /api/lobbies` | | `200` lista de `{id, code, playerCount, maxPlayers, createdAt}` | RF-04 |
 | `POST /api/lobbies` | | `201` sala | RF-02, RF-03 |
@@ -161,7 +174,11 @@ Todos los errores tienen la misma forma. `message` está en español y se puede 
 | 403 | `not_in_lobby` | El jugador no pertenece a esa sala |
 | 502 | `game_service_unavailable` | Game Logic no respondió. La sala sigue en espera; se puede reintentar |
 
-## 3. Para Game Logic
+## 3. Para Auth
+
+Auth llama `POST /internal/auth/session` en la red privada, con `X-Service-Token: <SERVICE_SECRET>` y cuerpo `{"accountId":"<UUID de cuenta>","nickname":"ana"}`. La operación es idempotente por `accountId`: devuelve el mismo jugador y un nuevo token de sesión compatible con `POST /api/session`. El endpoint nunca debe publicarse a través de Traefik.
+
+## 4. Para Game Logic
 
 Los dos sentidos usan la cabecera `X-Service-Token: <SERVICE_SECRET>` y solo existen en la red interna.
 
@@ -230,7 +247,7 @@ Solo conviene reintentar ante errores de red o `5xx`; un `4xx` indica un error e
 
 [`lobby-manager/tools/fake_game_logic.py`](../lobby-manager/tools/fake_game_logic.py) implementa el lado de Go de este contrato con la biblioteca estándar, y `lobby-manager/compose.dev.yaml` levanta el Lobby real en `http://localhost:8000` para probar contra él.
 
-## 4. Para despliegue
+## 5. Para despliegue
 
 Estado de los pendientes de [deployment.md §12.2](deployment.md#122-lobby-manager-python):
 
@@ -284,7 +301,7 @@ Dos cosas a tener en cuenta en el gateway:
 - El token de sesión viaja en `?token=` del SSE, igual que el de partida en el WebSocket. El `accessLog` actual ya descarta `RequestPath`, así que no queda en los logs de Traefik. El contenedor del Lobby arranca con `--no-access-log` por la misma razón.
 - `/api/docs` y `/api/openapi.json` quedan publicados por el router `lobby`. Son útiles para la demo; si no se quieren expuestos, se desactivan en `app/main.py`.
 
-## 5. Diferencias con el diseño inicial
+## 6. Diferencias con el diseño inicial
 
 Respecto a [game-logic-design.md](game-logic-design.md), que se escribió antes de cambiar el juego:
 
