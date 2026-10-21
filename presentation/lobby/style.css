@@ -77,3 +77,34 @@ canvas {
   transform: translateY(2px) scale(0.99);
 }
 
+.logo {
+  width: 400px;
+  height: 300px;       /* Make this shorter to crop more from the bottom */
+  object-fit: cover;
+  object-position: top;
+}
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  width: 230px;
+}
+
+.button-row .menu-navigation-button {
+  flex: 1;
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.menu-error-msg {
+  position: fixed;
+  font-size: 25px;
+  left: 640px;
+  bottom: 25%;
+  transform: translateX(-50%);
+  z-index: 10;
+  color: var(--logo-yellow);
+  font-family: "Rubik", serif;
+  text-align: center;
+}

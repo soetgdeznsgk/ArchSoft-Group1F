@@ -2,10 +2,15 @@
 let MENUSTATE
 let WINDOW_HEIGHT = 800
 let WINDOW_LENGTH = 1280
+let errorWindow;
 
 function setup() {
     createCanvas(WINDOW_LENGTH, WINDOW_HEIGHT)
     enterMenuState()
+
+    errorWindow = createSpan("");
+    errorWindow.addClass("menu-error-msg");
+    errorWindow.hide();
 }
 
 function draw() {
@@ -23,6 +28,11 @@ function draw() {
     }
 }
 
+// State draw behavior
+function drawStart() {
+    // DOM nodes handle the draw operation, but for escalability's sake this stays
+}
+
 // State setup behavior
 async function enterMenuState()
 {
@@ -35,39 +45,78 @@ async function enterMenuState()
     const logo = createImg('assets/logo.svg', "Logo");
     logo.addClass("logo")
     
-    usernameInput = createInput("");
-    usernameInput.attribute("placeholder", "USERNAMé")
-    usernameInput.addClass("menu-input");
-    usernameInput.elt.addEventListener("keydown", (event) => {
-        if (event.key === "Enter")
-        {
-            validateUsername(usernameInput.value())
-        }
-    })
+    const infoGuest = createSpan("GUéST?")
 
-    continueButton = createButton("SéT USERNAMé");
+    usernameGuestInput = createInput("");
+    usernameGuestInput.attribute("placeholder", "GúEST NAMé")
+    usernameGuestInput.addClass("menu-input");
+
+    continueButton = createButton("LóG AS GUéST");
     continueButton.mousePressed(
         () => validateUsername(usernameInput.value())
     );
     continueButton.addClass("menu-navigation-button")
 
+    const infoUser = createSpan("RéAL?")
+
+    username = createInput("");
+    username.attribute("placeholder", "USERNAMé")
+    username.addClass("menu-input")
+    pw = createInput("", "password");
+    pw.attribute("placeholder", "PáSSWóRD")
+    pw.addClass("menu-input")
+
+    const buttonRow = createDiv();
+    buttonRow.addClass("button-row");
+
+    loginButton = createButton("LóGIN AS RéAL");
+    loginButton.addClass("menu-navigation-button");
+    loginButton.mousePressed(() => loginRequested(username.value(), pw.value()));
+
+    signinButton = createButton("SíGN IN AS RéAL");
+    signinButton.addClass("menu-navigation-button");
+    signinButton.mousePressed(() => signinRequested(username.value(), pw.value()));
+
+    buttonRow.child(loginButton);
+    buttonRow.child(signinButton);
+
     menuContainer.child(logo)
-    menuContainer.child(usernameInput);
+    menuContainer.child(infoGuest)
+    menuContainer.child(usernameGuestInput);
     menuContainer.child(continueButton);
-}
-
-// State draw behavior
-function drawStart() {
-    // DOM nodes handle the draw operation, but for escalability's sake this stays
-}
-
-function drawLobbyPreview() {
+    menuContainer.child(infoUser);
+    menuContainer.child(username);
+    menuContainer.child(pw);
+    menuContainer.child(buttonRow);
 }
 
 // Username validation
-function validateUsername(nameToCheck)
+function validateGuestname(nameToCheck)
 {
     connectSession(nameToCheck.trim());
+}
+
+function signinRequested(username, password) {
+  if (!username || !password) {
+    errorWindow.html("FíLL THE FIéLDS!");
+    errorWindow.show();
+    return;
+  }
+
+  // TODO do signin request to backend
+  errorWindow.hide();
+}
+
+function loginRequested(username, password)
+{
+  if (!username || !password) {
+      errorWindow.html("FíLL THE FIéLDS!");
+      errorWindow.show();
+      return;
+  }
+
+  // TODO do login request to backend
+  errorWindow.hide();
 }
 
 // DATA LAYER
