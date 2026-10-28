@@ -12,7 +12,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from . import errors, security
 from .events import format_sse
+from .modes import DEFAULT_MODE
 from .schemas import (
+    CreateLobbyIn,
     ErrorOut,
     AuthSessionIn,
     JoinByCodeIn,
@@ -109,10 +111,13 @@ async def list_lobbies(player: CurrentPlayer, service: Service) -> list[LobbySum
     return await service.list_lobbies()
 
 
-@public.post("/lobbies", status_code=201, tags=["salas"], responses=_error(401, 409))
-async def create_lobby(player: CurrentPlayer, service: Service) -> Lobby:
-    """Crea una sala y deja al jugador dentro. 409 `lobby_limit_reached` si ya hay 10 salas."""
-    return await service.create_lobby(player)
+@public.post("/lobbies", status_code=201, tags=["salas"], responses=_error(401, 409, 422))
+async def create_lobby(player: CurrentPlayer, service: Service, body: CreateLobbyIn | None = None) -> Lobby:
+    """Crea una sala del modo elegido y deja al jugador dentro.
+
+    El cuerpo es opcional: sin él la sala es CLASSIC. 409 `lobby_limit_reached` si ya hay 10 salas.
+    """
+    return await service.create_lobby(player, body.mode if body else DEFAULT_MODE)
 
 
 @public.post("/lobbies/join", tags=["salas"], responses=_error(401, 404, 409))
@@ -142,7 +147,7 @@ async def leave_lobby(lobby_id: str, player: CurrentPlayer, service: Service) ->
 
 @public.post("/lobbies/{lobby_id}/start", tags=["salas"], responses=_error(401, 403, 404, 409, 502))
 async def start_game(lobby_id: str, player: CurrentPlayer, service: Service) -> Lobby:
-    """Inicia la partida. Cualquier jugador de la sala puede hacerlo cuando están los 4.
+    """Inicia la partida. Cualquier jugador de la sala puede hacerlo cuando hay `minPlayers` (4 en CLASSIC, 2 en CHAMELEON).
 
     Los demás se enteran por el evento SSE `game_starting`, que trae el token de cada uno.
     """

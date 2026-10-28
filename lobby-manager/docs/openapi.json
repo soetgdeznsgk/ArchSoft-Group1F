@@ -148,8 +148,25 @@
           "salas"
         ],
         "summary": "Create Lobby",
-        "description": "Crea una sala y deja al jugador dentro. 409 `lobby_limit_reached` si ya hay 10 salas.",
+        "description": "Crea una sala del modo elegido y deja al jugador dentro.\n\nEl cuerpo es opcional: sin él la sala es CLASSIC. 409 `lobby_limit_reached` si ya hay 10 salas.",
         "operationId": "create_lobby_api_lobbies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateLobbyIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Successful Response",
@@ -173,6 +190,16 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -499,7 +526,7 @@
           "salas"
         ],
         "summary": "Start Game",
-        "description": "Inicia la partida. Cualquier jugador de la sala puede hacerlo cuando están los 4.\n\nLos demás se enteran por el evento SSE `game_starting`, que trae el token de cada uno.",
+        "description": "Inicia la partida. Cualquier jugador de la sala puede hacerlo cuando hay `minPlayers` (4 en CLASSIC, 2 en CHAMELEON).\n\nLos demás se enteran por el evento SSE `game_starting`, que trae el token de cada uno.",
         "operationId": "start_game_api_lobbies__lobby_id__start_post",
         "security": [
           {
@@ -879,6 +906,22 @@
         ],
         "title": "AuthSessionIn"
       },
+      "CreateLobbyIn": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "CLASSIC",
+              "CHAMELEON"
+            ],
+            "title": "Mode",
+            "description": "CLASSIC (4 jugadores) o CHAMELEON (2 a 4 jugadores).",
+            "default": "CLASSIC"
+          }
+        },
+        "type": "object",
+        "title": "CreateLobbyIn"
+      },
       "ErrorOut": {
         "properties": {
           "code": {
@@ -912,6 +955,15 @@
               "g_7f3a9c1e2b4d"
             ]
           },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "CLASSIC",
+              "CHAMELEON"
+            ],
+            "title": "Mode",
+            "description": "Modo de la partida: decide qué pantalla abre el cliente."
+          },
           "wsPath": {
             "type": "string",
             "title": "Wspath",
@@ -928,6 +980,7 @@
         "type": "object",
         "required": [
           "gameId",
+          "mode",
           "wsPath",
           "token"
         ],
@@ -979,6 +1032,14 @@
               "K7QM2X"
             ]
           },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "CLASSIC",
+              "CHAMELEON"
+            ],
+            "title": "Mode"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -998,6 +1059,11 @@
           "playerCount": {
             "type": "integer",
             "title": "Playercount"
+          },
+          "minPlayers": {
+            "type": "integer",
+            "title": "Minplayers",
+            "description": "Jugadores necesarios para iniciar la partida en este modo."
           },
           "maxPlayers": {
             "type": "integer",
@@ -1024,9 +1090,11 @@
         "required": [
           "id",
           "code",
+          "mode",
           "status",
           "players",
           "playerCount",
+          "minPlayers",
           "maxPlayers",
           "createdAt"
         ],
@@ -1072,9 +1140,21 @@
             "type": "string",
             "title": "Code"
           },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "CLASSIC",
+              "CHAMELEON"
+            ],
+            "title": "Mode"
+          },
           "playerCount": {
             "type": "integer",
             "title": "Playercount"
+          },
+          "minPlayers": {
+            "type": "integer",
+            "title": "Minplayers"
           },
           "maxPlayers": {
             "type": "integer",
@@ -1090,7 +1170,9 @@
         "required": [
           "id",
           "code",
+          "mode",
           "playerCount",
+          "minPlayers",
           "maxPlayers",
           "createdAt"
         ],

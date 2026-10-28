@@ -4,6 +4,10 @@
 # Si game-logic todavía es el relleno, las comprobaciones que necesitan Go se omiten.
 
 set -uo pipefail
+# En Git Bash (Windows), MSYS convierte argumentos como "/healthz" en rutas de
+# Windows ("C:/Program Files/Git/healthz") antes de pasarlos a docker. Sin esto,
+# la detección de Go y las llamadas internas fallan. En Linux no tiene efecto.
+export MSYS_NO_PATHCONV=1
 
 ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 BASE_URL="${BASE_URL:-http://localhost}"
@@ -105,6 +109,8 @@ location=$(curl -sI --max-time 5 "$BASE_URL/" | tr -d '\r' | awk 'tolower($1)=="
 check "Location relativa a /menu/" "/menu/" "$location"
 check "GET /menu/" "200" "$(http_code "$BASE_URL/menu/")"
 check "GET /ingame/" "200" "$(http_code "$BASE_URL/ingame/")"
+check "GET /chameleon/ (modo camaleon)" "200" "$(http_code "$BASE_URL/chameleon/")"
+check "GET /chameleon/chameleon.js" "200" "$(http_code "$BASE_URL/chameleon/chameleon.js")"
 check "GET /internal/games no enrutado" "404" "$(http_code "$BASE_URL/internal/games")"
 encoding=$(curl -s -o /dev/null -D - --max-time 5 -H 'Accept-Encoding: gzip' "$BASE_URL$P5_PATH" | tr -d '\r' | awk 'tolower($1)=="content-encoding:"{print $2}')
 check "p5.js servido con gzip" "gzip" "$encoding"
@@ -193,9 +199,37 @@ else
     check "la sala se cierra al registrar el resultado" "CLOSED" "$closed"
     check "resultado guardado una vez en PostgreSQL" "1" \
       "$(docker compose exec -T postgres sh -c "psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Atc \"select count(*) from game_results where game_id = '$GAME_ID'\"" | tr -d '\r')"
-    check "la partida sale de games:active" "0" "$(docker compose exec -T redis redis-cli sismember games:active "$GAME_ID" | tr -d '\r')"
+    check "la partida sale de games:active" "0" "$(docker compose exec -T redis redis-cli sismember bololo:games:active "$GAME_ID" | tr -d '\r')"
     check "los jugadores pueden crear otra sala" "201" "$(status_of "$(api POST /lobbies "${TOKENS[2]}")")"
   fi
+fi
+
+section "Modo camaleon (2 a 4 jugadores)"
+declare -a CH_TOKENS
+for name in Eva Fede; do
+  CH_TOKENS+=("$(body_of "$(api POST /session "" "{\"nickname\":\"$name\"}")" | field token)")
+done
+res=$(api POST /lobbies "${CH_TOKENS[0]}" '{"mode":"CHAMELEON"}')
+check "POST /api/lobbies con mode CHAMELEON" "201" "$(status_of "$res")"
+check "la sala informa su modo" ".*\"mode\":\"CHAMELEON\".*\"minPlayers\":2.*" "$(body_of "$res")"
+CH_LOBBY=$(body_of "$res" | grep -o '"id":"l_[^"]*"' | cut -d'"' -f4)
+CH_CODE=$(body_of "$res" | field code)
+check "modo desconocido rechazado" "422" "$(status_of "$(api POST /lobbies "$extra" '{"mode":"POKER"}')")"
+check "camaleon no inicia con 1 jugador" "409" "$(status_of "$(api POST "/lobbies/$CH_LOBBY/start" "${CH_TOKENS[0]}")")"
+check "segundo jugador entra con el codigo" "200" "$(status_of "$(api POST /lobbies/join "${CH_TOKENS[1]}" "{\"code\":\"$CH_CODE\"}")")"
+res=$(api POST "/lobbies/$CH_LOBBY/start" "${CH_TOKENS[0]}")
+if ! $GO_REAL; then
+  check "POST /start sin Go responde 502" "502" "$(status_of "$res")"
+  skip "partida camaleon en Go" "game-logic es un relleno"
+else
+  check "POST /start con 2 jugadores" "200" "$(status_of "$res")"
+  CH_GAME=$(body_of "$res" | field gameId)
+  CH_GAME_TOKEN=$(body_of "$res" | grep -o '"game":{[^}]*}' | field token)
+  check "el acceso a la partida trae el modo" ".*\"game\":\{[^}]*\"mode\":\"CHAMELEON\".*" "$(body_of "$res")"
+  check "Game Logic crea la partida camaleon" ".*\"mode\":\"CHAMELEON\".*\"status\":\"WAITING\".*" "$(internal GET "/internal/games/$CH_GAME")"
+  check "Redis guarda el modo de la partida" "CHAMELEON" \
+    "$(docker compose exec -T redis redis-cli hget "bololo:game:$CH_GAME" mode | tr -d '\r')"
+  check "WebSocket camaleon por el gateway" "101" "$(ws "$CH_GAME" "$CH_GAME_TOKEN")"
 fi
 
 section "Datos"

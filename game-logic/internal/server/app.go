@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/game"
 	redisstore "github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/store/redis"
 )
 
@@ -55,12 +54,13 @@ type App struct {
 type gameInstance struct {
 	id      string
 	lobbyID string
+	mode    string
 	players []redisstore.Player
-	match   *game.Match
+	engine  engine
 
 	opMu            sync.Mutex
 	mu              sync.Mutex
-	clients         map[game.PlayerID]*wsClient
+	clients         map[string]*wsClient
 	started         bool
 	cancel          context.CancelFunc
 	roundDue        time.Time
@@ -70,11 +70,13 @@ type gameInstance struct {
 type createGameRequest struct {
 	GameID  string              `json:"gameId"`
 	LobbyID string              `json:"lobbyId"`
+	Mode    string              `json:"mode,omitempty"` // CLASSIC (por defecto) o CHAMELEON
 	Players []redisstore.Player `json:"players"`
 }
 
 type createGameResponse struct {
 	GameID string `json:"gameId"`
+	Mode   string `json:"mode"`
 	Status string `json:"status"`
 	WSPath string `json:"wsPath"`
 }
@@ -82,17 +84,18 @@ type createGameResponse struct {
 type gameStatusResponse struct {
 	GameID  string             `json:"gameId"`
 	LobbyID string             `json:"lobbyId"`
+	Mode    string             `json:"mode"`
 	Status  string             `json:"status"`
 	Round   int                `json:"round"`
 	Players []gameStatusPlayer `json:"players"`
-	Winners []game.PlayerID    `json:"winners,omitempty"`
+	Winners []string           `json:"winners,omitempty"`
 }
 
 type gameStatusPlayer struct {
-	ID        game.PlayerID `json:"id"`
-	Name      string        `json:"name"`
-	Connected bool          `json:"connected"`
-	HandSize  int           `json:"handSize"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Connected bool   `json:"connected"`
+	HandSize  int    `json:"handSize"`
 }
 
 func New(cfg Config, store StateStore, logger *slog.Logger) *App {
@@ -127,36 +130,36 @@ func (a *App) RestoreActive(ctx context.Context) error {
 		if !validID.MatchString(record.GameID) || !validID.MatchString(record.LobbyID) {
 			return fmt.Errorf("invalid identifiers in Redis record for game %q", record.GameID)
 		}
-		ids := make([]game.PlayerID, len(record.Players))
+		ids := make([]string, len(record.Players))
 		for i, player := range record.Players {
-			ids[i] = game.PlayerID(player.ID)
+			ids[i] = player.ID
 		}
-		match, err := game.RestoreMatch(record.Snapshot, game.Config{})
+		mode := normalizeMode(record.Mode)
+		eng, err := restoreEngine(mode, record.Snapshot, a.cfg)
 		if err != nil {
-			return fmt.Errorf("restore game %q: %w", record.GameID, err)
+			return fmt.Errorf("restore %s game %q: %w", mode, record.GameID, err)
 		}
-		if !samePlayerIDs(match.Players(), ids) {
+		if !samePlayerIDs(eng.Players(), ids) {
 			return fmt.Errorf("Redis roster does not match snapshot for game %q", record.GameID)
 		}
 		instance := &gameInstance{
-			id: record.GameID, lobbyID: record.LobbyID, players: record.Players,
-			match: match, clients: make(map[game.PlayerID]*wsClient),
-			started: match.Phase() != game.PhaseWaiting,
+			id: record.GameID, lobbyID: record.LobbyID, mode: mode, players: record.Players,
+			engine: eng, clients: make(map[string]*wsClient),
+			started: eng.Status() != statusWaiting,
 		}
 		if err := a.register(instance); err != nil {
 			return fmt.Errorf("register restored game %q: %w", record.GameID, err)
 		}
 		if instance.started {
-			if match.Phase() != game.PhaseGameOver {
-				events := match.MarkAllDisconnected()
-				if len(events) != 0 {
+			if eng.Status() != statusFinished {
+				if !eng.MarkAllDisconnected().empty() {
 					if err := a.save(instance); err != nil {
 						a.logger.Error("persist recovered disconnections", "game_id", instance.id, "error", err)
 					}
 				}
 			}
 			a.startRunner(instance)
-			if match.Phase() == game.PhaseGameOver {
+			if eng.Status() == statusFinished {
 				a.reportResult(instance)
 			}
 		}
@@ -181,12 +184,19 @@ func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "request must contain one JSON value")
 		return
 	}
-	if !validID.MatchString(request.GameID) || !validID.MatchString(request.LobbyID) ||
-		len(request.Players) != game.NumPlayers {
-		writeError(w, http.StatusBadRequest, "gameId, lobbyId and exactly four players are required")
+	request.Mode = normalizeMode(request.Mode)
+	limits, knownMode := playerLimits[request.Mode]
+	if !knownMode {
+		writeError(w, http.StatusBadRequest, "unknown game mode; use CLASSIC or CHAMELEON")
 		return
 	}
-	ids := make([]game.PlayerID, len(request.Players))
+	if !validID.MatchString(request.GameID) || !validID.MatchString(request.LobbyID) ||
+		len(request.Players) < limits[0] || len(request.Players) > limits[1] {
+		writeError(w, http.StatusBadRequest,
+			fmt.Sprintf("gameId, lobbyId and %d to %d players are required for mode %s", limits[0], limits[1], request.Mode))
+		return
+	}
+	ids := make([]string, len(request.Players))
 	seen := make(map[string]struct{}, len(request.Players))
 	for i, player := range request.Players {
 		if !validID.MatchString(player.ID) || strings.TrimSpace(player.Name) == "" || len(player.Name) > 20 {
@@ -198,13 +208,14 @@ func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		seen[player.ID] = struct{}{}
-		ids[i] = game.PlayerID(player.ID)
+		ids[i] = player.ID
 	}
 
 	a.mu.Lock()
 	if existing := a.games[request.GameID]; existing != nil {
 		existing.mu.Lock()
-		same := existing.lobbyID == request.LobbyID && samePlayers(existing.players, request.Players)
+		same := existing.lobbyID == request.LobbyID && existing.mode == request.Mode &&
+			samePlayers(existing.players, request.Players)
 		existing.mu.Unlock()
 		a.mu.Unlock()
 		if !same {
@@ -212,17 +223,18 @@ func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusOK, createGameResponse{
-			GameID: request.GameID, Status: a.gameStatus(existing), WSPath: "/ws/games/" + request.GameID,
+			GameID: request.GameID, Mode: existing.mode, Status: a.gameStatus(existing),
+			WSPath: "/ws/games/" + request.GameID,
 		})
 		return
 	}
-	match, err := game.NewMatch(ids, game.Config{})
+	eng, err := newEngine(request.Mode, ids, a.cfg)
 	if err != nil {
 		a.mu.Unlock()
 		writeError(w, http.StatusBadRequest, "invalid player roster")
 		return
 	}
-	snapshot, err := match.Snapshot()
+	snapshot, err := eng.Snapshot()
 	if err != nil {
 		a.mu.Unlock()
 		a.logger.Error("snapshot new game", "game_id", request.GameID, "error", err)
@@ -230,7 +242,7 @@ func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	record := redisstore.Record{
-		GameID: request.GameID, LobbyID: request.LobbyID, Players: request.Players,
+		GameID: request.GameID, LobbyID: request.LobbyID, Mode: request.Mode, Players: request.Players,
 		Snapshot: snapshot, Status: statusWaiting,
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), a.cfg.StoreTimeout)
@@ -249,14 +261,14 @@ func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	instance := &gameInstance{
-		id: request.GameID, lobbyID: request.LobbyID, players: request.Players,
-		match: match, clients: make(map[game.PlayerID]*wsClient),
+		id: request.GameID, lobbyID: request.LobbyID, mode: request.Mode, players: request.Players,
+		engine: eng, clients: make(map[string]*wsClient),
 	}
 	a.games[request.GameID] = instance
 	a.mu.Unlock()
 	a.clearFailure(request.GameID)
 	writeJSON(w, http.StatusCreated, createGameResponse{
-		GameID: request.GameID, Status: statusWaiting, WSPath: "/ws/games/" + request.GameID,
+		GameID: request.GameID, Mode: request.Mode, Status: statusWaiting, WSPath: "/ws/games/" + request.GameID,
 	})
 }
 
@@ -313,57 +325,33 @@ func (a *App) register(instance *gameInstance) error {
 	return nil
 }
 
-func (a *App) gameStatus(instance *gameInstance) string {
-	switch instance.match.Phase() {
-	case game.PhaseWaiting:
-		return statusWaiting
-	case game.PhaseRoundOver:
-		return statusRoundOver
-	case game.PhaseGameOver:
-		return statusFinished
-	default:
-		return statusPlaying
-	}
-}
+func (a *App) gameStatus(instance *gameInstance) string { return instance.engine.Status() }
 
 func (a *App) gameStatusResponse(instance *gameInstance) (gameStatusResponse, error) {
 	response := gameStatusResponse{
-		GameID: instance.id, LobbyID: instance.lobbyID, Status: a.gameStatus(instance),
-		Round: instance.match.Round(),
+		GameID: instance.id, LobbyID: instance.lobbyID, Mode: instance.mode, Status: a.gameStatus(instance),
+		Round: instance.engine.Round(),
 	}
 	instance.mu.Lock()
-	connected := make(map[game.PlayerID]bool, len(instance.clients))
+	connected := make(map[string]bool, len(instance.clients))
 	for id := range instance.clients {
 		connected[id] = true
 	}
 	instance.mu.Unlock()
 	for _, player := range instance.players {
-		view, err := instance.match.ViewFor(game.PlayerID(player.ID))
-		if err != nil {
-			return gameStatusResponse{}, err
-		}
 		response.Players = append(response.Players, gameStatusPlayer{
-			ID: game.PlayerID(player.ID), Name: player.Name, Connected: connected[game.PlayerID(player.ID)],
-			HandSize: playerCardCount(view, game.PlayerID(player.ID)),
+			ID: player.ID, Name: player.Name, Connected: connected[player.ID],
+			HandSize: instance.engine.HandSize(player.ID),
 		})
 	}
-	if final := instance.match.Final(); final != nil {
+	if final := instance.engine.Final(); final != nil {
 		response.Winners = final.Winners
 	}
 	return response, nil
 }
 
-func playerCardCount(view game.PlayerView, player game.PlayerID) int {
-	for _, summary := range view.Players {
-		if summary.ID == player {
-			return summary.CardCount
-		}
-	}
-	return 0
-}
-
 func (a *App) save(instance *gameInstance) error {
-	snapshot, err := instance.match.Snapshot()
+	snapshot, err := instance.engine.Snapshot()
 	if err != nil {
 		a.recordFailure(instance.id, err)
 		return fmt.Errorf("snapshot game %q: %w", instance.id, err)
@@ -423,7 +411,7 @@ func samePlayers(left, right []redisstore.Player) bool {
 	return true
 }
 
-func samePlayerIDs(left, right []game.PlayerID) bool {
+func samePlayerIDs(left, right []string) bool {
 	if len(left) != len(right) {
 		return false
 	}

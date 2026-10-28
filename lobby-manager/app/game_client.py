@@ -28,13 +28,16 @@ class GameLogicClient:
             headers={"X-Service-Token": service_secret},
         )
 
-    async def create_game(self, game_id: str, lobby_id: str, players: list[dict[str, str]]) -> None:
+    async def create_game(
+        self, game_id: str, lobby_id: str, players: list[dict[str, str]], mode: str = "CLASSIC"
+    ) -> None:
         """Entrega la sala a Go. `players` va en orden de asiento: [{"id", "name"}, ...].
 
+        `mode` elige el motor en Go: CLASSIC o CHAMELEON.
         Go responde 201 al crear y 200 si el mismo gameId ya existía para la misma sala,
         así que reintentar una vez ante un fallo de red o un 5xx es seguro.
         """
-        body = {"gameId": game_id, "lobbyId": lobby_id, "players": players}
+        body = {"gameId": game_id, "lobbyId": lobby_id, "mode": mode, "players": players}
         last_error = ""
         for attempt in (1, 2):
             try:

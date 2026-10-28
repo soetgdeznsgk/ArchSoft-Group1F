@@ -1,17 +1,28 @@
 # Bololó: Game Logic Component (Go + Redis)
 
-Servicio autoritativo de las partidas de Bololó (cinco rondas, cuatro jugadores). El motor de reglas se conserva en `internal/game`; `cmd/server` lo expone por REST interno y WebSocket y guarda snapshots de las partidas activas en Redis. Los detalles de integración están en [docs/RED_Y_PERSISTENCIA.md](docs/RED_Y_PERSISTENCIA.md).
+Servicio autoritativo de las partidas de Bololó. Tiene dos modos de juego, cada uno con su motor:
+
+| Modo | Motor | Jugadores | Reglas |
+|---|---|---|---|
+| `CLASSIC` | `internal/game` | 4 | [docs/DISENO.md](docs/DISENO.md) |
+| `CHAMELEON` | `internal/chameleon` | 2 a 4 | [docs/MODO_CAMALEON.md](docs/MODO_CAMALEON.md) |
+
+`cmd/server` expone ambos por REST interno y WebSocket y guarda snapshots de las partidas activas en Redis. El servidor no conoce las reglas: habla con cada motor a través de la interfaz `engine` (`internal/server/engine.go`). Para agregar un modo nuevo basta con un paquete de motor, un adaptador en `engine.go` y su entrada en `playerLimits`. Los detalles de integración están en [docs/RED_Y_PERSISTENCIA.md](docs/RED_Y_PERSISTENCIA.md).
 
 ## Estructura
 
 ```
 game-logic/
 ├── cmd/
-│   └── simulate/        CLI que juega partidas completas
+│   ├── server/          servicio: REST interno, WebSocket, Redis
+│   └── simulate/        CLI que juega partidas clásicas completas
 ├── internal/
-│   ├── game/            motor: reglas, eventos, vistas, Match concurrente (+ pruebas)
+│   ├── game/            motor del modo clásico (+ pruebas)
+│   ├── chameleon/       motor del modo camaleón (+ pruebas)
+│   ├── server/          HTTP, WebSocket, ticks, callback al Lobby; engine.go adapta cada modo
+│   ├── store/redis/     persistencia de snapshots
 │   └── bot/             jugador automático para simulaciones
-├── docs/                PLAN, DISENO, PRUEBAS
+├── docs/                PLAN, DISENO, PRUEBAS, RED_Y_PERSISTENCIA, MODO_CAMALEON
 └── Dockerfile
 ```
 
@@ -83,3 +94,6 @@ view, _ := m.ViewFor("ana") // mano propia, conteos ajenos, bancos, turno, tiemp
 - [docs/DISENO.md](docs/DISENO.md): arquitectura, máquina de estados, API, decisiones sobre reglas.
 - [docs/PRUEBAS.md](docs/PRUEBAS.md): estrategia, trazabilidad RF/RNF → pruebas, resultados.
 - [docs/RED_Y_PERSISTENCIA.md](docs/RED_Y_PERSISTENCIA.md): APIs del servicio, WebSocket, snapshots y recuperación.
+- [docs/MODO_CAMALEON.md](docs/MODO_CAMALEON.md): reglas, protocolo y parámetros del modo camaleón.
+
+Las pruebas del store contra Redis real se activan con `TEST_REDIS_URL` (por ejemplo `redis://127.0.0.1:16379/15`); sin esa variable se omiten.

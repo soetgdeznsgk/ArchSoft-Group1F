@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/chameleon"
 )
 
 type Config struct {
@@ -20,6 +22,8 @@ type Config struct {
 	RoundPause       time.Duration
 	StoreTimeout     time.Duration
 	CallbackTimeout  time.Duration
+	// Chameleon parametriza el repartidor del modo camaleón (cero = valores por defecto).
+	Chameleon chameleon.Config
 }
 
 func LoadConfig() (Config, error) {
@@ -66,6 +70,13 @@ func LoadConfig() (Config, error) {
 	}
 	if cfg.TickInterval <= 0 || cfg.RoundPause < 0 || cfg.StoreTimeout <= 0 || cfg.CallbackTimeout <= 0 {
 		return Config{}, errors.New("service durations must be positive (ROUND_PAUSE may be zero)")
+	}
+	// Modo camaleón: duración de la partida (por defecto 3m), útil para demos cortas.
+	if cfg.Chameleon.GameDuration, err = durationEnv("CHAMELEON_GAME_DURATION", 0); err != nil {
+		return Config{}, err
+	}
+	if cfg.Chameleon.GameDuration < 0 {
+		return Config{}, errors.New("CHAMELEON_GAME_DURATION must be positive")
 	}
 	return cfg, nil
 }

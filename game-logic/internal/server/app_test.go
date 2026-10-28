@@ -30,6 +30,18 @@ func newMemoryStore() *memoryStore {
 	return &memoryStore{records: make(map[string]redisstore.Record)}
 }
 
+func (s *memoryStore) get(id string) redisstore.Record {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.records[id]
+}
+
+func (s *memoryStore) put(record redisstore.Record) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.records[record.GameID] = record
+}
+
 func (s *memoryStore) Ping(context.Context) error { return nil }
 func (s *memoryStore) Close() error               { return nil }
 
@@ -37,7 +49,8 @@ func (s *memoryStore) Create(_ context.Context, record redisstore.Record) error 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if existing, ok := s.records[record.GameID]; ok {
-		if existing.LobbyID != record.LobbyID || !samePlayers(existing.Players, record.Players) {
+		if existing.LobbyID != record.LobbyID || existing.Mode != record.Mode ||
+			!samePlayers(existing.Players, record.Players) {
 			return redisstore.ErrGameConflict
 		}
 		return nil

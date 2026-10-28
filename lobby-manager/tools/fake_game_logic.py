@@ -36,8 +36,10 @@ class Handler(BaseHTTPRequestHandler):
             if self.headers.get("X-Service-Token") != SERVICE_SECRET:
                 return self.reply(401, {"error": "unauthorized"})
             players = body.get("players") or []
-            if not body.get("gameId") or not body.get("lobbyId") or len(players) != 4:
-                return self.reply(400, {"error": "se requieren gameId, lobbyId y 4 jugadores"})
+            mode = body.get("mode") or "CLASSIC"
+            low, high = {"CLASSIC": (4, 4), "CHAMELEON": (2, 4)}.get(mode, (0, -1))
+            if not body.get("gameId") or not body.get("lobbyId") or not low <= len(players) <= high:
+                return self.reply(400, {"error": f"se requieren gameId, lobbyId y {low}-{high} jugadores ({mode})"})
             existing = games.get(body["gameId"])
             if existing and existing["lobbyId"] != body["lobbyId"]:
                 return self.reply(409, {"error": "game exists"})
