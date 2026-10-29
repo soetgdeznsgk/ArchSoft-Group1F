@@ -1,6 +1,11 @@
 # Bololó (ArchSoft 1-F)
 
-Juego de cartas por rondas para 4 jugadores, construido como sistema distribuido. Cada componente de la vista C&C tiene su propia carpeta, que se construye y despliega como un contenedor independiente (RNF-06, RNF-11).
+Juego de cartas con dos modos, construido como sistema distribuido:
+
+- **Clásico** (`CLASSIC`): 5 rondas de tríos y cuartetos, 4 jugadores, por turnos. Pantalla `/ingame/`.
+- **Camaleón** (`CHAMELEON`): en tiempo real, 2 a 4 jugadores; un repartidor tira cartas y gana quien reúne los 8 colores. Pantalla `/chameleon/`. Reglas: [game-logic/docs/MODO_CAMALEON.md](game-logic/docs/MODO_CAMALEON.md).
+
+El modo se elige al crear la sala. Cada componente de la vista C&C tiene su propia carpeta, que se construye y despliega como un contenedor independiente (RNF-06, RNF-11).
 
 ```mermaid
 flowchart TB
@@ -24,8 +29,9 @@ flowchart TB
 ArchSoft-Group1F/
 ├── presentation/        Presentación web (p5.js)
 │   ├── libraries/       p5 compartido por todas las pantallas
-│   ├── lobby/           pantalla de ingreso y salas
-│   └── game/            mesa de juego
+│   ├── lobby/           pantalla de ingreso y salas (elige el modo)
+│   ├── game/            mesa del modo clásico (/ingame/)
+│   └── chameleon/       mesa básica del modo camaleón (/chameleon/)
 ├── api-gateway/         Traefik (por implementar)
 ├── auth-service/        Cuentas y credenciales en Java + Spring Boot
 ├── lobby-manager/       Gestión de sesiones y salas en FastAPI + PostgreSQL

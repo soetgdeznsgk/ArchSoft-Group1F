@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/game"
 )
 
 func (a *App) startRunner(instance *gameInstance) {
@@ -21,7 +19,7 @@ func (a *App) startRunner(instance *gameInstance) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	instance.cancel = cancel
-	if instance.match.Phase() == game.PhaseRoundOver && instance.roundDue.IsZero() {
+	if instance.engine.Status() == statusRoundOver && instance.roundDue.IsZero() {
 		instance.roundDue = time.Now().Add(a.cfg.RoundPause)
 	}
 	instance.mu.Unlock()
@@ -36,18 +34,15 @@ func (a *App) runGame(ctx context.Context, instance *gameInstance) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if instance.match.Phase() == game.PhaseGameOver {
+			switch instance.engine.Status() {
+			case statusFinished:
 				return
-			}
-			if instance.match.Phase() == game.PhaseRoundOver {
+			case statusRoundOver:
 				a.maybeStartNextRound(instance)
 				continue
 			}
 			instance.opMu.Lock()
-			events := instance.match.Tick()
-			if len(events) != 0 {
-				a.publish(instance, events)
-			}
+			a.publish(instance, instance.engine.Tick())
 			instance.opMu.Unlock()
 		}
 	}
@@ -57,19 +52,19 @@ func (a *App) maybeStartNextRound(instance *gameInstance) {
 	instance.opMu.Lock()
 	defer instance.opMu.Unlock()
 	instance.mu.Lock()
-	if instance.match.Phase() != game.PhaseRoundOver || instance.roundDue.IsZero() ||
+	if instance.engine.Status() != statusRoundOver || instance.roundDue.IsZero() ||
 		time.Now().Before(instance.roundDue) || len(instance.clients) == 0 {
 		instance.mu.Unlock()
 		return
 	}
 	instance.roundDue = time.Time{}
-	events, err := instance.match.StartNextRound()
+	out, err := instance.engine.StartNextRound()
 	instance.mu.Unlock()
 	if err != nil {
 		a.logger.Error("start next game round", "game_id", instance.id, "error", err)
 		return
 	}
-	a.publish(instance, events)
+	a.publish(instance, out)
 }
 
 func (a *App) reportResult(instance *gameInstance) {
@@ -103,21 +98,24 @@ func (a *App) reportResult(instance *gameInstance) {
 }
 
 func (a *App) postResult(instance *gameInstance) error {
-	final := instance.match.Final()
+	final := instance.engine.Final()
 	if final == nil {
 		return fmt.Errorf("game %q ended without a final result", instance.id)
 	}
+	// Las posiciones dependen del modo: puntos/rondas en CLASSIC, colores en CHAMELEON.
 	payload := struct {
-		GameID    string          `json:"gameId"`
-		WinnerID  string          `json:"winnerId,omitempty"`
-		Winners   []game.PlayerID `json:"winners,omitempty"`
-		EndReason string          `json:"endReason"`
-		Standings []game.Standing `json:"standings"`
+		GameID    string   `json:"gameId"`
+		Mode      string   `json:"mode"`
+		WinnerID  string   `json:"winnerId,omitempty"`
+		Winners   []string `json:"winners,omitempty"`
+		EndReason string   `json:"endReason"`
+		Standings any      `json:"standings"`
 	}{
-		GameID: instance.id, Winners: final.Winners, EndReason: "completed", Standings: final.Standings,
+		GameID: instance.id, Mode: instance.mode, Winners: final.Winners, EndReason: final.EndReason,
+		Standings: final.Standings,
 	}
 	if len(final.Winners) == 1 {
-		payload.WinnerID = string(final.Winners[0])
+		payload.WinnerID = final.Winners[0]
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {

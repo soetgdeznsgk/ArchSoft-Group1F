@@ -45,6 +45,7 @@ async def test_iniciar_entrega_la_sala_a_go_en_orden_de_asiento(ctx):
     assert ctx.game.bodies[0] == {
         "gameId": game_id,
         "lobbyId": lobby["id"],
+        "mode": "CLASSIC",
         "players": [{"id": u.id, "name": u.nickname} for u in users],
     }
 

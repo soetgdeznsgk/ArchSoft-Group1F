@@ -7,12 +7,18 @@ cada partida.
 ## Responsabilidades y ciclo de vida
 
 - `POST /internal/games`, autenticado con `X-Service-Token`, crea y persiste
-  una partida. `gameId`, `lobbyId` y la lista de cuatro jugadores deben ser
-  válidos; el orden de `players` es el orden de asientos del motor.
-- La creación es idempotente para el mismo `gameId`, `lobbyId` y roster.
-  Reutilizar el identificador con otro lobby o jugadores responde `409`.
+  una partida: `{gameId, lobbyId, mode, players}`. `mode` es `CLASSIC`
+  (por defecto si falta; exactamente 4 jugadores) o `CHAMELEON` (2 a 4
+  jugadores, ver [MODO_CAMALEON.md](MODO_CAMALEON.md)). El orden de
+  `players` es el orden de asientos del motor. Las respuestas incluyen `mode`.
+- La creación es idempotente para el mismo `gameId`, `lobbyId`, modo y roster.
+  Reutilizar el identificador con otro lobby, modo o jugadores responde `409`.
 - El estado inicial se conserva en Redis como `WAITING`. La partida comienza
-  cuando los cuatro jugadores de la lista conectan a su WebSocket.
+  cuando todos los jugadores de la lista conectan a su WebSocket.
+- El hash de Redis guarda además el campo `mode`, que decide qué motor
+  restaura el snapshot al reiniciar. Los registros sin `mode` son `CLASSIC`.
+- El resultado que se envía al Lobby incluye `mode`; `standings` y
+  `endReason` dependen del modo.
 - `GET /internal/games/{gameId}` devuelve el estado operativo, jugadores,
   conexión y cantidad de cartas, sin exponer las manos.
 - `GET /healthz` informa `503` si Redis no responde o si hay snapshots

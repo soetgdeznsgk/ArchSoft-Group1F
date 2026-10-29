@@ -22,6 +22,7 @@ erDiagram
     lobbies {
         text id PK "l_ + 12 hex"
         text code "6 caracteres, único entre salas vivas"
+        text mode "CLASSIC | CHAMELEON (por defecto CLASSIC)"
         text status "WAITING, IN_GAME o CLOSED"
         text game_id UK "g_ + 12 hex; nulo mientras espera"
         timestamptz created_at
@@ -76,7 +77,7 @@ stateDiagram-v2
     [*] --> WAITING: crear sala
     WAITING --> WAITING: entra o sale un jugador
     WAITING --> [*]: sale el último jugador (se elimina la fila)
-    WAITING --> IN_GAME: iniciar con 4 jugadores y Go acepta la partida
+    WAITING --> IN_GAME: iniciar con minPlayers (4 CLASSIC, 2 CHAMELEON) y Go acepta la partida
     IN_GAME --> CLOSED: Go reporta el resultado
     IN_GAME --> CLOSED: 3 h sin resultado
     CLOSED --> [*]
@@ -94,7 +95,7 @@ Los límites del reglamento deben cumplirse aunque varias peticiones lleguen a l
 
 | Regla | Mecanismo | Qué pasaría sin él |
 |---|---|---|
-| Máximo 4 jugadores por sala (RF-06) | `SELECT ... FROM lobbies WHERE id = $1 FOR UPDATE` antes de contar los cupos | Dos jugadores verían 3 ocupados y entrarían ambos: 5 en la sala |
+| Máximo 4 jugadores por sala (RF-06, ambos modos) | `SELECT ... FROM lobbies WHERE id = $1 FOR UPDATE` antes de contar los cupos | Dos jugadores verían 3 ocupados y entrarían ambos: 5 en la sala |
 | Máximo 10 salas (RF-03) | `pg_advisory_xact_lock` antes de contar las salas. No hay una fila que bloquear porque la sala aún no existe | Dos creaciones verían 9 salas y habría 11 |
 | Un jugador en una sola sala | `SELECT ... FROM players WHERE id = $1 FOR UPDATE` antes de revisar en qué sala está | El mismo jugador, con dos pestañas, quedaría en dos salas |
 | Una sola partida por sala | El inicio bloquea la sala con `FOR UPDATE`; el segundo en llegar la encuentra `IN_GAME` y recibe la misma partida | Go recibiría dos partidas para la misma sala |
@@ -119,3 +120,14 @@ ORDER BY r.recorded_at DESC;
 ```
 
 En el entorno de desarrollo: `docker compose -f lobby-manager/compose.dev.yaml exec postgres psql -U bololo -d bololo`.
+
+## Modos de juego
+
+`lobbies.mode` guarda el modo elegido al crear la sala (`POST /api/lobbies {"mode": "CHAMELEON"}`; sin cuerpo es `CLASSIC`). Se envía a Go en `POST /internal/games` y viaja en `Lobby.mode`, `LobbySummary.mode` y `GameAccess.mode` (evento SSE `game_starting`), para que el cliente abra la pantalla correcta.
+
+| Modo | Mínimo para iniciar | Máximo en la sala | Reglas |
+|---|---|---|---|
+| `CLASSIC` | 4 | 4 | [docs/game-logic-design.md](../../docs/game-logic-design.md) |
+| `CHAMELEON` | 2 | 4 | [game-logic/docs/MODO_CAMALEON.md](../../game-logic/docs/MODO_CAMALEON.md) |
+
+Los límites están en `app/modes.py`. Las bases creadas antes de los modos reciben la columna con `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` al arrancar; sus salas quedan como `CLASSIC`. En `game_results.payload` el resultado del camaleón trae `mode`, `endReason` (`all_colors` o `time_up`) y `standings` con `{player, colors, rank}`.
