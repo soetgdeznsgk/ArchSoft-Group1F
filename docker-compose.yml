@@ -145,6 +145,38 @@ services:
       start_period: 10s
       start_interval: 2s
 
+  bot-service:
+    build: ./bot-service
+    restart: unless-stopped
+    environment:
+      LOBBY_URL: http://lobby-manager:8000
+      GAME_LOGIC_URL: http://game-logic:8081
+      BOT_THINK_MIN_MS: ${BOT_THINK_MIN_MS:-900}
+      BOT_THINK_MAX_MS: ${BOT_THINK_MAX_MS:-2200}
+      BOT_REACT_MIN_MS: ${BOT_REACT_MIN_MS:-400}
+      BOT_REACT_MAX_MS: ${BOT_REACT_MAX_MS:-1200}
+    networks:
+      - internal
+    labels:
+      - "traefik.enable=true"
+      # Más específica que /api/ (lobby-manager): la prioridad la hace ganar.
+      - "traefik.http.routers.bots.rule=PathPrefix(`/api/bots/`)"
+      - "traefik.http.routers.bots.entrypoints=web"
+      - "traefik.http.routers.bots.priority=30"
+      - "traefik.http.services.bots.loadbalancer.server.port=8090"
+    depends_on:
+      lobby-manager:
+        condition: service_healthy
+      game-logic:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8090/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+      start_interval: 2s
+
   postgres:
     image: postgres:16.15-alpine
     restart: unless-stopped

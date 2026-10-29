@@ -199,6 +199,11 @@ function enterLobbyPreview() {
 
   const seats = createDiv("");
   seats.id("lobby-seats");
+  const fillBots = createButton("LLéNAR CóN BóTS");
+  fillBots.id("fill-bots");
+  fillBots.addClass("menu-navigation-button");
+  fillBots.hide();
+  fillBots.mousePressed(fillWithBots);
   const start = createButton("INICIAR PARTIDA");
   start.id("start-game");
   start.addClass("menu-navigation-button");
@@ -208,7 +213,7 @@ function enterLobbyPreview() {
   const status = createSpan("");
   status.id("menu-status");
 
-  for (const el of [title, mode, create, code, join, seats, start, status]) menuContainer.child(el);
+  for (const el of [title, mode, create, code, join, seats, fillBots, start, status]) menuContainer.child(el);
 }
 
 async function joinLobby(request) {
@@ -240,6 +245,21 @@ function renderLobby(lobby) {
   // CLASSIC necesita la sala llena (4); CHAMELEON puede iniciar desde 2.
   if (lobby.playerCount >= (lobby.minPlayers ?? lobby.maxPlayers)) start.show();
   else start.hide();
+  // Solo el anfitrión (el de menor asiento; la lista llega ordenada) puede llenar con bots.
+  const fill = select("#fill-bots");
+  const isHost = lobby.players.length > 0 && lobby.players[0].id === session.player.id;
+  if (isHost && lobby.status === "WAITING" && lobby.playerCount < lobby.maxPlayers) fill.show();
+  else fill.hide();
+}
+
+// Bot Service (/api/bots/, ver docs/bot-service.md): ocupa los cupos libres con bots.
+async function fillWithBots() {
+  try {
+    const result = await api("POST", `/bots/lobbies/${currentLobby.id}/fill`);
+    renderLobby(result.lobby);
+  } catch (err) {
+    showStatus(err.message);
+  }
 }
 
 async function startGame() {

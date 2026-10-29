@@ -1,0 +1,38 @@
+name: bot-service
+
+on:
+  push:
+    paths: ["bot-service/**", ".github/workflows/bot-service.yml"]
+  pull_request:
+    paths: ["bot-service/**", ".github/workflows/bot-service.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot-service
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.17.3"
+          otp-version: "27.1.2"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            bot-service/deps
+            bot-service/_build
+          key: mix-${{ hashFiles('bot-service/mix.lock') }}
+      - name: dependencias
+        run: mix deps.get
+      - name: formato
+        run: mix format --check-formatted
+      - name: compilación
+        run: mix compile --warnings-as-errors
+      - name: pruebas
+        run: mix test
+      - name: imagen
+        run: docker build -t bololo/bot-service .

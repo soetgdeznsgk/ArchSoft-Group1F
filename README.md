@@ -13,6 +13,9 @@ flowchart TB
   G -- "REST, SSE" --> L[lobby-manager<br/>FastAPI]
   G -- "registro / login" --> A[auth-service<br/>Java / Spring Boot]
   G -- WebSocket --> GL[game-logic<br/>Go]
+  G -- "REST /api/bots/" --> B[bot-service<br/>Elixir / OTP]
+  B -- "REST, SSE" --> L
+  B -- WebSocket --> GL
   A -- "REST interno" --> L
   L <-- "REST interno" --> GL
   L --> PG[(PostgreSQL)]
@@ -33,6 +36,7 @@ ArchSoft-Group1F/
 ├── auth-service/        Cuentas y credenciales en Java + Spring Boot
 ├── lobby-manager/       Gestión de sesiones y salas en FastAPI + PostgreSQL
 ├── game-logic/          Lógica de la partida, servicio Go y persistencia Redis
+├── bot-service/         Bots que llenan salas y juegan solos, en Elixir/OTP
 ├── docs/                Documentación transversal del sistema
 └── .github/workflows/   CI, un workflow por componente
 ```
@@ -52,4 +56,5 @@ Convenciones:
 | [`auth-service/`](auth-service) | Registro/login, BCrypt y sesión compatible con Lobby | Ver [auth-service/README.md](auth-service/README.md) |
 | [`game-logic/`](game-logic) | Motor, API interna, WebSocket y persistencia Redis | Ver [game-logic/README.md](game-logic/README.md) |
 | [`lobby-manager/`](lobby-manager) | Sesiones de invitado, identidad de jugador y salas | Ver [lobby-manager/README.md](lobby-manager/README.md) |
+| [`bot-service/`](bot-service) | Llenar sala con bots que juegan la partida completa | Ver [bot-service/README.md](bot-service/README.md) y [docs/bot-service.md](docs/bot-service.md) |
 | [`api-gateway/`](api-gateway) | Por implementar | Ver su README |

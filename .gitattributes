@@ -1,0 +1,9 @@
+# Finales de línea LF en todas las plataformas. Con core.autocrlf=true (Windows)
+# Git convertía a CRLF y el build de Go fallaba en `gofmt -l .`; los scripts .sh
+# tampoco corren con CRLF dentro de los contenedores.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ttf binary
+*.svg text eol=lf
