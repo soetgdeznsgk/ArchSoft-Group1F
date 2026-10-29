@@ -3,15 +3,13 @@ package server
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
-	"strings"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/game"
 )
 
 const (
@@ -23,7 +21,7 @@ const (
 )
 
 type wsClient struct {
-	player game.PlayerID
+	player string
 	conn   *websocket.Conn
 	send   chan []byte
 	done   chan struct{}
@@ -44,12 +42,11 @@ func (a *App) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "game not found")
 		return
 	}
-	player := game.PlayerID(playerID)
-	if !containsPlayer(instance.match.Players(), player) {
+	if !slices.Contains(instance.engine.Players(), playerID) {
 		writeError(w, http.StatusForbidden, "player is not in this game")
 		return
 	}
-	if instance.match.Phase() == game.PhaseGameOver {
+	if instance.engine.Status() == statusFinished {
 		writeError(w, http.StatusGone, "game is finished")
 		return
 	}
@@ -62,20 +59,20 @@ func (a *App) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client := &wsClient{
-		player: player, conn: conn, send: make(chan []byte, sendBufferSize), done: make(chan struct{}),
+		player: playerID, conn: conn, send: make(chan []byte, sendBufferSize), done: make(chan struct{}),
 	}
 	instance.opMu.Lock()
-	old, events, startNow, started := a.attach(instance, client)
+	old, out, startNow, started := a.attach(instance, client)
 	if old != nil {
 		old.shutdown()
 	}
 	go client.writePump()
 	if startNow {
-		a.publish(instance, events)
+		a.publish(instance, out)
 		a.startRunner(instance)
 	} else if started {
-		if len(events) != 0 {
-			a.publish(instance, events)
+		if !out.empty() {
+			a.publish(instance, out)
 		} else {
 			a.sendView(instance, client)
 		}
@@ -87,29 +84,31 @@ func (a *App) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 	client.readPump(a, instance)
 }
 
-func (a *App) attach(instance *gameInstance, client *wsClient) (old *wsClient, events []game.Event, startNow, started bool) {
+// attach registra la conexión. La partida inicia cuando están conectados
+// todos los jugadores de la lista que envió el Lobby.
+func (a *App) attach(instance *gameInstance, client *wsClient) (old *wsClient, out outcome, startNow, started bool) {
 	instance.mu.Lock()
 	defer instance.mu.Unlock()
 	old = instance.clients[client.player]
 	instance.clients[client.player] = client
 	if instance.started {
-		events, _ = instance.match.SetConnected(client.player, true)
-		return old, events, false, true
+		out, _ = instance.engine.SetConnected(client.player, true)
+		return old, out, false, true
 	}
-	if len(instance.clients) == game.NumPlayers {
+	if len(instance.clients) == len(instance.players) {
 		instance.started = true
 		var err error
-		events, err = instance.match.Start()
+		out, err = instance.engine.Start()
 		if err != nil {
 			instance.started = false
 			delete(instance.clients, client.player)
 			client.shutdown()
 			a.logger.Error("start match after all players connected", "game_id", instance.id, "error", err)
-			return old, nil, false, false
+			return old, outcome{}, false, false
 		}
-		return old, events, true, true
+		return old, out, true, true
 	}
-	return old, nil, false, false
+	return old, outcome{}, false, false
 }
 
 func (c *wsClient) readPump(a *App, instance *gameInstance) {
@@ -133,35 +132,19 @@ func (c *wsClient) readPump(a *App, instance *gameInstance) {
 			}
 			return
 		}
-		var action game.Action
-		decoder := json.NewDecoder(strings.NewReader(string(message)))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&action); err != nil {
-			c.sendJSON(map[string]any{"type": "error", "code": "invalid_action", "message": "mensaje JSON inválido"})
-			continue
-		}
-		if err := decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
-			c.sendJSON(map[string]any{"type": "error", "code": "invalid_action", "message": "se esperaba una sola acción por mensaje"})
-			continue
-		}
-		action.Player = c.player
 		instance.opMu.Lock()
-		events, err := instance.match.Apply(action)
+		out, err := instance.engine.Apply(c.player, message)
 		if err != nil {
 			instance.opMu.Unlock()
-			code := string(game.CodeOf(err))
-			if code == "" {
-				code = "invalid_action"
+			code, text := "invalid_action", err.Error()
+			var actErr *actionError
+			if errors.As(err, &actErr) {
+				code, text = actErr.Code, actErr.Message
 			}
-			messageText := err.Error()
-			var gameErr *game.Error
-			if errors.As(err, &gameErr) {
-				messageText = gameErr.Message
-			}
-			c.sendJSON(map[string]any{"type": "error", "code": code, "message": messageText})
+			c.sendJSON(map[string]any{"type": "error", "code": code, "message": text})
 			continue
 		}
-		a.publish(instance, events)
+		a.publish(instance, out)
 		instance.opMu.Unlock()
 	}
 }
@@ -178,30 +161,32 @@ func (a *App) detach(instance *gameInstance, client *wsClient) {
 	started := instance.started
 	instance.mu.Unlock()
 	if !started {
+		a.publishWaiting(instance)
 		return
 	}
-	events, err := instance.match.SetConnected(client.player, false)
+	out, err := instance.engine.SetConnected(client.player, false)
 	if err != nil {
 		a.logger.Error("mark player disconnected", "game_id", instance.id, "player_id", client.player, "error", err)
 		return
 	}
-	a.publish(instance, events)
+	a.publish(instance, out)
 }
 
-func (a *App) publish(instance *gameInstance, events []game.Event) {
-	if len(events) == 0 {
+// publish persiste el estado, difunde los eventos y envía a cada conexión su vista.
+func (a *App) publish(instance *gameInstance, out outcome) {
+	if out.empty() {
 		return
 	}
 	if err := a.save(instance); err != nil {
 		a.logger.Error("persist game after state change", "game_id", instance.id, "error", err)
 	}
 	instance.mu.Lock()
-	if hasEvent(events, game.EvRoundEnded) && instance.match.Phase() == game.PhaseRoundOver {
+	if out.roundEnded && instance.engine.Status() == statusRoundOver {
 		instance.roundDue = time.Now().Add(a.cfg.RoundPause)
 	}
 	instance.mu.Unlock()
 	clients := a.clients(instance)
-	for _, event := range events {
+	for _, event := range out.events {
 		for _, client := range clients {
 			if err := client.sendJSON(event); err != nil {
 				a.logger.Warn("websocket consumer is too slow", "game_id", instance.id, "player_id", client.player)
@@ -212,22 +197,13 @@ func (a *App) publish(instance *gameInstance, events []game.Event) {
 	for _, client := range clients {
 		a.sendView(instance, client)
 	}
-	for _, event := range events {
-		if event.Type == game.EvGameEnded {
-			a.reportResult(instance)
-			break
-		}
-	}
-}
-
-func (a *App) publishViews(instance *gameInstance) {
-	for _, client := range a.clients(instance) {
-		a.sendView(instance, client)
+	if out.gameEnded {
+		a.reportResult(instance)
 	}
 }
 
 func (a *App) sendView(instance *gameInstance, client *wsClient) {
-	view, err := instance.match.ViewFor(client.player)
+	view, err := instance.engine.View(client.player)
 	if err != nil {
 		client.sendJSON(map[string]any{"type": "error", "code": "unknown_player", "message": "jugador desconocido"})
 		return
@@ -245,14 +221,14 @@ func (a *App) publishWaiting(instance *gameInstance) {
 		clients = append(clients, client)
 	}
 	for _, player := range instance.players {
-		if _, ok := instance.clients[game.PlayerID(player.ID)]; ok {
+		if _, ok := instance.clients[player.ID]; ok {
 			connected = append(connected, map[string]string{"id": player.ID, "name": player.Name})
 		}
 	}
 	instance.mu.Unlock()
 	message := map[string]any{
-		"type": "game_waiting", "gameId": instance.id, "connectedPlayers": connected,
-		"requiredPlayers": game.NumPlayers,
+		"type": "game_waiting", "gameId": instance.id, "mode": instance.mode, "connectedPlayers": connected,
+		"requiredPlayers": len(instance.players),
 	}
 	for _, client := range clients {
 		if err := client.sendJSON(message); err != nil {
@@ -341,22 +317,4 @@ func (c *wsClient) shutdown() {
 		close(c.done)
 		_ = c.conn.Close()
 	})
-}
-
-func containsPlayer(players []game.PlayerID, id game.PlayerID) bool {
-	for _, player := range players {
-		if player == id {
-			return true
-		}
-	}
-	return false
-}
-
-func hasEvent(events []game.Event, eventType game.EventType) bool {
-	for _, event := range events {
-		if event.Type == eventType {
-			return true
-		}
-	}
-	return false
 }

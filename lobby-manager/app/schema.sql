@@ -14,6 +14,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS players_account_id ON players (account_id);
 CREATE TABLE IF NOT EXISTS lobbies (
     id          TEXT PRIMARY KEY,
     code        TEXT NOT NULL,
+    mode        TEXT NOT NULL DEFAULT 'CLASSIC' CHECK (mode IN ('CLASSIC', 'CHAMELEON')),
     status      TEXT NOT NULL DEFAULT 'WAITING' CHECK (status IN ('WAITING', 'IN_GAME', 'CLOSED')),
     game_id     TEXT UNIQUE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -21,6 +22,10 @@ CREATE TABLE IF NOT EXISTS lobbies (
     closed_at   TIMESTAMPTZ,
     CHECK ((status = 'WAITING') = (game_id IS NULL))
 );
+
+-- Bases creadas antes de los modos de juego: sus salas quedan como CLASSIC.
+ALTER TABLE lobbies ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'CLASSIC'
+    CHECK (mode IN ('CLASSIC', 'CHAMELEON'));
 
 -- El código solo debe ser único entre las salas vivas; una sala cerrada lo libera.
 CREATE UNIQUE INDEX IF NOT EXISTS lobbies_active_code ON lobbies (code) WHERE status <> 'CLOSED';

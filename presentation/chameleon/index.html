@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bololó · Camaleón</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Pantalla básica del modo camaleón. Reglas: game-logic/docs/MODO_CAMALEON.md -->
+    <script src="./chameleon.js" type="module"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Camaleón</h1>
+      <p class="hint">Toca las cartas para tomarlas. Reúne los 8 colores sin repetir. Un color repetido te quita ambas cartas; el camaleón, todas.</p>
+      <div class="status">
+        <span id="connection">Conectando…</span>
+        <span>Tiempo: <strong id="timer">--:--</strong></span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="board-wrap" aria-label="Mesa">
+        <div id="board" class="board" role="group" aria-label="Cartas en la mesa"></div>
+      </section>
+
+      <aside class="side">
+        <h2>Jugadores</h2>
+        <ul id="players" class="players"></ul>
+        <h2>Jugadas</h2>
+        <ol id="log" class="log" aria-live="polite"></ol>
+      </aside>
+    </main>
+
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+
+    <dialog id="final" class="final">
+      <h2 id="final-title">Fin de la partida</h2>
+      <ol id="final-standings"></ol>
+      <a href="/menu/" class="back">Volver al menú</a>
+    </dialog>
+  </body>
+</html>

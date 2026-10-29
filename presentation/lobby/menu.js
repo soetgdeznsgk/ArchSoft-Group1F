@@ -110,6 +110,9 @@ async function loginRequested(username, password) {
 
 const SESSION_KEY = "bololo.session";
 const GAME_KEY = "bololo.game";
+// Modos de juego del Lobby y la pantalla que abre cada uno.
+const MODE_LABELS = { CLASSIC: "Clásico (4 jugadores)", CHAMELEON: "Camaleón (2 a 4 jugadores)" };
+const GAME_PAGES = { CLASSIC: "/ingame/", CHAMELEON: "/chameleon/" };
 
 let session = null;
 let lobbyEvents = null;
@@ -174,9 +177,16 @@ function enterLobbyPreview() {
   menuContainer.html("");
 
   const title = createSpan(`Hola, ${session.player.nickname}`);
+  // Modo de juego de la sala que se va a crear (quien se une por código no elige: hereda el de la sala).
+  const mode = createSelect();
+  mode.id("lobby-mode");
+  mode.addClass("menu-input");
+  mode.attribute("aria-label", "Modo de juego");
+  for (const [value, label] of Object.entries(MODE_LABELS)) mode.option(label, value);
+  mode.selected("CLASSIC");
   const create = createButton("CRéAR SALA");
   create.addClass("menu-navigation-button");
-  create.mousePressed(() => joinLobby(() => api("POST", "/lobbies")));
+  create.mousePressed(() => joinLobby(() => api("POST", "/lobbies", { mode: mode.value() })));
 
   const code = createInput("");
   code.attribute("placeholder", "CÓDIGO DE SALA");
@@ -198,7 +208,7 @@ function enterLobbyPreview() {
   const status = createSpan("");
   status.id("menu-status");
 
-  for (const el of [title, create, code, join, seats, start, status]) menuContainer.child(el);
+  for (const el of [title, mode, create, code, join, seats, start, status]) menuContainer.child(el);
 }
 
 async function joinLobby(request) {
@@ -222,9 +232,13 @@ function openLobbyEvents(lobbyId) {
 function renderLobby(lobby) {
   currentLobby = lobby;
   const names = lobby.players.map((p) => p.nickname).join(", ");
-  select("#lobby-seats").html(`Sala ${lobby.code} · ${lobby.playerCount}/${lobby.maxPlayers}: ${names}`);
+  const modeLabel = MODE_LABELS[lobby.mode] || lobby.mode || MODE_LABELS.CLASSIC;
+  select("#lobby-seats").html(
+    `Sala ${lobby.code} · ${modeLabel} · ${lobby.playerCount}/${lobby.maxPlayers}: ${names}`
+  );
   const start = select("#start-game");
-  if (lobby.playerCount === lobby.maxPlayers) start.show();
+  // CLASSIC necesita la sala llena (4); CHAMELEON puede iniciar desde 2.
+  if (lobby.playerCount >= (lobby.minPlayers ?? lobby.maxPlayers)) start.show();
   else start.hide();
 }
 
@@ -239,17 +253,19 @@ async function startGame() {
 
 function goToGame(game) {
   if (lobbyEvents) lobbyEvents.close();
+  const mode = game.mode || (currentLobby && currentLobby.mode) || "CLASSIC";
   sessionStorage.setItem(
     GAME_KEY,
     JSON.stringify({
       gameId: game.gameId,
+      mode,
       wsPath: game.wsPath,
       token: game.token,
       me: session.player,
       players: currentLobby ? currentLobby.players : [],
     })
   );
-  window.location.href = "/ingame/";
+  window.location.href = GAME_PAGES[mode] || GAME_PAGES.CLASSIC;
 }
 
 function showStatus(text) {

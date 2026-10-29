@@ -8,6 +8,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from .modes import DEFAULT_MODE, GameMode
+
 
 class ApiModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -36,6 +38,7 @@ class GameAccess(ApiModel):
     """Lo que el cliente necesita para abrir el WebSocket de la partida."""
 
     game_id: str = Field(examples=["g_7f3a9c1e2b4d"])
+    mode: GameMode = Field(description="Modo de la partida: decide qué pantalla abre el cliente.")
     ws_path: str = Field(examples=["/ws/games/g_7f3a9c1e2b4d"])
     token: str = Field(description="JWT del jugador para Go; va en ?token= al abrir el WebSocket.")
 
@@ -44,12 +47,20 @@ class LobbyPlayer(Player):
     seat: int = Field(description="Orden de llegada a la sala; define el orden de la mesa.")
 
 
+class CreateLobbyIn(ApiModel):
+    mode: GameMode = Field(
+        default=DEFAULT_MODE, description="CLASSIC (4 jugadores) o CHAMELEON (2 a 4 jugadores)."
+    )
+
+
 class Lobby(ApiModel):
     id: str = Field(examples=["l_0c5d8e1f2a3b"])
     code: str = Field(examples=["K7QM2X"])
+    mode: GameMode
     status: Literal["WAITING", "IN_GAME", "CLOSED"]
     players: list[LobbyPlayer]
     player_count: int
+    min_players: int = Field(description="Jugadores necesarios para iniciar la partida en este modo.")
     max_players: int
     created_at: datetime
     game: GameAccess | None = Field(
@@ -60,7 +71,9 @@ class Lobby(ApiModel):
 class LobbySummary(ApiModel):
     id: str
     code: str
+    mode: GameMode
     player_count: int
+    min_players: int
     max_players: int
     created_at: datetime
 

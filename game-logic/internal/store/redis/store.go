@@ -20,8 +20,11 @@ type Player struct {
 }
 
 type Record struct {
-	GameID   string
-	LobbyID  string
+	GameID  string
+	LobbyID string
+	// Mode es el modo de juego (CLASSIC o CHAMELEON). Decide qué motor
+	// restaura el snapshot. Vacío en registros anteriores a los modos (= CLASSIC).
+	Mode     string
 	Players  []Player
 	Snapshot []byte
 	Status   string
@@ -63,6 +66,7 @@ func (s *Store) Create(ctx context.Context, record Record) error {
 if redis.call("EXISTS", KEYS[1]) == 1 then
   if redis.call("HGET", KEYS[1], "lobby_id") == ARGV[1]
     and redis.call("HGET", KEYS[1], "players") == ARGV[2]
+    and (redis.call("HGET", KEYS[1], "mode") or "CLASSIC") == ARGV[7]
     and redis.call("HGET", KEYS[1], "status") ~= "finished" then
     return 0
   end
@@ -73,13 +77,18 @@ redis.call("HSET", KEYS[1],
   "players", ARGV[2],
   "snapshot", ARGV[3],
   "status", ARGV[4],
-  "updated_at", ARGV[5])
+  "updated_at", ARGV[5],
+  "mode", ARGV[7])
 redis.call("SADD", KEYS[2], ARGV[6])
 return 1
 `)
+	mode := record.Mode
+	if mode == "" {
+		mode = "CLASSIC"
+	}
 	result, err := script.Run(ctx, s.client, []string{s.gameKey(record.GameID), s.activeKey()},
 		record.LobbyID, players, record.Snapshot, record.Status,
-		time.Now().UTC().Format(time.RFC3339Nano), record.GameID).Int()
+		time.Now().UTC().Format(time.RFC3339Nano), record.GameID, mode).Int()
 	if err != nil {
 		return fmt.Errorf("create game %q in Redis: %w", record.GameID, err)
 	}
@@ -131,7 +140,7 @@ func (s *Store) LoadActive(ctx context.Context) ([]Record, error) {
 			return nil, fmt.Errorf("decode players for game %q: %w", id, err)
 		}
 		records = append(records, Record{
-			GameID: id, LobbyID: fields["lobby_id"], Players: players,
+			GameID: id, LobbyID: fields["lobby_id"], Mode: fields["mode"], Players: players,
 			Snapshot: []byte(fields["snapshot"]), Status: fields["status"],
 		})
 	}

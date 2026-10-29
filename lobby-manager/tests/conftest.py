@@ -109,10 +109,14 @@ class Ctx:
         body = r.json()
         return User(body["player"]["id"], body["player"]["nickname"], body["token"])
 
-    async def lobby_with(self, players: int) -> tuple[dict, list[User]]:
-        """Crea una sala con esa cantidad de jugadores. Devuelve la sala y los jugadores en orden de asiento."""
+    async def lobby_with(self, players: int, mode: str | None = None) -> tuple[dict, list[User]]:
+        """Crea una sala con esa cantidad de jugadores. Devuelve la sala y los jugadores en orden de asiento.
+
+        Sin `mode` la sala se crea sin cuerpo, como los clientes anteriores a los modos (CLASSIC).
+        """
         users = [await self.login(f"Jugador{i + 1}") for i in range(players)]
-        r = await self.client.post("/api/lobbies", headers=users[0].headers)
+        body = {"json": {"mode": mode}} if mode else {}
+        r = await self.client.post("/api/lobbies", headers=users[0].headers, **body)
         assert r.status_code == 201, r.text
         lobby = r.json()
         for user in users[1:]:

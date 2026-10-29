@@ -19,6 +19,7 @@ from .config import Settings
 from .db import LOBBY_LIMIT_LOCK
 from .events import LobbyEvents
 from .game_client import GameLogicClient, GameServiceError
+from .modes import DEFAULT_MODE, GameMode, player_limits
 from .schemas import GameAccess, Lobby, LobbyPlayer, LobbySummary, Player, ResultIn, ResultOut, SessionOut
 
 log = logging.getLogger("lobby.service")
@@ -99,7 +100,7 @@ class LobbyService:
     async def list_lobbies(self) -> list[LobbySummary]:
         rows = await self._pool.fetch(
             """
-            SELECT l.id, l.code, l.created_at, count(lp.player_id) AS player_count
+            SELECT l.id, l.code, l.mode, l.created_at, count(lp.player_id) AS player_count
             FROM lobbies l
             LEFT JOIN lobby_players lp ON lp.lobby_id = l.id
             WHERE l.status = 'WAITING'
@@ -107,16 +108,21 @@ class LobbyService:
             ORDER BY l.created_at
             """
         )
-        return [
-            LobbySummary(
-                id=r["id"],
-                code=r["code"],
-                player_count=r["player_count"],
-                max_players=self._settings.lobby_size,
-                created_at=r["created_at"],
+        summaries = []
+        for r in rows:
+            min_players, max_players = player_limits(self._settings, r["mode"])
+            summaries.append(
+                LobbySummary(
+                    id=r["id"],
+                    code=r["code"],
+                    mode=r["mode"],
+                    player_count=r["player_count"],
+                    min_players=min_players,
+                    max_players=max_players,
+                    created_at=r["created_at"],
+                )
             )
-            for r in rows
-        ]
+        return summaries
 
     async def get_lobby(self, lobby_id: str, viewer: str) -> Lobby:
         async with self._pool.acquire() as conn:
@@ -125,7 +131,7 @@ class LobbyService:
             raise errors.lobby_not_found()
         return lobby
 
-    async def create_lobby(self, player: Player) -> Lobby:
+    async def create_lobby(self, player: Player, mode: GameMode = DEFAULT_MODE) -> Lobby:
         async with self._pool.acquire() as conn, conn.transaction():
             if await self._lock_player(conn, player.id):
                 raise errors.already_in_lobby()
@@ -139,7 +145,7 @@ class LobbyService:
             while await conn.fetchval("SELECT 1 FROM lobbies WHERE code = $1 AND status <> 'CLOSED'", code):
                 code = _new_code()
             lobby_id = _new_id("l")
-            await conn.execute("INSERT INTO lobbies (id, code) VALUES ($1, $2)", lobby_id, code)
+            await conn.execute("INSERT INTO lobbies (id, code, mode) VALUES ($1, $2, $3)", lobby_id, code, mode)
             await conn.execute(
                 "INSERT INTO lobby_players (lobby_id, player_id, seat) VALUES ($1, $2, 0)", lobby_id, player.id
             )
@@ -151,12 +157,12 @@ class LobbyService:
             # FOR UPDATE: quien llegue después espera aquí y cuenta los cupos con el estado ya actualizado.
             if code is not None:
                 row = await conn.fetchrow(
-                    "SELECT id, status FROM lobbies WHERE code = $1 AND status <> 'CLOSED' FOR UPDATE",
+                    "SELECT id, status, mode FROM lobbies WHERE code = $1 AND status <> 'CLOSED' FOR UPDATE",
                     code.strip().upper(),
                 )
             else:
                 row = await conn.fetchrow(
-                    "SELECT id, status FROM lobbies WHERE id = $1 AND status <> 'CLOSED' FOR UPDATE", lobby_id
+                    "SELECT id, status, mode FROM lobbies WHERE id = $1 AND status <> 'CLOSED' FOR UPDATE", lobby_id
                 )
             if row is None:
                 raise errors.lobby_not_found(by_code=code is not None)
@@ -169,7 +175,7 @@ class LobbyService:
             if row["status"] != "WAITING":
                 raise errors.lobby_started()
             seats = [r["seat"] for r in await conn.fetch("SELECT seat FROM lobby_players WHERE lobby_id = $1", lobby_id)]
-            if len(seats) >= self._settings.lobby_size:
+            if len(seats) >= player_limits(self._settings, row["mode"])[1]:
                 raise errors.lobby_full()
             await conn.execute(
                 "INSERT INTO lobby_players (lobby_id, player_id, seat) VALUES ($1, $2, $3)",
@@ -228,7 +234,7 @@ class LobbyService:
                 raise errors.not_in_lobby()
             if row["status"] == "IN_GAME":  # otro jugador la inició primero
                 return lobby
-            missing = self._settings.lobby_size - len(lobby.players)
+            missing = lobby.min_players - len(lobby.players)
             if missing > 0:
                 raise errors.not_enough_players(missing)
 
@@ -237,7 +243,7 @@ class LobbyService:
             game_id = _new_id("g")
             roster = [{"id": p.id, "name": p.nickname} for p in lobby.players]
             try:
-                await self._game_client.create_game(game_id, lobby_id, roster)
+                await self._game_client.create_game(game_id, lobby_id, roster, lobby.mode)
             except GameServiceError:
                 raise errors.game_service_unavailable() from None
             await conn.execute(
@@ -249,7 +255,9 @@ class LobbyService:
 
         self._events.publish(lobby_id, "lobby", lobby_event(lobby))
         self._events.publish_each(
-            lobby_id, "game_starting", lambda pid: game_starting_event(lobby_id, self._game_access(game_id, pid))
+            lobby_id,
+            "game_starting",
+            lambda pid: game_starting_event(lobby_id, self._game_access(game_id, pid, lobby.mode)),
         )
         return lobby
 
@@ -325,9 +333,10 @@ class LobbyService:
         self._events.publish(lobby_id, "lobby_closed", {"lobbyId": lobby_id, **data})
         self._events.close(lobby_id)
 
-    def _game_access(self, game_id: str, player_id: str) -> GameAccess:
+    def _game_access(self, game_id: str, player_id: str, mode: GameMode) -> GameAccess:
         return GameAccess(
             game_id=game_id,
+            mode=mode,
             ws_path=f"/ws/games/{game_id}",
             token=security.issue_game_token(self._settings, game_id, player_id),
         )
@@ -351,7 +360,9 @@ class LobbyService:
         return await self._active_lobby_of(conn, player_id)
 
     async def _read_lobby(self, conn: asyncpg.Connection, lobby_id: str, viewer: str | None = None) -> Lobby | None:
-        row = await conn.fetchrow("SELECT id, code, status, game_id, created_at FROM lobbies WHERE id = $1", lobby_id)
+        row = await conn.fetchrow(
+            "SELECT id, code, mode, status, game_id, created_at FROM lobbies WHERE id = $1", lobby_id
+        )
         if row is None:
             return None
         members = await conn.fetch(
@@ -366,14 +377,17 @@ class LobbyService:
         players = [LobbyPlayer(id=m["id"], nickname=m["nickname"], seat=m["seat"]) for m in members]
         game = None
         if row["status"] == "IN_GAME" and any(p.id == viewer for p in players):
-            game = self._game_access(row["game_id"], viewer)
+            game = self._game_access(row["game_id"], viewer, row["mode"])
+        min_players, max_players = player_limits(self._settings, row["mode"])
         return Lobby(
             id=row["id"],
             code=row["code"],
+            mode=row["mode"],
             status=row["status"],
             players=players,
             player_count=len(players),
-            max_players=self._settings.lobby_size,
+            min_players=min_players,
+            max_players=max_players,
             created_at=row["created_at"],
             game=game,
         )
