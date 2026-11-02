@@ -62,6 +62,7 @@ defmodule BotService.Bot do
       timer: nil,
       awaiting: nil,
       blocked: MapSet.new(),
+      chameleon_board: %{},
       steal_key: nil,
       steal_wanted: nil,
       retries: 0,
@@ -262,6 +263,19 @@ defmodule BotService.Bot do
     end
   end
 
+  defp game_message(
+         %{"type" => type, "card" => %{"id" => id} = card},
+         %{game: %{"mode" => "CHAMELEON"}} = state
+       )
+       when type == "card_spawned" do
+    %{state | chameleon_board: Map.put(state.chameleon_board, id, card)}
+  end
+
+  defp game_message(%{"type" => type, "card" => %{"id" => id}}, %{game: %{"mode" => "CHAMELEON"}} = state)
+       when type in ["card_expired", "card_taken", "color_repeated", "chameleon_taken"] do
+    %{state | chameleon_board: Map.delete(state.chameleon_board, id)}
+  end
+
   defp game_message(%{"type" => "error", "code" => code} = error, %{awaiting: action} = state)
        when action != nil do
     Logger.debug("Go rechazó #{action["type"]}: #{code} #{error["message"]}")
@@ -282,6 +296,10 @@ defmodule BotService.Bot do
   # un temporizador viejo nunca envía una acción que ya no aplica.
   defp schedule(%{view: view} = state) when view != nil and state.awaiting == nil do
     cond do
+      chameleon?(state) and view["phase"] == "playing" and view["can_take"] == true and
+          map_size(state.chameleon_board) > 0 ->
+        {:noreply, state |> cancel_timer() |> arm(Config.think_ms())}
+
       Strategy.my_turn?(view) ->
         {:noreply, state |> cancel_timer() |> arm(Config.think_ms())}
 
@@ -308,6 +326,9 @@ defmodule BotService.Bot do
   defp act(%{view: view} = state) when view != nil and state.awaiting == nil do
     action =
       cond do
+        chameleon?(state) and view["phase"] == "playing" and view["can_take"] == true ->
+          Strategy.chameleon_action(view, state.chameleon_board, state.blocked)
+
         Strategy.my_turn?(view) ->
           Strategy.turn_action(view, state.blocked)
 
@@ -322,6 +343,9 @@ defmodule BotService.Bot do
   end
 
   defp act(state), do: {:noreply, state}
+
+  defp chameleon?(%{game: %{"mode" => "CHAMELEON"}}), do: true
+  defp chameleon?(_state), do: false
 
   defp send_action(state, action) do
     case GameSocket.send_json(state.socket, action) do

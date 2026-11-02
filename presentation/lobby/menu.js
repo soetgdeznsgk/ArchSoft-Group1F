@@ -3,8 +3,12 @@ let MENUSTATE
 let WINDOW_HEIGHT = 800
 let WINDOW_LENGTH = 1280
 let errorWindow;
+let errorWindowTimeout;
+let logoHoverAudio;
+let logoHoverAudioTimeout;
 
 function setup() {
+    document.getElementById("ssr-shell")?.remove();
     createCanvas(WINDOW_LENGTH, WINDOW_HEIGHT)
     enterMenuState()
 
@@ -40,22 +44,39 @@ async function enterMenuState()
 
     menuContainer = createDiv();
     menuContainer.addClass("menu-container")
-    menuContainer.position(WINDOW_LENGTH / 2, WINDOW_HEIGHT / 3 )
 
-    const logo = createImg('assets/logo.svg', "Logo");
+    const logo = createImg('assets/logo.png', "Logo");
     logo.addClass("logo")
+    logoHoverAudio = new Audio("assets/tribu.mp3");
+    logoHoverAudio.preload = "auto";
+    logoHoverAudio.volume = 0.5;
+    logo.elt.addEventListener("mouseenter", () => {
+        clearTimeout(logoHoverAudioTimeout);
+        logoHoverAudio.pause();
+        logoHoverAudio.currentTime = 0;
+        logoHoverAudio.play().catch((error) => {
+            console.warn("No se pudo reproducir el audio del logo.", error);
+        });
+        logoHoverAudioTimeout = setTimeout(() => {
+            logoHoverAudio.pause();
+            logoHoverAudio.currentTime = 0;
+        }, 5000);
+    });
     
-    const infoGuest = createSpan("GUéST?")
+    const infoGuest = createSpan("MODO INVITADO")
+    infoGuest.addClass("section-label")
 
     usernameGuestInput = createInput("");
-    usernameGuestInput.attribute("placeholder", "GúEST NAMé")
+    usernameGuestInput.attribute("placeholder", "NOMBRE DE INVITADO")
     usernameGuestInput.addClass("menu-input");
 
-    continueButton = createButton("LóG AS GUéST");
+    continueButton = createButton("ENTRAR COMO INVITADO");
     continueButton.mousePressed(
         () => validateGuestname(usernameGuestInput.value())
     );
     continueButton.addClass("menu-navigation-button")
+    continueButton.addClass("guest-image-button")
+    continueButton.attribute("aria-label", "Entrar como invitado")
 
     const infoUser = createSpan("RéAL?")
 
@@ -135,7 +156,7 @@ async function api(method, path, body) {
 async function connectSession(nickname) {
   try {
     const data = await api("POST", "/session", { nickname });
-    beginSession(data);
+    await beginSession(data, { playWelcome: true });
   } catch (err) {
     showAuthError(err.message);
   }
@@ -160,24 +181,56 @@ async function authenticate(action, username, password) {
   }
 }
 
-function beginSession(data) {
+async function beginSession(data, options = {}) {
   session = { token: data.token, player: data.player };
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   errorWindow.hide();
+  if (options.playWelcome) await playWelcomeSound();
   enterLobbyPreview();
+}
+
+async function playWelcomeSound() {
+  const welcomeAudio = new Audio("assets/welcome.mp3");
+  welcomeAudio.preload = "auto";
+
+  try {
+    await welcomeAudio.play();
+    await new Promise((resolve) => {
+      welcomeAudio.addEventListener("ended", resolve, { once: true });
+    });
+  } catch (error) {
+    console.error("No se pudo reproducir el sonido de bienvenida.", error);
+    showAuthError("No se pudo reproducir el sonido de bienvenida.");
+  }
 }
 
 function showAuthError(message) {
   errorWindow.elt.textContent = message;
   errorWindow.show();
+  clearTimeout(errorWindowTimeout);
+  errorWindowTimeout = setTimeout(() => errorWindow.hide(), 3000);
 }
 
 function enterLobbyPreview() {
   MENUSTATE = "LOBBY_PREVIEW";
   menuContainer.html("");
 
+  const previousBackButton = document.querySelector(".back-image-button");
+  if (previousBackButton) previousBackButton.remove();
+
+  const backButton = createButton("Volver al menú");
+  backButton.addClass("back-image-button");
+  backButton.attribute("aria-label", "Volver al menú");
+  backButton.parent(document.body);
+  backButton.mousePressed(() => {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(GAME_KEY);
+    window.location.assign("/menu/");
+  });
+
   const title = createSpan(`Hola, ${session.player.nickname}`);
   // Modo de juego de la sala que se va a crear (quien se une por código no elige: hereda el de la sala).
+  const modeLabel = createSpan("SELECCIONA EL MODO DE JUEGO");
   const mode = createSelect();
   mode.id("lobby-mode");
   mode.addClass("menu-input");
@@ -213,7 +266,9 @@ function enterLobbyPreview() {
   const status = createSpan("");
   status.id("menu-status");
 
-  for (const el of [title, mode, create, code, join, seats, fillBots, start, status]) menuContainer.child(el);
+  for (const el of [title, modeLabel, mode, create, code, join, seats, fillBots, start, status]) {
+    menuContainer.child(el);
+  }
 }
 
 async function joinLobby(request) {
