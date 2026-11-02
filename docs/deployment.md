@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Componentes | API Gateway (Traefik), Presentación (Nginx), PostgreSQL, Redis; integración de Lobby Manager y Game Logic |
-| Tecnología | Docker Compose, Traefik v3.7, Nginx 1.30, PostgreSQL 16, Redis 7.4 |
+| Componentes | API Gateway (Traefik), Presentación SSR, PostgreSQL, Redis; integración de Lobby Manager y Game Logic |
+| Tecnología | Docker Compose, Traefik v3.7, Node.js, PostgreSQL 16, Redis 7.4 |
 | Vistas cubiertas | Despliegue |
 | Estado | Esqueleto funcional con rellenos para Go y Python, versión 0.1 (octubre 2026) |
 | Rama | `feature/devops` |
@@ -15,7 +15,7 @@
 3. [Redes y puertos](#3-redes-y-puertos)
 4. [Contrato de rutas](#4-contrato-de-rutas)
 5. [API Gateway (Traefik)](#5-api-gateway-traefik)
-6. [Presentación (Nginx)](#6-presentación-nginx)
+6. [Presentación (SSR)](#6-presentación-ssr)
 7. [Datos: Redis y PostgreSQL](#7-datos-redis-y-postgresql)
 8. [Variables de entorno y secretos](#8-variables-de-entorno-y-secretos)
 9. [Healthchecks y orden de arranque](#9-healthchecks-y-orden-de-arranque)
@@ -36,7 +36,7 @@ Incluido:
 
 - `docker-compose.yml` con los 6 contenedores, redes `public` e `internal`, volúmenes y healthchecks.
 - Configuración de Traefik: enrutamiento, timeouts para WebSocket y SSE, logs sin el token.
-- Imagen de Nginx para los estáticos de la presentación.
+- Servidor Node.js para SSR y assets de la presentación.
 - Redis con persistencia AOF y contraseña; PostgreSQL con credenciales fuera del repositorio.
 - `.env.example` con todas las variables del sistema.
 
@@ -61,7 +61,7 @@ flowchart TB
             TR["traefik<br/>traefik:v3.7.14<br/>publica :80<br/>también en internal"]
         end
         subgraph INT["red: internal (internal: true, sin salida ni puertos publicados)"]
-            FE["frontend<br/>Nginx 1.30 + estáticos<br/>:80"]
+            FE["frontend<br/>Node.js SSR + assets<br/>:3000"]
             LM["lobby-manager<br/>Python, FastAPI<br/>:8000"]
             GL["game-logic<br/>Go<br/>:8080 ws, :8081 interno"]
             PG[("postgres<br/>16.15<br/>:5432<br/>volumen pg-data")]
@@ -82,7 +82,7 @@ flowchart TB
 | Servicio | Imagen | Redes | Puertos | Volúmenes | Espera a (healthy) | Healthcheck |
 |---|---|---|---|---|---|---|
 | `traefik` | `traefik:v3.7.14` | public, internal | 80 publicado | socket de Docker (ro), `traefik.yml` (ro) | ninguno | `traefik healthcheck --ping` |
-| `frontend` | build de `presentation/` (base `nginx:1.30.5-alpine`) | internal | 80 | ninguno | ninguno | `wget --spider http://127.0.0.1/healthz` |
+| `frontend` | build de `presentation-ssr/` (Node.js 22 Alpine) | internal | 3000 | ninguno | ninguno | `wget --spider http://127.0.0.1:3000/healthz` |
 | `lobby-manager` | relleno `traefik/whoami:v1.12.0` | internal | 8000 | ninguno | `postgres` | pendiente (§12.2) |
 | `game-logic` | relleno `traefik/whoami:v1.12.0` | internal | 8080 (8081 cuando exista) | ninguno | `redis` | pendiente (§12.1) |
 | `postgres` | `postgres:16.15-alpine` | internal | 5432 | `pg-data` | ninguno | `pg_isready` |
@@ -135,20 +135,16 @@ Archivos: [`api-gateway/traefik.yml`](../api-gateway/traefik.yml) (configuració
 
 El *upgrade* a WebSocket no necesita configuración extra: Traefik lo reenvía de forma nativa.
 
-## 6. Presentación (Nginx)
+## 6. Presentación (SSR)
 
-Archivos: [`presentation/Dockerfile`](../presentation/Dockerfile) y [`presentation/nginx.conf`](../presentation/nginx.conf).
+Archivos: [`presentation-ssr/Dockerfile`](../presentation-ssr/Dockerfile), [`presentation-ssr/server.js`](../presentation-ssr/server.js) y [`presentation-ssr/views/`](../presentation-ssr/views/).
 
-- La imagen copia **solo** `libraries/`, `lobby/` y `game/` (servidos como `/libraries/`, `/menu/` y `/ingame/`). Así `Dockerfile`, `nginx.conf` y `jsconfig.json` no se sirven al público.
-- `/` redirige con `302` a `/menu/`, porque no existe `index.html` en la raíz.
-- `absolute_redirect off`: las redirecciones usan `Location` relativa y no exponen el host o puerto interno del contenedor.
-- `/healthz` responde `200 ok` sin tocar disco y sin escribir en el log.
-- `gzip` para CSS, JS y SVG: `p5.min.js` baja de 1,04 MB a 300 KB. Aquí sí se comprime porque son archivos completos, no streams.
-- `Cache-Control: no-cache`: el navegador revalida en cada carga (barato, con ETag) y no muestra versiones viejas tras un cambio.
-- `listen [::]:80` además de `listen 80`, porque en Alpine `localhost` puede resolverse a IPv6.
-- `server_tokens off`: no muestra la versión de Nginx.
+- El servidor SSR genera HTML inicial para `/menu/`, `/ingame/` y `/chameleon/`.
+- Los assets existentes se sirven como `/libraries/`, `/menu/`, `/ingame/` y `/chameleon/`.
+- El navegador conserva la lógica actual: REST y SSE pasan por `/api/`, autenticación por `/auth/` y partidas por `/ws/games/`.
+- `/healthz` responde `200 ok` y se usa en el healthcheck del contenedor.
 
-Después de cambiar algo en `presentation/` hay que reconstruir: `docker compose up -d --build frontend`.
+Después de cambiar algo en `presentation/` o `presentation-ssr/` hay que reconstruir: `docker compose up -d --build frontend`.
 
 ## 7. Datos: Redis y PostgreSQL
 
@@ -359,7 +355,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 | P1 | Quitar URL absoluta del prototipo antiguo | La referencia `presentation/ingame/action.js` corresponde al prototipo eliminado; confirmar si aún aplica antes de trasladar este cambio al frontend actual |
 | P2 | URL del WebSocket | `` `ws://${location.host}/ws/games/${gameId}?token=${token}` `` |
 | P3 | SSE | `new EventSource("/api/lobbies/<id>/events")` (ruta exacta según L2) |
-| P4 | Carpetas nuevas | Añadir su `COPY` en `presentation/Dockerfile` |
+| P4 | Carpetas nuevas | Añadir su `COPY` en `presentation-ssr/Dockerfile` |
 
 ### 12.4 Todos
 
@@ -373,7 +369,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 |---|---|---|---|
 | Protocolo | HTTPS/WSS, puertos 80 y 443 | Solo HTTP en 80 | Demo local; los certificados autofirmados generan avisos en el navegador. En producción se añadiría TLS en Traefik |
 | Ruta del lobby | `/api/lobbies` | `/api/` | Permite más rutas del lobby sin cambiar el gateway |
-| Versiones | `traefik:v3.x`, `postgres:16`, `redis:7`, `nginx:alpine` | `v3.7.14`, `16.15-alpine`, `7.4.11-alpine`, `1.30.5-alpine` | Tags exactos verificados en Docker Hub para que la demo no cambie sola |
+| Versiones | `traefik:v3.x`, `node:22-alpine`, `postgres:16`, `redis:7` | `v3.7.14`, `22.14.0-alpine`, `16.15-alpine`, `7.4.11-alpine` | Tags exactos verificados en Docker Hub para que la demo no cambie sola |
 | Configuración de Redis | `appendonly`, `appendfsync everysec`, `requirepass` | Igual, como argumentos de `redis-server` | Un `redis.conf` no puede leer variables de entorno |
 | Healthcheck de Traefik | No especificado | `ping` | Permite saber si el gateway responde |
 
@@ -383,7 +379,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 |---|---|---|---|
 | 1. Esqueleto | 6 servicios, redes, volúmenes, rellenos | `docker-compose.yml` | Hecho |
 | 2. Gateway | Configuración estática, rutas, timeouts, logs sin token | `api-gateway/traefik.yml`, labels | Hecho |
-| 3. Presentación | Imagen Nginx con estáticos | `presentation/Dockerfile`, `presentation/nginx.conf` | Hecho |
+| 3. Presentación | Servidor Node.js SSR con assets estáticos | `presentation-ssr/Dockerfile`, `presentation-ssr/server.js` | Hecho |
 | 4. Datos | Redis con AOF y contraseña; PostgreSQL con credenciales en `.env` | `docker-compose.yml`, `.gitignore` | Hecho |
 | 5. Variables | Plantilla de variables | `.env.example` | Hecho |
 | 6. Salud y arranque | Healthchecks, `depends_on`, `restart` | `docker-compose.yml` | Hecho |

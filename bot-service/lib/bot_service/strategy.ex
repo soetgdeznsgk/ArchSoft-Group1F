@@ -50,6 +50,28 @@ defmodule BotService.Strategy do
   def blocked_by(%{"type" => "draw"}), do: :draw
   def blocked_by(%{"type" => "discard", "card" => card}), do: {:discard, card}
   def blocked_by(%{"type" => "steal"}), do: :steal
+  def blocked_by(%{"type" => "take", "card" => card}), do: {:take, card}
+
+  @doc "Elige una carta del tablero de Camaleón, priorizando colores que aún faltan."
+  @spec chameleon_action(map(), map(), MapSet.t()) :: map() | nil
+  def chameleon_action(view, board, blocked) do
+    owned =
+      view
+      |> get_in(["players"])
+      |> Enum.find(%{}, &(&1["id"] == view["you"]))
+      |> Map.get("cards", [])
+      |> MapSet.new(& &1["color"])
+
+    board
+    |> Map.values()
+    |> Enum.reject(&MapSet.member?(blocked, {:take, &1["id"]}))
+    |> Enum.sort_by(fn card -> if card["color"] in owned, do: 1, else: 0 end)
+    |> List.first()
+    |> case do
+      nil -> nil
+      card -> %{"type" => "take", "card" => card["id"]}
+    end
+  end
 
   @doc """
   Identifica la carta que está arriba del banco de vistas, para decidir una sola
