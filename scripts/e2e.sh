@@ -47,6 +47,23 @@ api() {
 status_of() { tail -1 <<<"$1"; }
 body_of()   { sed '$d' <<<"$1"; }
 
+auth_api() {
+  local method=$1 path=$2 token=${3:-} body=${4:-}
+  local args=(-s --max-time 10 -X "$method" -H 'Content-Type: application/json')
+  [[ -n "$token" ]] && args+=(-H "Authorization: Bearer $token")
+  [[ -n "$body" ]] && args+=(-d "$body")
+  curl "${args[@]}" -w '\n%{http_code}' "$BASE_URL/auth$path"
+}
+
+# Reporta un resultado al Lobby como lo haría Go: REST interno, sin pasar por Traefik.
+lobby_result() {
+  docker compose exec -T lobby-manager python -c "
+import os, sys, urllib.request as u
+req = u.Request('http://127.0.0.1:8000/internal/lobbies/' + sys.argv[1] + '/result', data=sys.argv[2].encode(), method='POST', headers={'X-Service-Token': os.environ['SERVICE_SECRET'], 'Content-Type': 'application/json'})
+print(u.urlopen(req, timeout=10).read().decode())
+" "$1" "$2" 2>&1
+}
+
 # Llama al REST interno de Go desde dentro de la red (no pasa por Traefik).
 internal() {
   docker compose exec -T lobby-manager python -c "
@@ -231,6 +248,71 @@ else
     "$(docker compose exec -T redis redis-cli hget "bololo:game:$CH_GAME" mode | tr -d '\r')"
   check "WebSocket camaleon por el gateway" "101" "$(ws "$CH_GAME" "$CH_GAME_TOKEN")"
 fi
+
+section "Auth (Java, Spring Security y su propia base)"
+SUFFIX=$(openssl rand -hex 4)
+USER_A="e2e_a_$SUFFIX"
+USER_B="e2e_b_$SUFFIX"
+USER_L="e2e_l_$SUFFIX"
+PASSWORD="e2e-pass-$SUFFIX"
+res=$(auth_api POST /register "" "{\"username\":\"$USER_A\",\"password\":\"$PASSWORD\"}")
+check "POST /auth/register" "201" "$(status_of "$res")"
+TOKEN_A=$(body_of "$res" | field token)
+ACCOUNT_A=$(body_of "$res" | grep -o '"account":{[^}]*}' | field id)
+res=$(auth_api POST /register "" "{\"username\":\"$USER_B\",\"password\":\"$PASSWORD\"}")
+TOKEN_B=$(body_of "$res" | field token)
+ACCOUNT_B=$(body_of "$res" | grep -o '"account":{[^}]*}' | field id)
+check "usuario repetido rechazado" "409" "$(status_of "$(auth_api POST /register "" "{\"username\":\"$USER_A\",\"password\":\"$PASSWORD\"}")")"
+check "POST /auth/login" "200" "$(status_of "$(auth_api POST /login "" "{\"username\":\"$USER_A\",\"password\":\"$PASSWORD\"}")")"
+check "login con contrasena incorrecta" "401" "$(status_of "$(auth_api POST /login "" "{\"username\":\"$USER_A\",\"password\":\"incorrecta-123\"}")")"
+res=$(auth_api GET /me "$TOKEN_A")
+check "GET /auth/me con sesion de cuenta" "200" "$(status_of "$res")"
+check "/auth/me identifica la cuenta" "$USER_A" "$(body_of "$res" | field username)"
+check "GET /auth/me sin token" "401" "$(status_of "$(auth_api GET /me)")"
+check "GET /auth/me con sesion de invitado" "403" "$(status_of "$(auth_api GET /me "${TOKENS[0]}")")"
+check "la sesion de cuenta sirve en el lobby" "200" "$(status_of "$(api GET /lobbies "$TOKEN_A")")"
+auth_api POST /register "" "{\"username\":\"$USER_L\",\"password\":\"$PASSWORD\"}" >/dev/null
+for _ in 1 2 3 4 5; do
+  auth_api POST /login "" "{\"username\":\"$USER_L\",\"password\":\"incorrecta-123\"}" >/dev/null
+done
+check "bloqueo tras 5 intentos fallidos" "429" "$(status_of "$(auth_api POST /login "" "{\"username\":\"$USER_L\",\"password\":\"$PASSWORD\"}")")"
+check "contrasena guardada con BCrypt" '\$2[aby]\$12\$.*' \
+  "$(docker compose exec -T auth-postgres sh -c "psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Atc \"select password_hash from accounts where username = '$USER_A'\"" | tr -d '\r')"
+
+section "Ratings (Lobby -> RabbitMQ -> Ratings)"
+check "GET /api/ratings/leaderboard" "200" "$(status_of "$(api GET '/ratings/leaderboard?mode=CLASSIC')")"
+check "modo desconocido en el ranking" "422" "$(status_of "$(api GET '/ratings/leaderboard?mode=POKER')")"
+check "ruta desconocida en ratings" "404" "$(http_code "$BASE_URL/api/ratings/internal")"
+if ! $GO_REAL; then
+  skip "ranking de punta a punta" "game-logic es un relleno"
+else
+  res=$(api POST /lobbies "$TOKEN_A" '{"mode":"CHAMELEON"}')
+  R_LOBBY=$(body_of "$res" | grep -o '"id":"l_[^"]*"' | cut -d'"' -f4)
+  R_CODE=$(body_of "$res" | field code)
+  api POST /lobbies/join "$TOKEN_B" "{\"code\":\"$R_CODE\"}" >/dev/null
+  res=$(api POST "/lobbies/$R_LOBBY/start" "$TOKEN_A")
+  check "partida entre dos cuentas iniciada" "200" "$(status_of "$res")"
+  R_GAME=$(body_of "$res" | field gameId)
+  R_PLAYER_A=$(body_of "$(api GET /session "$TOKEN_A")" | grep -o '"id":"p_[^"]*"' | head -1 | cut -d'"' -f4)
+  R_PLAYER_B=$(body_of "$(api GET /session "$TOKEN_B")" | grep -o '"id":"p_[^"]*"' | head -1 | cut -d'"' -f4)
+  R_BODY="{\"gameId\":\"$R_GAME\",\"mode\":\"CHAMELEON\",\"winnerId\":\"$R_PLAYER_A\",\"winners\":[\"$R_PLAYER_A\"],\"endReason\":\"all_colors\",\"standings\":[{\"player\":\"$R_PLAYER_A\",\"colors\":8,\"rank\":1},{\"player\":\"$R_PLAYER_B\",\"colors\":5,\"rank\":2}]}"
+  check "el Lobby registra el resultado" ".*\"recorded\":true.*" "$(lobby_result "$R_LOBBY" "$R_BODY")"
+  rating=""
+  for _ in $(seq 1 30); do
+    rating=$(body_of "$(api GET "/ratings/players/$ACCOUNT_A")" | grep -o '"rating":[0-9]*' | cut -d: -f2)
+    [[ -n "$rating" ]] && break
+    sleep 0.5
+  done
+  check "el ganador sube a 1016" "1016" "$rating"
+  check "el perdedor baja a 984" ".*\"rating\":984.*" "$(body_of "$(api GET "/ratings/players/$ACCOUNT_B")")"
+  check "un reintento de Go no registra otra vez" ".*\"recorded\":false.*" "$(lobby_result "$R_LOBBY" "$R_BODY")"
+  sleep 3
+  check "el reintento no suma dos veces" ".*\"games\":1.*" "$(body_of "$(api GET "/ratings/players/$ACCOUNT_A")")"
+  check "el historial guarda el cambio" ".*\"ratingBefore\":1000,\"ratingAfter\":1016.*" "$(body_of "$(api GET "/ratings/players/$ACCOUNT_A/history")")"
+fi
+queues=$(docker compose exec -T rabbitmq rabbitmqctl -q list_queues name durable messages 2>&1 | tr -d '\r' | tr '\t' ' ')
+check "cola de ratings durable y vacia" ".*ratings\.game-finished true 0.*" "$(tr '\n' ';' <<<"$queues")"
+check "sin mensajes muertos" ".*ratings\.game-finished\.dead true 0.*" "$(tr '\n' ';' <<<"$queues")"
 
 section "Datos"
 check "redis exige contrasena" "NOAUTH.*" "$(docker compose exec -T redis sh -c 'unset REDISCLI_AUTH; redis-cli ping' 2>&1 | tr -d '\r')"

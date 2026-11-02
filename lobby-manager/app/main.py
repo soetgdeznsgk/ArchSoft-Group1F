@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .api import internal, public
+from .broker import ResultBroker, RabbitResultBroker
 from .config import Settings
 from .db import create_pool
 from .errors import ApiError
@@ -28,9 +29,15 @@ log = logging.getLogger("lobby")
 SWEEP_INTERVAL_S = 60
 
 
-def create_app(settings: Settings | None = None, game_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
-    """`game_transport` permite a las pruebas simular a Game Logic sin red."""
+def create_app(
+    settings: Settings | None = None,
+    game_transport: httpx.AsyncBaseTransport | None = None,
+    result_broker: ResultBroker | None = None,
+) -> FastAPI:
+    """`game_transport` y `result_broker` permiten a las pruebas simular a Game Logic y a RabbitMQ sin red."""
     settings = settings or Settings.from_env()
+    if result_broker is None and settings.rabbitmq_url:
+        result_broker = RabbitResultBroker(settings.rabbitmq_url)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
 
     @asynccontextmanager
@@ -45,13 +52,20 @@ def create_app(settings: Settings | None = None, game_transport: httpx.AsyncBase
         app.state.pool = pool
         app.state.events = events
         app.state.service = service
-        sweeper = asyncio.create_task(_sweep(service))
+        tasks = [asyncio.create_task(_sweep(service))]
+        if result_broker:
+            tasks.append(
+                asyncio.create_task(_publish_results(service, result_broker, settings.result_publish_interval_s))
+            )
         try:
             yield
         finally:
-            sweeper.cancel()
-            with suppress(asyncio.CancelledError):
-                await sweeper
+            for task in tasks:
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+            if result_broker:
+                await result_broker.aclose()
             await events.aclose()
             await game_client.aclose()
             await pool.close()
@@ -105,3 +119,15 @@ async def _sweep(service: LobbyService) -> None:
         except Exception:
             log.exception("Falló la limpieza de salas sin resultado")
         await asyncio.sleep(SWEEP_INTERVAL_S)
+
+
+async def _publish_results(service: LobbyService, broker: ResultBroker, interval_s: float) -> None:
+    """Saca los resultados hacia el broker. Si RabbitMQ no responde, siguen pendientes y se reintentan."""
+    while True:
+        try:
+            for event in await service.unpublished_results():
+                await broker.publish(event)
+                await service.mark_result_published(event["gameId"])
+        except Exception as exc:
+            log.warning("No se pudo publicar un resultado en el broker: %r", exc)
+        await asyncio.sleep(interval_s)

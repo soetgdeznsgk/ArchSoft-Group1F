@@ -30,11 +30,11 @@ class RestLobbySessionProvider implements LobbySessionProvider {
                     .retrieve()
                     .body(LobbySessionResponse.class);
             if (response == null || response.player() == null || response.token() == null) {
-                throw new AuthException(502, "lobby_unavailable", "The Lobby Manager returned an invalid session.");
+                throw new AuthException(502, "lobby_unavailable", "El Lobby Manager devolvió una sesión inválida.");
             }
             return response;
         } catch (RestClientException failure) {
-            throw new AuthException(502, "lobby_unavailable", "The Lobby Manager could not provide a player session.");
+            throw new AuthException(502, "lobby_unavailable", "El Lobby Manager no pudo crear la sesión del jugador.");
         }
     }
 }

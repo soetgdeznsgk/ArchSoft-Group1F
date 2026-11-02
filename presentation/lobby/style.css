@@ -108,3 +108,37 @@ canvas {
   font-family: "Rubik", serif;
   text-align: center;
 }
+.ranking-panel {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  width: 420px;
+  padding: 16px;
+  color: #ffffff;
+  font-family: "Rubik", serif;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+}
+
+.ranking-panel h3,
+.ranking-panel p {
+  margin: 8px 0;
+  text-align: center;
+}
+
+.ranking-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ranking-panel th,
+.ranking-panel td {
+  padding: 4px;
+  text-align: center;
+}
+
+.ranking-panel th {
+  color: var(--logo-yellow);
+}

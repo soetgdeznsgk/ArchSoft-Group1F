@@ -14,9 +14,12 @@ ALGORITHM = "HS256"
 SESSION_SCOPE = "session"
 
 
-def issue_session_token(settings: Settings, player_id: str) -> str:
+def issue_session_token(settings: Settings, player_id: str, account_id: str | None = None) -> str:
+    """`accountId` solo existe en las sesiones con cuenta: Auth lo lee para saber de quién es el token."""
     now = int(time.time())
     claims = {"sub": player_id, "scope": SESSION_SCOPE, "iat": now, "exp": now + settings.session_ttl_s}
+    if account_id is not None:
+        claims["accountId"] = account_id
     return jwt.encode(claims, settings.jwt_secret, algorithm=ALGORITHM)
 
 

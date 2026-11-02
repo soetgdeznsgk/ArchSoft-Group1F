@@ -18,9 +18,13 @@ record RegisterRequest(
         String username,
         @NotBlank String password) {}
 
+record ChangePasswordRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {}
+
 record PlayerResponse(String id, String nickname) {}
 
-record SessionResponse(PlayerResponse player, String token) {}
+record AccountResponse(String id, String username) {}
+
+record SessionResponse(PlayerResponse player, String token, AccountResponse account) {}
 
 record ErrorResponse(String code, String message) {}
 

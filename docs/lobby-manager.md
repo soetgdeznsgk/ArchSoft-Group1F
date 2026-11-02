@@ -178,6 +178,10 @@ Todos los errores tienen la misma forma. `message` está en español y se puede 
 
 Auth llama `POST /internal/auth/session` en la red privada, con `X-Service-Token: <SERVICE_SECRET>` y cuerpo `{"accountId":"<UUID de cuenta>","nickname":"ana"}`. La operación es idempotente por `accountId`: devuelve el mismo jugador y un nuevo token de sesión compatible con `POST /api/session`. El endpoint nunca debe publicarse a través de Traefik.
 
+El token de estas sesiones incluye además el claim `accountId`, que Auth usa para identificar la cuenta en sus rutas protegidas. Las sesiones de invitado no lo llevan.
+
+Cuando se registra un resultado, el Lobby publica el evento `game.finished` en RabbitMQ. El contrato está en [ratings-service.md](ratings-service.md) §3.
+
 ## 4. Para Game Logic
 
 Los dos sentidos usan la cabecera `X-Service-Token: <SERVICE_SECRET>` y solo existen en la red interna.

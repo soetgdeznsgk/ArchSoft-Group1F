@@ -50,3 +50,7 @@ CREATE TABLE IF NOT EXISTS game_results (
     payload     JSONB NOT NULL,
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Null mientras el resultado no llegue al broker: esta columna es la bandeja de salida hacia Ratings.
+ALTER TABLE game_results ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS game_results_unpublished ON game_results (recorded_at) WHERE published_at IS NULL;

@@ -84,7 +84,7 @@ class LobbyService:
             account_id,
         )
         player = Player(id=row["id"], nickname=row["nickname"])
-        return SessionOut(player=player, token=security.issue_session_token(self._settings, player.id))
+        return SessionOut(player=player, token=security.issue_session_token(self._settings, player.id, account_id))
 
     async def get_player(self, player_id: str) -> Player | None:
         row = await self._pool.fetchrow("SELECT id, nickname FROM players WHERE id = $1", player_id)
@@ -312,6 +312,23 @@ class LobbyService:
             )
         return ResultOut(game_id=result.game_id, lobby_id=lobby_id, recorded=bool(recorded))
 
+    async def unpublished_results(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Eventos game.finished de los resultados que aún no llegaron al broker (docs/ratings-service.md §3)."""
+        rows = await self._pool.fetch(
+            """
+            SELECT r.game_id, r.lobby_id, r.end_reason, r.payload, r.recorded_at, l.mode
+            FROM game_results r JOIN lobbies l ON l.id = r.lobby_id
+            WHERE r.published_at IS NULL
+            ORDER BY r.recorded_at
+            LIMIT $1
+            """,
+            limit,
+        )
+        return [await self._game_finished_event(row) for row in rows]
+
+    async def mark_result_published(self, game_id: str) -> None:
+        await self._pool.execute("UPDATE game_results SET published_at = now() WHERE game_id = $1", game_id)
+
     async def expire_stale_games(self) -> int:
         """Cierra las salas cuya partida nunca reportó resultado, para que no ocupen cupo."""
         rows = await self._pool.fetch(
@@ -328,6 +345,34 @@ class LobbyService:
         return len(rows)
 
     # --- internos ------------------------------------------------------------
+
+    async def _game_finished_event(self, row: asyncpg.Record) -> dict[str, Any]:
+        result = json.loads(row["payload"])
+        standings = result.get("standings") or []
+        winners = result.get("winners") or ([result["winnerId"]] if result.get("winnerId") else [])
+        players = await self._pool.fetch(
+            "SELECT id, nickname, account_id FROM players WHERE id = ANY($1::text[])",
+            [standing["player"] for standing in standings],
+        )
+        by_id = {player["id"]: player for player in players}
+        return {
+            "gameId": row["game_id"],
+            "lobbyId": row["lobby_id"],
+            "mode": row["mode"],
+            "endReason": row["end_reason"],
+            "finishedAt": row["recorded_at"].isoformat(),
+            "winners": winners,
+            "players": [
+                {
+                    "playerId": standing["player"],
+                    "accountId": by_id[standing["player"]]["account_id"],
+                    "nickname": by_id[standing["player"]]["nickname"],
+                    "rank": standing["rank"],
+                }
+                for standing in standings
+                if standing["player"] in by_id
+            ],
+        }
 
     def _publish_closed(self, lobby_id: str, data: dict[str, Any]) -> None:
         self._events.publish(lobby_id, "lobby_closed", {"lobbyId": lobby_id, **data})
