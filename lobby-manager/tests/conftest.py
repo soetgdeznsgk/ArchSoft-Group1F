@@ -92,12 +92,31 @@ class SseReader:
         return None
 
 
+class FakeBroker:
+    """Simula RabbitMQ: guarda lo publicado o falla mientras `down` sea True."""
+
+    def __init__(self) -> None:
+        self.events: list[dict] = []
+        self.down = False
+
+    async def publish(self, event: dict) -> None:
+        if self.down:
+            raise ConnectionError("broker caído")
+        self.events.append(event)
+
+    async def aclose(self) -> None:
+        pass
+
+
 class Ctx:
-    def __init__(self, app, client: httpx.AsyncClient, game: FakeGameLogic, settings: Settings) -> None:
+    def __init__(
+        self, app, client: httpx.AsyncClient, game: FakeGameLogic, settings: Settings, broker: FakeBroker
+    ) -> None:
         self.app = app
         self.client = client
         self.game = game
         self.settings = settings
+        self.broker = broker
 
     @property
     def pool(self):
@@ -147,6 +166,7 @@ def make_settings(**overrides) -> Settings:
         service_secret=SERVICE_SECRET,
         game_logic_url="http://game-logic.test:8081",
         db_connect_timeout_s=5,
+        result_publish_interval_s=0.02,
     )
     return replace(base, **overrides)
 
@@ -156,7 +176,8 @@ async def running(settings: Settings):
     if not TEST_DATABASE_URL:
         pytest.skip("Define TEST_DATABASE_URL para correr las pruebas (ver README)")
     game = FakeGameLogic()
-    app = create_app(settings, game_transport=httpx.MockTransport(game.handle))
+    broker = FakeBroker()
+    app = create_app(settings, game_transport=httpx.MockTransport(game.handle), result_broker=broker)
     config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning", timeout_graceful_shutdown=1)
     server = uvicorn.Server(config)
     task = asyncio.create_task(server.serve())
@@ -168,7 +189,7 @@ async def running(settings: Settings):
     try:
         await app.state.pool.execute("TRUNCATE game_results, lobby_players, lobbies, players")
         async with httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}", timeout=10) as client:
-            yield Ctx(app, client, game, settings)
+            yield Ctx(app, client, game, settings, broker)
     finally:
         server.should_exit = True
         await task

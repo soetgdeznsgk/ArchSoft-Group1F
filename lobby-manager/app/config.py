@@ -14,6 +14,8 @@ class Settings:
     service_secret: str
     game_logic_url: str = "http://game-logic:8081"
     cors_origins: tuple[str, ...] = ()
+    # Sin URL el Lobby no publica eventos; los resultados quedan pendientes en PostgreSQL.
+    rabbitmq_url: str | None = None
 
     # Límites del reglamento (RF-03, RF-06). El motor de Go exige 4 jugadores.
     max_lobbies: int = 10
@@ -28,6 +30,7 @@ class Settings:
     game_ttl_s: float = 3 * 3600
     game_request_timeout_s: float = 3
     db_connect_timeout_s: float = 30
+    result_publish_interval_s: float = 2
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -52,6 +55,7 @@ class Settings:
             ("GAME_LOGIC_URL", "game_logic_url", str),
             ("PRESENCE_GRACE_SECONDS", "presence_grace_s", float),
             ("GAME_TTL_SECONDS", "game_ttl_s", float),
+            ("RABBITMQ_URL", "rabbitmq_url", str),
         ):
             if os.environ.get(env):
                 optional[field] = cast(os.environ[env])

@@ -14,11 +14,15 @@ flowchart TB
   G -- "registro / login" --> A[auth-service<br/>Java / Spring Boot]
   G -- WebSocket --> GL[game-logic<br/>Go]
   G -- "REST /api/bots/" --> B[bot-service<br/>Elixir / OTP]
+  G -- "REST /api/ratings/" --> RS[ratings-service<br/>FastAPI]
   B -- "REST, SSE" --> L
   B -- WebSocket --> GL
   A -- "REST interno" --> L
   L <-- "REST interno" --> GL
   L --> PG[(PostgreSQL)]
+  L -- "game.finished" --> MQ{{RabbitMQ}}
+  MQ -- "game.finished" --> RS
+  RS --> RPG[(PostgreSQL)]
   A --> APG[(PostgreSQL)]
   GL --> R[(Redis)]
 ```
@@ -37,6 +41,7 @@ ArchSoft-Group1F/
 ├── lobby-manager/       Gestión de sesiones y salas en FastAPI + PostgreSQL
 ├── game-logic/          Lógica de la partida, servicio Go y persistencia Redis
 ├── bot-service/         Bots que llenan salas y juegan solos, en Elixir/OTP
+├── ratings-service/     Ranking de jugadores por eventos de RabbitMQ, en FastAPI + PostgreSQL
 ├── docs/                Documentación transversal del sistema
 └── .github/workflows/   CI, un workflow por componente
 ```
@@ -44,7 +49,7 @@ ArchSoft-Group1F/
 Convenciones:
 
 - Cada componente es autocontenido: su código, pruebas, `Dockerfile` y `README.md` viven en su carpeta.
-- Cada base de datos pertenece a un solo componente: PostgreSQL al Auth, PostgreSQL al Lobby y Redis a Game Logic. Su configuración va dentro de la carpeta del componente dueño.
+- Cada base de datos pertenece a un solo componente: PostgreSQL al Auth, PostgreSQL al Lobby, PostgreSQL a Ratings y Redis a Game Logic. Su configuración va dentro de la carpeta del componente dueño.
 - La documentación propia de un componente va en `<componente>/docs/`. En `docs/` solo va lo que cruza componentes.
 - El `docker-compose.yml` que levante todo el sistema irá en la raíz cuando haya más de un servicio ejecutable.
 
@@ -53,8 +58,9 @@ Convenciones:
 | Carpeta | Estado | Cómo usarlo |
 |---|---|---|
 | [`presentation/`](presentation) | Pantallas iniciales | Abrir `presentation/lobby/index.html` o servir la carpeta: `python -m http.server -d presentation 8080` |
-| [`auth-service/`](auth-service) | Registro/login, BCrypt y sesión compatible con Lobby | Ver [auth-service/README.md](auth-service/README.md) |
+| [`auth-service/`](auth-service) | Registro/login, Spring Security, BCrypt, bloqueo por intentos y sesión compatible con Lobby | Ver [auth-service/README.md](auth-service/README.md) |
 | [`game-logic/`](game-logic) | Motor, API interna, WebSocket y persistencia Redis | Ver [game-logic/README.md](game-logic/README.md) |
 | [`lobby-manager/`](lobby-manager) | Sesiones de invitado, identidad de jugador y salas | Ver [lobby-manager/README.md](lobby-manager/README.md) |
 | [`bot-service/`](bot-service) | Llenar sala con bots que juegan la partida completa | Ver [bot-service/README.md](bot-service/README.md) y [docs/bot-service.md](docs/bot-service.md) |
+| [`ratings-service/`](ratings-service) | Ranking Elo por modo, alimentado por RabbitMQ | Ver [ratings-service/README.md](ratings-service/README.md) y [docs/ratings-service.md](docs/ratings-service.md) |
 | [`api-gateway/`](api-gateway) | Por implementar | Ver su README |

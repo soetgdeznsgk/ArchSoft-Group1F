@@ -73,6 +73,7 @@ Auth dispone de `POST /internal/auth/session`, protegido por `X-Service-Token`, 
 | `JWT_SECRET` | Sí | hex aleatorio | Firma los tokens. El mismo valor que usa Game Logic para verificarlos |
 | `SERVICE_SECRET` | Sí | hex aleatorio | Cabecera `X-Service-Token` del REST interno, en ambas direcciones |
 | `GAME_LOGIC_URL` | No | `http://game-logic:8081` | Base del REST interno de Go |
+| `RABBITMQ_URL` | No | `amqp://usuario:clave@rabbitmq:5672/` | Broker de eventos. Sin ella los resultados quedan pendientes en PostgreSQL |
 | `CORS_ORIGINS` | No | `http://localhost:8080` | Solo para desarrollo, si las pantallas se sirven desde otro origen. Detrás del gateway no hace falta |
 | `PRESENCE_GRACE_SECONDS` | No | `30` | Espera antes de sacar de la sala a quien cerró la página |
 | `GAME_TTL_SECONDS` | No | `10800` | Una sala con partida iniciada y sin resultado se cierra pasado este tiempo |

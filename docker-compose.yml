@@ -48,6 +48,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${AUTH_POSTGRES_PASSWORD:-${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}}
       LOBBY_MANAGER_URL: http://lobby-manager:8000
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
     networks:
       - internal
     labels:
@@ -78,6 +79,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
       GAME_LOGIC_URL: http://game-logic:8081
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
     networks:
       - internal
     labels:
@@ -177,6 +179,74 @@ services:
       start_period: 10s
       start_interval: 2s
 
+  ratings-service:
+    build: ./ratings-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: ratings-postgres
+      POSTGRES_USER: ${RATINGS_POSTGRES_USER:?Falta RATINGS_POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${RATINGS_POSTGRES_PASSWORD:?Falta RATINGS_POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${RATINGS_POSTGRES_DB:?Falta RATINGS_POSTGRES_DB en .env}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
+    networks:
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ratings.rule=PathPrefix(`/api/ratings/`)"
+      - "traefik.http.routers.ratings.entrypoints=web"
+      - "traefik.http.routers.ratings.priority=30"
+      - "traefik.http.services.ratings.loadbalancer.server.port=8000"
+    depends_on:
+      ratings-postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+      start_interval: 2s
+
+  ratings-postgres:
+    image: postgres:16.15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${RATINGS_POSTGRES_USER:?Falta RATINGS_POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${RATINGS_POSTGRES_PASSWORD:?Falta RATINGS_POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${RATINGS_POSTGRES_DB:?Falta RATINGS_POSTGRES_DB en .env}
+    volumes:
+      - ratings-pg-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+      start_interval: 2s
+
+  rabbitmq:
+    image: rabbitmq:3.13.7-management-alpine
+    hostname: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "5672"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 60s
+      start_interval: 2s
+
   postgres:
     image: postgres:16.15-alpine
     restart: unless-stopped
@@ -229,4 +299,6 @@ networks:
 volumes:
   pg-data:
   auth-pg-data:
+  ratings-pg-data:
+  rabbitmq-data:
   redis-data:

@@ -68,7 +68,7 @@ Al eliminar una sala vacía, sus filas se borran en cascada. En una sala cerrada
 
 ### `game_results`
 
-Un registro por partida terminada (RF-36). `game_id` es la clave primaria: es lo que garantiza el registro único (RNF-04). `payload` guarda el cuerpo completo que envió Go (por ejemplo la tabla de posiciones), sin que este servicio tenga que conocer su forma.
+Un registro por partida terminada (RF-36). `game_id` es la clave primaria: es lo que garantiza el registro único (RNF-04). `payload` guarda el cuerpo completo que envió Go (por ejemplo la tabla de posiciones), sin que este servicio tenga que conocer su forma. `published_at` queda nulo hasta que RabbitMQ confirma el evento `game.finished`; funciona como bandeja de salida hacia Ratings ([contrato](../../docs/ratings-service.md)).
 
 ## 3. Estados de la sala
 

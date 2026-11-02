@@ -117,6 +117,7 @@ const GAME_PAGES = { CLASSIC: "/ingame/", CHAMELEON: "/chameleon/" };
 let session = null;
 let lobbyEvents = null;
 let currentLobby = null;
+let rankingPanel = null;
 
 async function api(method, path, body) {
   const headers = { "Content-Type": "application/json" };
@@ -161,7 +162,7 @@ async function authenticate(action, username, password) {
 }
 
 function beginSession(data) {
-  session = { token: data.token, player: data.player };
+  session = { token: data.token, player: data.player, account: data.account };
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   errorWindow.hide();
   enterLobbyPreview();
@@ -184,6 +185,7 @@ function enterLobbyPreview() {
   mode.attribute("aria-label", "Modo de juego");
   for (const [value, label] of Object.entries(MODE_LABELS)) mode.option(label, value);
   mode.selected("CLASSIC");
+  mode.changed(() => loadRanking(mode.value()));
   const create = createButton("CRéAR SALA");
   create.addClass("menu-navigation-button");
   create.mousePressed(() => joinLobby(() => api("POST", "/lobbies", { mode: mode.value() })));
@@ -214,6 +216,50 @@ function enterLobbyPreview() {
   status.id("menu-status");
 
   for (const el of [title, mode, create, code, join, seats, fillBots, start, status]) menuContainer.child(el);
+
+  rankingPanel = createDiv("");
+  rankingPanel.addClass("ranking-panel");
+  loadRanking(mode.value());
+}
+
+// Ratings Service (/api/ratings/, ver docs/ratings-service.md): ranking del modo elegido.
+// Si el servicio no responde, el menú sigue funcionando: solo se avisa en el panel.
+async function loadRanking(mode) {
+  const panel = rankingPanel.elt;
+  try {
+    const [board, mine] = await Promise.all([
+      api("GET", `/ratings/leaderboard?mode=${mode}&limit=10`),
+      session.account ? api("GET", `/ratings/players/${session.account.id}`) : null,
+    ]);
+    panel.replaceChildren(rankingLine("h3", `Ranking · ${MODE_LABELS[mode]}`), rankingTable(board.players), myRatingLine(mine, mode));
+  } catch (err) {
+    panel.replaceChildren(rankingLine("p", "El ranking no está disponible por ahora."));
+  }
+}
+
+function rankingLine(tag, text) {
+  const line = document.createElement(tag);
+  line.textContent = text;
+  return line;
+}
+
+function rankingTable(players) {
+  if (players.length === 0) return rankingLine("p", "Aún no hay partidas puntuadas.");
+  const table = document.createElement("table");
+  const headers = ["#", "Jugador", "Puntos", "Partidas", "Victorias"];
+  const rows = players.map((p) => [p.position, p.nickname, p.rating, p.games, p.wins]);
+  for (const [i, cells] of [headers, ...rows].entries()) {
+    const row = table.insertRow();
+    for (const cell of cells) row.appendChild(rankingLine(i === 0 ? "th" : "td", cell));
+  }
+  return table;
+}
+
+function myRatingLine(mine, mode) {
+  if (!session.account) return rankingLine("p", "Entra con una cuenta para aparecer en el ranking.");
+  const rating = mine.ratings.find((r) => r.mode === mode);
+  if (!rating) return rankingLine("p", "Juega con otra cuenta en la sala para entrar al ranking.");
+  return rankingLine("p", `Tu puesto: #${rating.position} · ${rating.rating} puntos`);
 }
 
 async function joinLobby(request) {
