@@ -110,8 +110,9 @@ canvas {
 }
 .ranking-panel {
   position: fixed;
-  right: 24px;
-  top: 50%;
+  position: fixed;
+  left: 820px; 
+  top: 200px; 
   transform: translateY(-50%);
   box-sizing: border-box;
   width: 420px;
