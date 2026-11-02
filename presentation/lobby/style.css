@@ -41,7 +41,8 @@ canvas {
   transform: translate(-50%, -50%);
   width: calc(100% - 32px);
   max-width: 420px;
-  max-height: 100vh;
+  max-height: calc(100vh - 24px);
+  padding: 12px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -147,6 +148,34 @@ canvas {
   outline-offset: 4px;
 }
 
+.ranking-image-button {
+  width: min(220px, 70vw);
+  height: clamp(82px, 12vh, 125px);
+  flex: 0 0 auto;
+  margin: 4px 0;
+  padding: 0;
+  border: 0;
+  background: url("assets/rankings.png") center / contain no-repeat;
+  background-color: transparent;
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+  transform-origin: center;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.ranking-image-button:hover {
+  transform: scale(1.08);
+  filter:
+    drop-shadow(0 0 8px rgba(255, 215, 64, 0.9))
+    drop-shadow(0 0 24px rgba(255, 168, 0, 0.75));
+}
+
+.ranking-image-button:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 4px;
+}
+
 .logo {
   display: block;
   width: min(495px, 100%, calc(42vh + 2.5cm));
@@ -180,23 +209,82 @@ canvas {
 }
 
 .menu-error-msg {
-  position: fixed;
-  font-size: 25px;
-  left: 640px;
-  bottom: 25%;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
   transform: translateX(-50%);
-  z-index: 10;
-  color: var(--logo-yellow);
-  font-family: "Rubik", serif;
-  text-align: center;
-}
-.ranking-panel {
-  position: fixed;
-  right: 24px;
-  top: 50%;
-  transform: translateY(-50%);
   box-sizing: border-box;
-  width: 420px;
+  width: min(380px, 42vw, 48vh);
+  min-height: 112px;
+  padding: 28px 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(145deg, #fffdf2 0%, #f5e3b2 100%);
+  border: 4px solid #704717;
+  border-radius: 48% 52% 46% 54% / 52% 48% 54% 46%;
+  box-shadow:
+    0 5px 0 #3f2912,
+    0 8px 18px rgba(0, 0, 0, 0.35);
+  z-index: 2;
+  text-align: center;
+  line-height: 1.35;
+  letter-spacing: 0.035em;
+  word-spacing: 0.12em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  font-size: clamp(0.9rem, 1.25vw, 1.2rem);
+}
+
+.menu-error-msg::before,
+.menu-error-msg::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: #f5e3b2;
+  border: 3px solid #704717;
+  box-shadow: 0 3px 0 #3f2912;
+}
+
+.menu-error-msg::before {
+  width: 18px;
+  height: 18px;
+  left: 16%;
+  bottom: -32px;
+}
+
+.menu-error-msg::after {
+  width: 11px;
+  height: 11px;
+  left: 9%;
+  bottom: -48px;
+}
+
+.menu-error-character {
+  display: block;
+  width: min(620px, calc(100vw - 8px), 85vh);
+  max-height: 85vh;
+  object-fit: contain;
+}
+
+.menu-error-group {
+  position: fixed;
+  left: clamp(4px, 1vw, 16px);
+  bottom: clamp(4px, 1vh, 16px);
+  z-index: 10;
+  width: min(620px, calc(100vw - 8px), 85vh);
+  max-height: calc(100vh - 8px);
+  display: flex;
+  align-items: center;
+}
+
+.ranking-panel {
+  position: relative;
+  width: 100%;
+  max-height: min(360px, 42vh);
+  overflow-y: auto;
+  box-sizing: border-box;
   padding: 16px;
   color: #ffffff;
   font-family: "Rubik", serif;
@@ -237,11 +325,44 @@ canvas {
   .guest-image-button {
     width: min(318px, calc(100vw - 48px), calc(24vh + 3cm));
   }
+
+  .ranking-panel {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .menu-error-msg {
+    left: 50%;
+    bottom: calc(100% + 6px);
+    width: min(300px, 72vw, 28vh);
+    min-height: 82px;
+    padding: 18px 30px;
+    line-height: 1.35;
+    letter-spacing: 0.035em;
+    word-spacing: 0.08em;
+    font-size: 0.9rem;
+  }
+
+  .menu-error-character {
+    width: min(540px, calc(100vw - 8px), 78vh);
+    max-height: 78vh;
+  }
+
+  .menu-error-group {
+    left: 4px;
+    bottom: 4px;
+    width: min(540px, calc(100vw - 8px), 78vh);
+  }
 }
 
 @media (max-height: 600px) {
+  .menu-container {
+    gap: 3px;
+    padding: 4px 0;
+  }
+
   .logo {
-    width: min(457px, 100%, calc(34vh + 1.5cm));
+    width: min(360px, 100%, calc(28vh + 1.5cm));
   }
 
   .menu-navigation-button {
@@ -255,5 +376,9 @@ canvas {
 
   .menu-input {
     height: 30px;
+  }
+
+  .ranking-image-button {
+    height: clamp(58px, 10vh, 82px);
   }
 }

@@ -13,7 +13,8 @@ const game = {
     timer: 30,
     lastTick: 0,
     message: "Selecciona una carta para comenzar.",
-    nextCardId: 1
+    nextCardId: 1,
+    finished: false
 };
 
 const figures = [
@@ -381,6 +382,8 @@ function bindButtons() {
 }
 
 function updateTimer() {
+    if (game.finished) return;
+
     const now = millis();
     const elapsed = (now - game.lastTick) / 1000;
 
@@ -401,12 +404,14 @@ function updateInterface() {
         `00:${String(game.timer).padStart(2, "0")}`;
 
     document.getElementById("draw-hidden").disabled =
-        game.hasDrawn || game.hiddenCount === 0;
+        game.finished || game.hasDrawn || game.hiddenCount === 0;
 
     document.getElementById("draw-visible").disabled =
-        game.hasDrawn || !game.visibleCard;
+        game.finished || game.hasDrawn || !game.visibleCard;
 
-    document.getElementById("discard").disabled = !game.hasDrawn;
+    document.getElementById("discard").disabled = game.finished || !game.hasDrawn;
+    document.getElementById("meld").disabled = game.finished;
+    document.getElementById("deposit").disabled = game.finished;
 
     document.getElementById("game-message").textContent = game.message;
 

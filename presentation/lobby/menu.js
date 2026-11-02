@@ -4,6 +4,8 @@ let WINDOW_HEIGHT = 800
 let WINDOW_LENGTH = 1280
 let errorWindow;
 let errorWindowTimeout;
+let errorCharacter;
+let errorGroup;
 let logoHoverAudio;
 let logoHoverAudioTimeout;
 
@@ -14,7 +16,16 @@ function setup() {
 
     errorWindow = createSpan("");
     errorWindow.addClass("menu-error-msg");
-    errorWindow.hide();
+    errorWindow.addClass("section-label");
+
+    errorCharacter = createImg("assets/personaje.png", "Personaje");
+    errorCharacter.addClass("menu-error-character");
+
+    errorGroup = createDiv("");
+    errorGroup.addClass("menu-error-group");
+    errorCharacter.parent(errorGroup);
+    errorWindow.parent(errorGroup);
+    errorGroup.hide();
 }
 
 function draw() {
@@ -114,7 +125,12 @@ async function enterMenuState()
 // Username validation
 function validateGuestname(nameToCheck)
 {
-    connectSession(nameToCheck.trim());
+    const nickname = nameToCheck.trim();
+    if (!nickname) {
+        showAuthError("Ingresa un nombre válido.");
+        return;
+    }
+    connectSession(nickname);
 }
 
 async function signinRequested(username, password) {
@@ -139,6 +155,8 @@ let session = null;
 let lobbyEvents = null;
 let currentLobby = null;
 let rankingPanel = null;
+let rankingButton = null;
+let rankingMessageTimeout = null;
 
 async function api(method, path, body) {
   const headers = { "Content-Type": "application/json" };
@@ -207,9 +225,11 @@ async function playWelcomeSound() {
 
 function showAuthError(message) {
   errorWindow.elt.textContent = message;
-  errorWindow.show();
+  errorGroup.show();
   clearTimeout(errorWindowTimeout);
-  errorWindowTimeout = setTimeout(() => errorWindow.hide(), 3000);
+  errorWindowTimeout = setTimeout(() => {
+    errorGroup.hide();
+  }, 3000);
 }
 
 function enterLobbyPreview() {
@@ -230,15 +250,32 @@ function enterLobbyPreview() {
   });
 
   const title = createSpan(`Hola, ${session.player.nickname}`);
+  title.addClass("section-label");
   // Modo de juego de la sala que se va a crear (quien se une por código no elige: hereda el de la sala).
   const modeLabel = createSpan("SELECCIONA EL MODO DE JUEGO");
+  modeLabel.addClass("section-label");
   const mode = createSelect();
   mode.id("lobby-mode");
   mode.addClass("menu-input");
   mode.attribute("aria-label", "Modo de juego");
   for (const [value, label] of Object.entries(MODE_LABELS)) mode.option(label, value);
   mode.selected("CLASSIC");
-  mode.changed(() => loadRanking(mode.value()));
+  mode.changed(() => {
+    if (rankingPanel && rankingPanel.elt.style.display !== "none") loadRanking(mode.value());
+  });
+
+  rankingButton = createButton("Ver rankings");
+  rankingButton.addClass("ranking-image-button");
+  rankingButton.attribute("aria-label", "Ver rankings");
+  rankingButton.mousePressed(() => {
+    if (rankingPanel.elt.style.display === "none") {
+      rankingPanel.show();
+      loadRanking(mode.value());
+    } else {
+      rankingPanel.hide();
+    }
+  });
+
   const create = createButton("CRéAR SALA");
   create.addClass("menu-navigation-button");
   create.mousePressed(() => joinLobby(() => api("POST", "/lobbies", { mode: mode.value() })));
@@ -268,25 +305,35 @@ function enterLobbyPreview() {
   const status = createSpan("");
   status.id("menu-status");
 
-  for (const el of [title, modeLabel, mode, create, code, join, seats, fillBots, start, status]) {
-    menuContainer.child(el);
-  }
-
   rankingPanel = createDiv("");
   rankingPanel.addClass("ranking-panel");
-  loadRanking(mode.value());
+  rankingPanel.hide();
+
+  for (const el of [title, modeLabel, mode, create, code, join, rankingButton, rankingPanel, seats, fillBots, start, status]) {
+    menuContainer.child(el);
+  }
 }
 
 // Ratings Service (/api/ratings/, ver docs/ratings-service.md): ranking del modo elegido.
 // Si el servicio no responde, el menú sigue funcionando: solo se avisa en el panel.
 async function loadRanking(mode) {
   const panel = rankingPanel.elt;
+  clearTimeout(rankingMessageTimeout);
+  panel.replaceChildren(rankingLine("p", "Cargando rankings..."));
   try {
     const [board, mine] = await Promise.all([
       api("GET", `/ratings/leaderboard?mode=${mode}&limit=10`),
       session.account ? api("GET", `/ratings/players/${session.account.id}`) : null,
     ]);
-    panel.replaceChildren(rankingLine("h3", `Ranking · ${MODE_LABELS[mode]}`), rankingTable(board.players), myRatingLine(mine, mode));
+    const players = Array.isArray(board.players) ? board.players : [];
+    panel.replaceChildren(
+      rankingLine("h3", `Ranking · ${MODE_LABELS[mode]}`),
+      rankingTable(players),
+      myRatingLine(mine, mode)
+    );
+    if (players.length === 0) {
+      rankingMessageTimeout = setTimeout(() => rankingPanel.hide(), 5000);
+    }
   } catch (err) {
     panel.replaceChildren(rankingLine("p", "El ranking no está disponible por ahora."));
   }
@@ -299,7 +346,7 @@ function rankingLine(tag, text) {
 }
 
 function rankingTable(players) {
-  if (players.length === 0) return rankingLine("p", "Aún no hay partidas puntuadas.");
+  if (players.length === 0) return rankingLine("p", "Aún no hay rankings disponibles.");
   const table = document.createElement("table");
   const headers = ["#", "Jugador", "Puntos", "Partidas", "Victorias"];
   const rows = players.map((p) => [p.position, p.nickname, p.rating, p.games, p.wins]);

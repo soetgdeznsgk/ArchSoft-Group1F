@@ -45,8 +45,15 @@ function applyView(view) {
     document.getElementById("round-target").textContent = view.spec.melds.map((k) => meldNames[k]).join(" y ");
   }
   if (view.final) {
-    say(`Partida terminada. Gana: ${view.final.winners.map(nameOf).join(", ")}`);
+    game.finished = true;
+    const winners = view.final.winners.map(nameOf);
+    say(
+      winners.length
+        ? `¡Juego finalizado! Ganador: ${winners.join(", ")}`
+        : "¡Juego finalizado! No hubo ganador."
+    );
   } else if (view.current_turn) {
+    game.finished = false;
     say(view.current_turn === view.you ? "Es tu turno." : `Turno de ${nameOf(view.current_turn)}.`);
   } else {
     updateInterface();
