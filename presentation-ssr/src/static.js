@@ -1,6 +1,9 @@
 const { stat } = require("node:fs/promises");
 const { createReadStream } = require("node:fs");
 const path = require("node:path");
+const { createGzip } = require("node:zlib");
+
+const COMPRESSIBLE = new Set([".css", ".html", ".js", ".svg"]);
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -12,7 +15,7 @@ const CONTENT_TYPES = {
   ".svg": "image/svg+xml",
 };
 
-async function serveStatic(pathname, publicRoot, response, method) {
+async function serveStatic(pathname, publicRoot, response, method, acceptEncoding = "") {
   if (!pathname.startsWith("/libraries/") &&
       !pathname.startsWith("/menu/") &&
       !pathname.startsWith("/ingame/") &&
@@ -32,17 +35,19 @@ async function serveStatic(pathname, publicRoot, response, method) {
   }
   if (!fileInfo.isFile()) return false;
 
-  const contentType = CONTENT_TYPES[path.extname(filePath).toLowerCase()] ||
-    "application/octet-stream";
-  response.writeHead(200, {
-    "Content-Type": contentType,
-    "Cache-Control": "no-cache",
-  });
+  const extension = path.extname(filePath).toLowerCase();
+  const contentType = CONTENT_TYPES[extension] || "application/octet-stream";
+  const gzip = COMPRESSIBLE.has(extension) && /\bgzip\b/.test(acceptEncoding);
+  const headers = { "Content-Type": contentType, "Cache-Control": "no-cache", Vary: "Accept-Encoding" };
+  if (gzip) headers["Content-Encoding"] = "gzip";
+  response.writeHead(200, headers);
   if (method === "HEAD") {
     response.end();
     return true;
   }
-  createReadStream(filePath).pipe(response);
+  const stream = createReadStream(filePath);
+  if (gzip) stream.pipe(createGzip()).pipe(response);
+  else stream.pipe(response);
   return true;
 }
 

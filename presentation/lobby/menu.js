@@ -329,15 +329,29 @@ function enterLobbyPreview() {
   }
 }
 
+// Ranking del modo clásico que el servidor SSR ya insertó en el HTML (presentation-ssr/src/views.js).
+// Se usa una sola vez: la primera apertura del panel no vuelve a consultar a Ratings.
+let ssrLeaderboard = readSsrLeaderboard();
+
+function readSsrLeaderboard() {
+  try {
+    return JSON.parse(document.getElementById("ssr-data")?.textContent || "{}").leaderboard || null;
+  } catch {
+    return null;
+  }
+}
+
 // Ratings Service (/api/ratings/, ver docs/ratings-service.md): ranking del modo elegido.
 // Si el servicio no responde, el menú sigue funcionando: solo se avisa en el panel.
 async function loadRanking(mode) {
   const panel = rankingPanel.elt;
   clearTimeout(rankingMessageTimeout);
   panel.replaceChildren(rankingLine("p", "Cargando rankings..."));
+  const preloaded = mode === "CLASSIC" ? ssrLeaderboard : null;
+  ssrLeaderboard = null;
   try {
     const [board, mine] = await Promise.all([
-      api("GET", `/ratings/leaderboard?mode=${mode}&limit=10`),
+      preloaded || api("GET", `/ratings/leaderboard?mode=${mode}&limit=10`),
       session.account ? api("GET", `/ratings/players/${session.account.id}`) : null,
     ]);
     const players = Array.isArray(board.players) ? board.players : [];
