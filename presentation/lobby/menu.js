@@ -36,7 +36,8 @@ function draw() {
             drawStart();
             break;
         case "LOBBY_PREVIEW":
-            drawLobbyPreview();
+            print("Entered lobby preview state")
+            //drawLobbyPreview();
             break;
         default:
             throw new Error("Menu was given an invalid state");
@@ -182,21 +183,35 @@ async function connectSession(nickname) {
 }
 
 async function authenticate(action, username, password) {
-  if (!username || !password) {
-    showAuthError("FíLL THE FIéLDS!");
+  const normalizedUsername = username.trim();
+  if (!/^[A-Za-z0-9_.-]+$/.test(normalizedUsername)) {
+    showAuthError("USERNAMé debe estar escrito usando letras, números, punto, guion o guion bajo.");
+    return;
+  }
+  if (normalizedUsername.length < 3 || normalizedUsername.length > 20) {
+    showAuthError("USERNAMé debe tener entre 3 y 20 carácteres");
+    return
+  }
+  const passwordBytes = new TextEncoder().encode(password).length;
+  if (passwordBytes < 8) {
+    showAuthError("La contraseña debe tener al menos 8 caracteres");
+    return;
+  }
+  if (passwordBytes > 72) {
+    showAuthError("La contraseña es demasiado larga");
     return;
   }
   try {
     const response = await fetch(`/auth/${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: username.trim(), password }),
+      body: JSON.stringify({ username: normalizedUsername, password }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || `Error ${response.status}`);
     beginSession(data);
   } catch (err) {
-    showAuthError(err.message);
+    showAuthError("Servidor :" + err.message);
   }
 }
 
