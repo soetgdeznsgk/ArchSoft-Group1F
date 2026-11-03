@@ -74,7 +74,8 @@ flowchart TB
     TR -->|"/api/ (REST + SSE)"| LM
     TR -->|"/ws/games/ (WebSocket)"| GL
     LM -->|"/internal/games en :8081"| GL
-    GL -->|"/internal/lobbies/.../result en :8000"| LM
+    GL -->|"game.ended (AMQP :5672)"| MQ["rabbitmq"]
+    LM -->|"consume lobby.game-ended"| MQ
     LM --> PG
     GL --> RD
 ```
@@ -329,7 +330,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 | G3 | Ruta `/ws/games/{gameId}` con el prefijo completo | Traefik no recorta el prefijo (§4) |
 | G4 | `GET /healthz` en 8081 | `200 {"status":"ok","redis":"ok"}` o `503` si Redis no responde ([diseño §7.2](game-logic-design.md#72-internal-rest-api-go)) |
 | G5 | Flag `-healthcheck` en el binario | La imagen distroless no tiene shell ni `curl`. `/app -healthcheck` hace `GET http://127.0.0.1:8081/healthz` y sale con 0 o 1. Compose usará `test: ["CMD", "/app", "-healthcheck"]` |
-| G6 | Leer configuración del entorno | `WS_PORT`, `INTERNAL_PORT`, `REDIS_URL` (`redis://:${REDIS_PASSWORD}@redis:6379/0`), `JWT_SECRET`, `SERVICE_SECRET`, `LOBBY_CALLBACK_URL` (`http://lobby-manager:8000`), `ALLOWED_ORIGINS` (`http://localhost`) |
+| G6 | Leer configuración del entorno | `WS_PORT`, `INTERNAL_PORT`, `REDIS_URL` (`redis://:${REDIS_PASSWORD}@redis:6379/0`), `JWT_SECRET`, `SERVICE_SECRET`, `RABBITMQ_URL` (`amqp://...@rabbitmq:5672/`), `ALLOWED_ORIGINS` (`http://localhost`) |
 | G7 | No registrar la URL con el token | El JWT viaja en `?token=`; no imprimir la URL completa en los logs propios |
 | G8 | Reintentar la conexión a Redis | `depends_on` solo garantiza Redis al arrancar |
 
@@ -346,7 +347,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 | L7 | Configuración desde el entorno | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, host `postgres`, puerto `5432`; `JWT_SECRET`, `SERVICE_SECRET`; `GAME_LOGIC_URL` (`http://game-logic:8081`). Confirmar si prefieren una sola `DATABASE_URL` |
 | L8 | Esquema de la base | Decidir: scripts `.sql` en `lobby-manager/` montados en `/docker-entrypoint-initdb.d` (solo se ejecutan con el volumen vacío) o creación desde la aplicación (SQLAlchemy / Alembic) |
 | L9 | Reintentar la conexión a PostgreSQL | `depends_on` solo garantiza Postgres al arrancar |
-| L10 | Callback idempotente | `POST /internal/lobbies/{lobbyId}/result` con `X-Service-Token`, idempotente por `gameId` (RNF-04, [diseño §7.6](game-logic-design.md#76-result-callback-go--python)) |
+| L10 | Resultado idempotente | Consumo de `game.ended` desde RabbitMQ (cola `lobby.game-ended`), idempotente por `gameId` (RNF-04, [diseño §7.6](game-logic-design.md#76-result-event-gameended-go--rabbitmq--python)) |
 
 ### 12.3 Presentación (p5.js)
 

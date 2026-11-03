@@ -6,7 +6,7 @@ import json
 
 import jwt
 
-from .conftest import JWT_SECRET, SERVICE_HEADERS
+from .conftest import JWT_SECRET
 
 
 async def test_sin_cuerpo_la_sala_es_clasica(ctx):
@@ -91,7 +91,7 @@ async def test_resultado_del_camaleon_se_guarda_con_sus_posiciones(ctx):
             {"player": users[1].id, "colors": 0, "rank": 3},
         ],
     }
-    r = await ctx.client.post(f"/internal/lobbies/{lobby['id']}/result", json=body, headers=SERVICE_HEADERS)
+    r = await ctx.report_result(lobby["id"], body)
     assert r.status_code == 200 and r.json()["recorded"] is True
     row = await ctx.pool.fetchrow("SELECT winner_id, end_reason, payload FROM game_results WHERE game_id = $1", game_id)
     assert (row["winner_id"], row["end_reason"]) == (users[2].id, "all_colors")

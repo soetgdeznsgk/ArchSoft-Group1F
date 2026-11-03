@@ -3,7 +3,8 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"io"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,42 +17,48 @@ import (
 	redisstore "github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/store/redis"
 )
 
-// fakeLobby recibe el callback del resultado final.
-type fakeLobby struct {
-	mu     sync.Mutex
-	bodies []map[string]any
-	got    chan struct{}
+// fakeResults hace las veces de RabbitMQ: guarda cada game.ended publicado.
+type fakeResults struct {
+	mu       sync.Mutex
+	bodies   []map[string]any
+	got      chan struct{}
+	failures int
 }
 
-func newFakeLobby(t *testing.T) (*fakeLobby, *httptest.Server) {
-	lobby := &fakeLobby{got: make(chan struct{}, 4)}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Service-Token") != "service-secret" || !strings.HasSuffix(r.URL.Path, "/internal/lobbies/lobby_1/result") {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		var body map[string]any
-		data, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(data, &body)
-		lobby.mu.Lock()
-		lobby.bodies = append(lobby.bodies, body)
-		lobby.mu.Unlock()
-		lobby.got <- struct{}{}
-		w.WriteHeader(http.StatusOK)
-	}))
-	t.Cleanup(srv.Close)
-	return lobby, srv
+func newFakeResults() *fakeResults {
+	return &fakeResults{got: make(chan struct{}, 4)}
 }
 
-func chameleonApp(store StateStore, lobbyURL string, duration time.Duration) *App {
-	app := testApp(store)
-	app.cfg.LobbyCallbackURL = lobbyURL
+func (f *fakeResults) PublishResult(_ context.Context, gameID string, body []byte) error {
+	f.mu.Lock()
+	if f.failures > 0 {
+		f.failures--
+		f.mu.Unlock()
+		return errors.New("broker caído")
+	}
+	f.mu.Unlock()
+	var event map[string]any
+	if err := json.Unmarshal(body, &event); err != nil {
+		return err
+	}
+	if event["gameId"] != gameID {
+		return fmt.Errorf("message id %q does not match gameId %v", gameID, event["gameId"])
+	}
+	f.mu.Lock()
+	f.bodies = append(f.bodies, event)
+	f.mu.Unlock()
+	f.got <- struct{}{}
+	return nil
+}
+
+func chameleonApp(store StateStore, duration time.Duration) (*App, *fakeResults) {
+	app, results := testAppWithResults(store)
 	app.cfg.Chameleon = chameleon.Config{
 		GameDuration: duration, SpawnMin: 20 * time.Millisecond, SpawnMax: 40 * time.Millisecond,
 		CardLifetimeMin: 600 * time.Millisecond, CardLifetimeMax: 600 * time.Millisecond,
 		MaxBoardCards: 8, ChameleonChance: chameleon.NoChameleons,
 	}
-	return app
+	return app, results
 }
 
 func chameleonBody(t *testing.T, mode string, players []redisstore.Player) string {
@@ -146,11 +153,10 @@ func TestCreateGameWithoutModeIsClassic(t *testing.T) {
 }
 
 // Flujo completo por WebSocket: espera, inicio, robo de la misma carta, fin
-// con los 8 colores y callback al Lobby con el resultado del modo.
+// con los 8 colores y publicación de game.ended con el resultado del modo.
 func TestChameleonGameOverWebSocket(t *testing.T) {
 	store := newMemoryStore()
-	lobby, lobbySrv := newFakeLobby(t)
-	app := chameleonApp(store, lobbySrv.URL, time.Minute)
+	app, lobby := chameleonApp(store, time.Minute)
 	srv := httptest.NewServer(app.Handler())
 	defer srv.Close()
 	defer app.closeClients()
@@ -218,13 +224,14 @@ func TestChameleonGameOverWebSocket(t *testing.T) {
 	select {
 	case <-lobby.got:
 	case <-time.After(5 * time.Second):
-		t.Fatal("no llegó el resultado al Lobby")
+		t.Fatal("no se publicó game.ended")
 	}
 	lobby.mu.Lock()
 	body := lobby.bodies[0]
 	lobby.mu.Unlock()
-	if body["mode"] != ModeChameleon || body["endReason"] != "all_colors" || body["winnerId"] != "p_1" || body["gameId"] != "game_1" {
-		t.Fatalf("callback: %v", body)
+	if body["mode"] != ModeChameleon || body["endReason"] != "all_colors" || body["winnerId"] != "p_1" ||
+		body["gameId"] != "game_1" || body["lobbyId"] != "lobby_1" || body["finishedAt"] == "" {
+		t.Fatalf("game.ended: %v", body)
 	}
 	standings := body["standings"].([]any)
 	if first := standings[0].(map[string]any); first["player"] != "p_1" || first["colors"] != float64(8) || first["rank"] != float64(1) {
@@ -240,8 +247,7 @@ func TestChameleonGameOverWebSocket(t *testing.T) {
 
 // Sin nadie que complete los colores, la partida termina por tiempo.
 func TestChameleonTimeUpReportsResult(t *testing.T) {
-	lobby, lobbySrv := newFakeLobby(t)
-	app := chameleonApp(newMemoryStore(), lobbySrv.URL, 300*time.Millisecond)
+	app, lobby := chameleonApp(newMemoryStore(), 300*time.Millisecond)
 	srv := httptest.NewServer(app.Handler())
 	defer srv.Close()
 	defer app.closeClients()
@@ -255,19 +261,43 @@ func TestChameleonTimeUpReportsResult(t *testing.T) {
 	select {
 	case <-lobby.got:
 	case <-time.After(5 * time.Second):
-		t.Fatal("no llegó el resultado al Lobby")
+		t.Fatal("no se publicó game.ended")
 	}
 	lobby.mu.Lock()
 	defer lobby.mu.Unlock()
 	if body := lobby.bodies[0]; body["endReason"] != "time_up" || body["winnerId"] != nil {
-		t.Fatalf("callback: %v", body)
+		t.Fatalf("game.ended: %v", body)
 	}
+}
+
+// Si RabbitMQ no confirma, el resultado se reintenta y la partida no se marca
+// terminada en Redis hasta que el broker lo acepte.
+func TestResultIsRetriedUntilBrokerConfirms(t *testing.T) {
+	store := newMemoryStore()
+	app, results := chameleonApp(store, 300*time.Millisecond)
+	results.failures = 1
+	srv := httptest.NewServer(app.Handler())
+	defer srv.Close()
+	defer app.closeClients()
+	createRequest(app.Handler(), chameleonBody(t, ModeChameleon, testPlayers()[:2]), "service-secret")
+	ana := dial(t, srv, "p_1")
+	dial(t, srv, "p_2")
+	readUntil(t, ana, isType("game_ended"))
+	if status := store.get("game_1").Status; status == "finished" {
+		t.Fatalf("la partida se marcó terminada antes de publicar el resultado")
+	}
+	select {
+	case <-results.got:
+	case <-time.After(5 * time.Second):
+		t.Fatal("no se reintentó la publicación de game.ended")
+	}
+	waitFor(t, func() bool { return store.get("game_1").Status == "finished" })
 }
 
 // Tras un reinicio, la partida en curso se restaura con el motor de su modo.
 func TestRestoreActiveChameleonGame(t *testing.T) {
 	store := newMemoryStore()
-	app := chameleonApp(store, "http://127.0.0.1:1", time.Minute)
+	app, _ := chameleonApp(store, time.Minute)
 	srv := httptest.NewServer(app.Handler())
 	createRequest(app.Handler(), chameleonBody(t, ModeChameleon, testPlayers()[:3]), "service-secret")
 	ana := dial(t, srv, "p_1")
@@ -285,7 +315,7 @@ func TestRestoreActiveChameleonGame(t *testing.T) {
 	if mode := store.get("game_1").Mode; mode != ModeChameleon {
 		t.Fatalf("modo en el registro: %q", mode)
 	}
-	restored := chameleonApp(store, "http://127.0.0.1:1", time.Minute)
+	restored, _ := chameleonApp(store, time.Minute)
 	if err := restored.RestoreActive(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +329,7 @@ func TestRestoreActiveChameleonGame(t *testing.T) {
 	}
 	// Un registro con un modo inválido detiene el arranque en lugar de corromper la partida.
 	store.put(redisstore.Record{GameID: "game_2", LobbyID: "lobby_2", Mode: "POKER", Players: testPlayers(), Snapshot: []byte("{}")})
-	if err := chameleonApp(store, "", time.Minute).RestoreActive(context.Background()); err == nil {
+	if broken, _ := chameleonApp(store, time.Minute); broken.RestoreActive(context.Background()) == nil {
 		t.Fatal("se esperaba error por modo desconocido")
 	}
 }

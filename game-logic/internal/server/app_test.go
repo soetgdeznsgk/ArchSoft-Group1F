@@ -286,11 +286,17 @@ func readView(t *testing.T, conn *websocket.Conn, expectedPlayer string) testVie
 }
 
 func testApp(store StateStore) *App {
+	app, _ := testAppWithResults(store)
+	return app
+}
+
+func testAppWithResults(store StateStore) (*App, *fakeResults) {
+	results := newFakeResults()
 	return New(Config{
 		ListenAddr: ":0", JWTSecret: []byte("jwt-secret"), ServiceSecret: []byte("service-secret"),
-		LobbyCallbackURL: "http://127.0.0.1:1", TickInterval: 10 * time.Millisecond,
-		RoundPause: 10 * time.Millisecond, StoreTimeout: time.Second, CallbackTimeout: time.Second,
-	}, store, slog.New(slog.NewTextHandler(io.Discard, nil)))
+		TickInterval: 10 * time.Millisecond, RoundPause: 10 * time.Millisecond,
+		StoreTimeout: time.Second, PublishTimeout: time.Second,
+	}, store, results, slog.New(slog.NewTextHandler(io.Discard, nil))), results
 }
 
 func testPlayers() []redisstore.Player {

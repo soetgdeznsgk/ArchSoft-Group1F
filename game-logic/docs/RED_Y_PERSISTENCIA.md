@@ -77,16 +77,17 @@ cambios posteriores al último snapshot exitoso.
 
 ## Resultado y configuración
 
-Al llegar `game_ended`, Go publica el `FinalResult` al Lobby en
-`POST /internal/lobbies/{lobbyId}/result`, usando el mismo `gameId` para que
-los reintentos sean idempotentes. Se reintentan errores de red y HTTP 5xx con
-backoff exponencial; la partida permanece activa en Redis hasta que el Lobby
-acepta el resultado.
+Al llegar `game_ended`, Go publica el `FinalResult` como evento `game.ended`
+en RabbitMQ (exchange `bololo.events`), con `message_id` igual al `gameId` para
+que los reintentos sean idempotentes. Go no conoce al Lobby: el Lobby consume el
+evento de su propia cola. La publicación cuenta solo cuando el broker la
+confirma y la dejó en alguna cola; si no, se reintenta con backoff exponencial y
+la partida permanece activa en Redis hasta que se confirme.
 
-Variables requeridas: `REDIS_URL`, `JWT_SECRET` y `SERVICE_SECRET`. Opcionales:
-`GAME_LOGIC_ADDR` (`:8081`), `REDIS_KEY_PREFIX`, `LOBBY_CALLBACK_URL`,
+Variables requeridas: `REDIS_URL`, `JWT_SECRET`, `SERVICE_SECRET` y
+`RABBITMQ_URL`. Opcionales: `GAME_LOGIC_ADDR` (`:8081`), `REDIS_KEY_PREFIX`,
 `ALLOWED_ORIGINS`, `TICK_INTERVAL`, `ROUND_PAUSE`, `REDIS_WRITE_TIMEOUT` y
-`LOBBY_CALLBACK_TIMEOUT`. Use secretos generados en el entorno, no los guarde
+`RESULT_PUBLISH_TIMEOUT`. Use secretos generados en el entorno, no los guarde
 en Git. Para desarrollo aislado se puede usar `compose.dev.yaml`; publica el
 servicio solo en loopback y no publica el puerto de Redis.
 

@@ -51,9 +51,10 @@ sequenceDiagram
     LM-->>P: event: game_starting {gameId, wsPath, token} (a cada jugador el suyo)
     P->>GO: WebSocket /ws/games/{gameId}?token=
     Note over P,GO: la partida la maneja Game Logic
-    GO->>LM: POST /internal/lobbies/{lobbyId}/result
+    GO->>MQ: game.ended (exchange bololo.events)
+    MQ->>LM: cola lobby.game-ended
     LM->>PG: resultado (una sola vez) y sala CLOSED
-    LM-->>GO: 200 {recorded}
+    LM-->>MQ: ack
     LM-->>P: event: lobby_closed
 ```
 
@@ -216,36 +217,39 @@ Uno por jugador, firmado con `JWT_SECRET` y algoritmo HS256. Llega al cliente po
 
 Vence a las 2 horas. Si el cliente vuelve a pedir la sala, recibe un token nuevo, igual de válido. El token de **sesión** del Lobby usa el mismo secreto pero no trae `gameId` ni `playerId`, así que Go lo rechaza de forma natural al validar esos campos.
 
-### 3.3 Lo que el Lobby espera: `POST /internal/lobbies/{lobbyId}/result`
+### 3.3 Lo que el Lobby consume: evento `game.ended`
+
+Go ya no llama al Lobby. Publica el resultado en RabbitMQ (exchange `bololo.events`, tópico, durable; clave `game.ended`) y el Lobby lo consume de la cola durable `lobby.game-ended`. Así entre los dos servicios solo queda una dependencia: el Lobby crea la partida en Go (`POST /internal/games`). El detalle del lado de Go está en [game-logic-design.md §7.6](game-logic-design.md#76-result-event-gameended-go--rabbitmq--python).
 
 ```json
 {
   "gameId": "g_7f3a9c1e2b4d",
+  "lobbyId": "l_81c2d3e4f5a6",
+  "mode": "CLASSIC",
   "winnerId": "p_81c2d3e4f5a6",
   "winners": ["p_81c2d3e4f5a6"],
-  "endReason": "WIN",
-  "standings": [ { "player": "p_81c2d3e4f5a6", "points": 4, "rounds_won": 3, "last_round_points": 0, "rank": 1 } ]
+  "endReason": "completed",
+  "standings": [ { "player": "p_81c2d3e4f5a6", "points": 4, "rounds_won": 3, "last_round_points": 0, "rank": 1 } ],
+  "finishedAt": "2026-11-03T22:00:00Z"
 }
 ```
 
 | Campo | Obligatorio | Notas |
 |---|---|---|
 | `gameId` | Sí | Debe ser el de esa sala |
+| `lobbyId` | Sí | Sala a la que pertenece la partida |
 | `winnerId` | No | Ganador único |
-| `winners` | No | Lista de ganadores, como en `FinalResult.Winners`. Si trae uno solo, se toma como `winnerId`. Con varios (empate persistente) no se guarda ganador único |
+| `winners` | No | Lista de ganadores. Si trae uno solo, se toma como `winnerId`. Con varios (empate persistente) no se guarda ganador único |
 | `endReason` | No | Texto libre |
-| cualquier otro | No | Se guarda completo en `game_results.payload`. Se puede enviar `FinalResult` tal cual |
+| cualquier otro | No | Se guarda completo en `game_results.payload` |
 
-| Respuesta | Cuándo |
+| Resultado | Qué hace el consumidor |
 |---|---|
-| `200 {"gameId", "lobbyId", "recorded": true}` | Resultado registrado; la sala se cierra y libera su cupo |
-| `200 {..., "recorded": false}` | Ya estaba registrado. **Reintentar es seguro**: nunca se registra dos veces y se conserva el primero (RNF-04) |
-| `401` | Falta `X-Service-Token` o es incorrecto |
-| `404` | La sala no existe |
-| `409` | El `gameId` no es el de esa sala |
-| `422` | Falta `gameId`, o un ganador no pertenece a la sala |
+| Registrado, o ya estaba registrado | `ack`. **Repetir el evento es seguro**: nunca se registra dos veces y se conserva el primero (RNF-04) |
+| La sala no existe, el `gameId` no es el de esa sala, un ganador no pertenece a la sala o el JSON es inválido | `reject` sin reencolar: pasa a `lobby.game-ended.dead` (exchange `lobby.dead`) para que no bloquee a los demás |
+| PostgreSQL no responde | `nack` con reencolado: se reintenta |
 
-Solo conviene reintentar ante errores de red o `5xx`; un `4xx` indica un error en la petición.
+El código está en [`app/result_consumer.py`](../lobby-manager/app/result_consumer.py).
 
 ### 3.4 Probar sin el otro lado
 

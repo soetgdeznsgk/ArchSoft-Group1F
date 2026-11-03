@@ -7,7 +7,7 @@ from dataclasses import replace
 
 import jwt
 
-from .conftest import JWT_SECRET, SERVICE_HEADERS, make_settings, running
+from .conftest import JWT_SECRET, make_settings, running
 from .test_result import result_body
 
 
@@ -93,7 +93,7 @@ async def test_el_resultado_avisa_el_cierre_y_termina_el_stream(ctx):
     async with ctx.events(users[0], lobby["id"]) as stream:
         await stream.next_named("game_starting")
         body = result_body(lobby, users)
-        await ctx.client.post(f"/internal/lobbies/{lobby['id']}/result", json=body, headers=SERVICE_HEADERS)
+        await ctx.report_result(lobby["id"], body)
 
         name, data = await stream.next()
         assert name == "lobby_closed"

@@ -16,8 +16,12 @@ import httpx
 import pytest
 import uvicorn
 
+from pydantic import ValidationError
+
 from app.config import Settings
+from app.errors import ApiError
 from app.main import create_app
+from app.result_consumer import apply_game_ended
 
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 JWT_SECRET = "secreto-jwt-solo-para-pruebas-0123456789abcdef"
@@ -108,6 +112,21 @@ class FakeBroker:
         pass
 
 
+@dataclass
+class Reply:
+    """Resultado de entregar un game.ended, con la misma forma que una respuesta HTTP del Lobby."""
+
+    status_code: int
+    body: dict
+
+    def json(self) -> dict:
+        return self.body
+
+    @property
+    def text(self) -> str:
+        return json.dumps(self.body)
+
+
 class Ctx:
     def __init__(
         self, app, client: httpx.AsyncClient, game: FakeGameLogic, settings: Settings, broker: FakeBroker
@@ -121,6 +140,17 @@ class Ctx:
     @property
     def pool(self):
         return self.app.state.pool
+
+    async def report_result(self, lobby_id: str, body: dict) -> Reply:
+        """Entrega un game.ended como lo haría RabbitMQ, por el mismo camino que usa el consumidor."""
+        message = json.dumps({**body, "lobbyId": lobby_id}).encode()
+        try:
+            result = await apply_game_ended(self.app.state.service, message)
+        except ApiError as exc:
+            return Reply(exc.status, {"code": exc.code, "message": exc.message})
+        except ValidationError as exc:
+            return Reply(422, {"code": "invalid_request", "message": str(exc)})
+        return Reply(200, result.model_dump(by_alias=True))
 
     async def login(self, nickname: str) -> User:
         r = await self.client.post("/api/session", json={"nickname": nickname})

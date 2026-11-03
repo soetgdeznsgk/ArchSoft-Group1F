@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/broker"
 	"github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/server"
 	redisstore "github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/store/redis"
 )
@@ -59,7 +60,14 @@ func run(logger *slog.Logger) error {
 		time.Sleep(time.Second)
 	}
 
-	app := server.New(cfg, store, logger)
+	results := broker.NewPublisher(cfg.RabbitMQURL)
+	defer func() {
+		if err := results.Close(); err != nil {
+			logger.Error("close RabbitMQ connection", "error", err)
+		}
+	}()
+
+	app := server.New(cfg, store, results, logger)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := app.Run(ctx); err != nil {

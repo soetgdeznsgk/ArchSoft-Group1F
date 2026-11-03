@@ -122,7 +122,7 @@ En este modo **todas las manos son públicas**: cada jugador ve las cartas de to
 | Iniciar | Desde 2 jugadores (`minPlayers`), máximo 4 (`maxPlayers`) |
 | Lobby → Go | `POST /internal/games {gameId, lobbyId, mode: "CHAMELEON", players}` |
 | Cliente | `game.mode` (respuesta de `/start` y evento SSE `game_starting`) decide la pantalla: `/chameleon/` |
-| Go → Lobby | `POST /internal/lobbies/{id}/result {gameId, mode, winnerId?, winners, endReason, standings}`. El Lobby lo guarda en `game_results.payload` |
+| Go → RabbitMQ → Lobby | Evento `game.ended {gameId, lobbyId, mode, winnerId?, winners, endReason, standings, finishedAt}`. El Lobby lo consume y lo guarda en `game_results.payload` |
 | Redis | Hash `bololo:game:{gameId}` con el campo `mode` además del `snapshot` |
 | Gateway | Sin rutas nuevas: reutiliza `/api/`, `/ws/games/` y `/` (frontend) |
 

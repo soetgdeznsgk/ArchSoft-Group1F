@@ -22,15 +22,13 @@ from .schemas import (
     LobbySummary,
     MeOut,
     Player,
-    ResultIn,
-    ResultOut,
     SessionIn,
     SessionOut,
 )
 from .service import LobbyService, game_starting_event, lobby_event
 
 public = APIRouter(prefix="/api")
-internal = APIRouter(prefix="/internal", tags=["interno (Game Logic)"])
+internal = APIRouter(prefix="/internal", tags=["interno (Auth Service)"])
 
 bearer = HTTPBearer(auto_error=False, description="Token de sesión devuelto por POST /api/session.")
 
@@ -209,19 +207,3 @@ async def _event_stream(request: Request, lobby_id: str, player_id: str) -> Asyn
             yield format_sse(*item)
     finally:
         events.unsubscribe(sub)
-
-
-# --- interno: resultado de la partida (RF-36, RNF-04) ------------------------
-
-
-@internal.post("/lobbies/{lobby_id}/result", responses=_error(401, 404, 409, 422))
-async def record_result(
-    lobby_id: str,
-    body: ResultIn,
-    request: Request,
-    service: Service,
-    x_service_token: Annotated[str | None, Header()] = None,
-) -> ResultOut:
-    """Go reporta el resultado final. Idempotente por `gameId`: un reintento responde 200 con `recorded: false`."""
-    security.check_service_token(request.app.state.settings, x_service_token)
-    return await service.record_result(lobby_id, body)

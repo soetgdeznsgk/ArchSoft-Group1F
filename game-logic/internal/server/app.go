@@ -39,12 +39,12 @@ type StateStore interface {
 }
 
 type App struct {
-	cfg        Config
-	store      StateStore
-	httpClient *http.Client
-	logger     *slog.Logger
-	ctx        context.Context
-	cancel     context.CancelFunc
+	cfg     Config
+	store   StateStore
+	results ResultPublisher
+	logger  *slog.Logger
+	ctx     context.Context
+	cancel  context.CancelFunc
 
 	mu       sync.RWMutex
 	games    map[string]*gameInstance
@@ -58,13 +58,13 @@ type gameInstance struct {
 	players []redisstore.Player
 	engine  engine
 
-	opMu            sync.Mutex
-	mu              sync.Mutex
-	clients         map[string]*wsClient
-	started         bool
-	cancel          context.CancelFunc
-	roundDue        time.Time
-	callbackRunning bool
+	opMu          sync.Mutex
+	mu            sync.Mutex
+	clients       map[string]*wsClient
+	started       bool
+	cancel        context.CancelFunc
+	roundDue      time.Time
+	resultRunning bool
 }
 
 type createGameRequest struct {
@@ -98,15 +98,19 @@ type gameStatusPlayer struct {
 	HandSize  int    `json:"handSize"`
 }
 
-func New(cfg Config, store StateStore, logger *slog.Logger) *App {
+// ResultPublisher entrega el resultado final de una partida (game.ended) a quien le interese.
+type ResultPublisher interface {
+	PublishResult(ctx context.Context, gameID string, body []byte) error
+}
+
+func New(cfg Config, store StateStore, results ResultPublisher, logger *slog.Logger) *App {
 	if logger == nil {
 		logger = slog.Default()
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &App{
-		cfg: cfg, store: store, logger: logger,
-		httpClient: &http.Client{Timeout: cfg.CallbackTimeout},
-		ctx:        ctx, cancel: cancel,
+		cfg: cfg, store: store, results: results, logger: logger,
+		ctx: ctx, cancel: cancel,
 		games:    make(map[string]*gameInstance),
 		failures: make(map[string]error),
 	}

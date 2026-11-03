@@ -26,7 +26,7 @@ async def finish(ctx, lobby: dict, ranking: list[str]) -> str:
         "endReason": "completed",
         "standings": [{"player": player, "points": i, "rank": i + 1} for i, player in enumerate(ranking)],
     }
-    r = await ctx.client.post(f"/internal/lobbies/{lobby['id']}/result", json=body, headers=SERVICE_HEADERS)
+    r = await ctx.report_result(lobby["id"], body)
     assert r.status_code == 200, r.text
     return game_id
 

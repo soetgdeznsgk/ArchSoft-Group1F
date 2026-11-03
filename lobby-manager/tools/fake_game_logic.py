@@ -1,27 +1,27 @@
 """Game Logic simulado, para probar el Lobby Manager mientras Go no tiene capa de red.
 
-Implementa lo mínimo del REST interno de Go (docs/game-logic-design.md §7.2 y §7.6):
+Implementa lo mínimo del lado de Go (docs/game-logic-design.md §7.2 y §7.6):
 
     POST /internal/games            acepta la partida (201; 200 si se repite el gameId)
-    POST /finish/{gameId}           envía el resultado al Lobby, como haría Go al terminar
+    POST /finish/{gameId}           publica game.ended en RabbitMQ, como haría Go al terminar
                                     (?winner=<playerId>; por defecto gana el primer jugador)
 
-Solo usa la biblioteca estándar:  python tools/fake_game_logic.py
-Variables: PORT (8081), SERVICE_SECRET, LOBBY_CALLBACK_URL (http://lobby-manager:8000).
+Necesita aio-pika (viene en la imagen del Lobby):  python tools/fake_game_logic.py
+Variables: PORT (8081), SERVICE_SECRET, RABBITMQ_URL.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
-import urllib.error
-import urllib.request
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 PORT = int(os.environ.get("PORT", "8081"))
 SERVICE_SECRET = os.environ.get("SERVICE_SECRET", "")
-LOBBY_CALLBACK_URL = os.environ.get("LOBBY_CALLBACK_URL", "http://lobby-manager:8000")
+RABBITMQ_URL = os.environ.get("RABBITMQ_URL", "amqp://bololo:dev-password@rabbitmq:5672/")
 
 games: dict[str, dict] = {}
 
@@ -52,8 +52,11 @@ class Handler(BaseHTTPRequestHandler):
             if game is None:
                 return self.reply(404, {"error": "partida desconocida"})
             winner = parse_qs(url.query).get("winner", [game["players"][0]["id"]])[0]
-            status, answer = send_result(game, winner)
-            return self.reply(200, {"callbackStatus": status, "callbackBody": answer})
+            try:
+                event = asyncio.run(publish_result(game, winner))
+            except Exception as exc:
+                return self.reply(502, {"error": f"no se pudo publicar game.ended: {exc!r}"})
+            return self.reply(200, {"published": event})
 
         self.reply(404, {"error": "not found"})
 
@@ -66,20 +69,32 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
 
-def send_result(game: dict, winner: str) -> tuple[int, dict]:
-    result = {"gameId": game["gameId"], "winnerId": winner, "winners": [winner], "endReason": "WIN"}
-    request = urllib.request.Request(
-        f"{LOBBY_CALLBACK_URL}/internal/lobbies/{game['lobbyId']}/result",
-        data=json.dumps(result).encode(),
-        headers={"Content-Type": "application/json", "X-Service-Token": SERVICE_SECRET},
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=5) as response:
-            return response.status, json.loads(response.read())
-    except urllib.error.HTTPError as exc:
-        return exc.code, json.loads(exc.read())
+async def publish_result(game: dict, winner: str) -> dict:
+    import aio_pika
+
+    event = {
+        "gameId": game["gameId"],
+        "lobbyId": game["lobbyId"],
+        "mode": game.get("mode") or "CLASSIC",
+        "winnerId": winner,
+        "winners": [winner],
+        "endReason": "WIN",
+        "finishedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    connection = await aio_pika.connect(RABBITMQ_URL)
+    async with connection:
+        channel = await connection.channel(publisher_confirms=True, on_return_raises=True)
+        exchange = await channel.declare_exchange("bololo.events", aio_pika.ExchangeType.TOPIC, durable=True)
+        message = aio_pika.Message(
+            json.dumps(event).encode(),
+            content_type="application/json",
+            delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+            message_id=event["gameId"],
+        )
+        await exchange.publish(message, routing_key="game.ended", mandatory=True)
+    return event
 
 
 if __name__ == "__main__":
-    print(f"Game Logic simulado en :{PORT}; resultados hacia {LOBBY_CALLBACK_URL}", flush=True)
+    print(f"Game Logic simulado en :{PORT}; resultados como game.ended en RabbitMQ", flush=True)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

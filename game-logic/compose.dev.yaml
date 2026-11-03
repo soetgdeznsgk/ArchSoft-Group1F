@@ -35,7 +35,7 @@ services:
       REDIS_KEY_PREFIX: "bololo:"
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in game-logic/.env}
       SERVICE_SECRET: ${SERVICE_SECRET:?Set SERVICE_SECRET in game-logic/.env}
-      LOBBY_CALLBACK_URL: "${LOBBY_CALLBACK_URL:-http://lobby-manager:8000}"
+      RABBITMQ_URL: "amqp://bololo:dev-password@rabbitmq:5672/"
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
     ports:
       - "127.0.0.1:${GAME_LOGIC_PORT:-18081}:8081"
@@ -44,12 +44,30 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "/app", "-healthcheck"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 10s
+
+  rabbitmq:
+    image: rabbitmq:3.13.7-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: bololo
+      RABBITMQ_DEFAULT_PASS: dev-password
+    ports:
+      - "127.0.0.1:15672:15672"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "5672"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
 
 networks:
   internal:

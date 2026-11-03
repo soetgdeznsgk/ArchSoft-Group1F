@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from collections import Counter
 
-from .conftest import SERVICE_HEADERS
 from .test_result import result_body
 
 
@@ -80,7 +79,7 @@ async def test_el_resultado_reintentado_en_paralelo_se_registra_una_vez(ctx):
 
     responses = await asyncio.gather(
         *(
-            ctx.client.post(f"/internal/lobbies/{lobby['id']}/result", json=body, headers=SERVICE_HEADERS)
+            ctx.report_result(lobby["id"], body)
             for _ in range(6)
         )
     )

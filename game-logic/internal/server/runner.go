@@ -1,13 +1,9 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"time"
 )
 
@@ -69,20 +65,20 @@ func (a *App) maybeStartNextRound(instance *gameInstance) {
 
 func (a *App) reportResult(instance *gameInstance) {
 	instance.mu.Lock()
-	if instance.callbackRunning {
+	if instance.resultRunning {
 		instance.mu.Unlock()
 		return
 	}
-	instance.callbackRunning = true
+	instance.resultRunning = true
 	instance.mu.Unlock()
 	go func() {
 		defer func() {
 			instance.mu.Lock()
-			instance.callbackRunning = false
+			instance.resultRunning = false
 			instance.mu.Unlock()
 		}()
-		if err := a.postResult(instance); err != nil {
-			a.logger.Error("report final game result to Lobby", "game_id", instance.id, "error", err)
+		if err := a.publishResult(instance); err != nil {
+			a.logger.Error("publish final game result", "game_id", instance.id, "error", err)
 			a.recordFailure(instance.id, err)
 			return
 		}
@@ -97,59 +93,46 @@ func (a *App) reportResult(instance *gameInstance) {
 	}()
 }
 
-func (a *App) postResult(instance *gameInstance) error {
+// gameEnded es el cuerpo del evento game.ended (docs/game-logic-design.md).
+type gameEnded struct {
+	GameID     string   `json:"gameId"`
+	LobbyID    string   `json:"lobbyId"`
+	Mode       string   `json:"mode"`
+	WinnerID   string   `json:"winnerId,omitempty"`
+	Winners    []string `json:"winners,omitempty"`
+	EndReason  string   `json:"endReason"`
+	Standings  any      `json:"standings"`
+	FinishedAt string   `json:"finishedAt"`
+}
+
+// publishResult publica game.ended. La partida solo se marca terminada en Redis
+// cuando RabbitMQ confirmó el mensaje; si Game Logic se reinicia antes,
+// RestoreActive lo vuelve a publicar y el Lobby lo descarta por gameId.
+func (a *App) publishResult(instance *gameInstance) error {
 	final := instance.engine.Final()
 	if final == nil {
 		return fmt.Errorf("game %q ended without a final result", instance.id)
 	}
-	// Las posiciones dependen del modo: puntos/rondas en CLASSIC, colores en CHAMELEON.
-	payload := struct {
-		GameID    string   `json:"gameId"`
-		Mode      string   `json:"mode"`
-		WinnerID  string   `json:"winnerId,omitempty"`
-		Winners   []string `json:"winners,omitempty"`
-		EndReason string   `json:"endReason"`
-		Standings any      `json:"standings"`
-	}{
-		GameID: instance.id, Mode: instance.mode, Winners: final.Winners, EndReason: final.EndReason,
-		Standings: final.Standings,
+	event := gameEnded{
+		GameID: instance.id, LobbyID: instance.lobbyID, Mode: instance.mode,
+		Winners: final.Winners, EndReason: final.EndReason, Standings: final.Standings,
+		FinishedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 	if len(final.Winners) == 1 {
-		payload.WinnerID = final.Winners[0]
+		event.WinnerID = final.Winners[0]
 	}
-	body, err := json.Marshal(payload)
+	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("marshal final result: %w", err)
 	}
-	endpoint, err := url.JoinPath(a.cfg.LobbyCallbackURL, "internal", "lobbies", url.PathEscape(instance.lobbyID), "result")
-	if err != nil {
-		return fmt.Errorf("build Lobby callback URL: %w", err)
-	}
 	var lastErr error
 	for attempt := 0; attempt < 6; attempt++ {
-		requestCtx, cancel := context.WithTimeout(a.ctx, a.cfg.CallbackTimeout)
-		request, err := http.NewRequestWithContext(requestCtx, http.MethodPost, endpoint, bytes.NewReader(body))
-		if err == nil {
-			request.Header.Set("Content-Type", "application/json")
-			request.Header.Set("X-Service-Token", string(a.cfg.ServiceSecret))
-			response, requestErr := a.httpClient.Do(request)
-			err = requestErr
-			if requestErr == nil {
-				_, _ = io.Copy(io.Discard, response.Body)
-				_ = response.Body.Close()
-				if response.StatusCode >= 200 && response.StatusCode < 300 {
-					cancel()
-					return nil
-				}
-				err = fmt.Errorf("Lobby callback returned HTTP %d", response.StatusCode)
-				if response.StatusCode < 500 {
-					cancel()
-					return err
-				}
-			}
-		}
+		ctx, cancel := context.WithTimeout(a.ctx, a.cfg.PublishTimeout)
+		lastErr = a.results.PublishResult(ctx, instance.id, body)
 		cancel()
-		lastErr = err
+		if lastErr == nil {
+			return nil
+		}
 		if attempt == 5 {
 			break
 		}
@@ -161,7 +144,7 @@ func (a *App) postResult(instance *gameInstance) error {
 			return a.ctx.Err()
 		}
 	}
-	return fmt.Errorf("result callback failed after retries: %w", lastErr)
+	return fmt.Errorf("result publication failed after retries: %w", lastErr)
 }
 
 func retryDelay(attempt int) time.Duration {

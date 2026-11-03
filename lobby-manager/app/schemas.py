@@ -93,7 +93,7 @@ class JoinByCodeIn(ApiModel):
 
 
 class ResultIn(ApiModel):
-    """Resultado que reporta Go. Los campos no listados se guardan tal cual en payload."""
+    """Resultado final de una partida. Los campos no listados se guardan tal cual en payload."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="allow")
 
@@ -101,6 +101,12 @@ class ResultIn(ApiModel):
     winner_id: str | None = None
     winners: list[str] = Field(default_factory=list, description="Más de uno solo si persiste el empate.")
     end_reason: str | None = None
+
+
+class GameEndedIn(ResultIn):
+    """Evento game.ended que publica Go en RabbitMQ: el resultado más la sala a la que pertenece."""
+
+    lobby_id: str
 
 
 class ResultOut(ApiModel):
