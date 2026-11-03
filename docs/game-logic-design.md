@@ -917,7 +917,7 @@ flowchart TB
             TR["traefik<br/>ports 80, 443<br/>also attached to internal"]
         end
         subgraph INT["network: internal (no published ports)"]
-            FE["frontend<br/>nginx, static P5.js bundle<br/>:80"]
+            FE["frontend<br/>Node.js SSR + P5.js assets<br/>:3000"]
             LM["lobby-manager<br/>Python, FastAPI + uvicorn<br/>:8000"]
             GL["game-logic<br/>Go binary<br/>:8080 ws, :8081 internal"]
             PG[("postgres<br/>:5432<br/>volume pg-data")]
@@ -942,7 +942,7 @@ Traefik is the only container on the `public` network and the only one with publ
 | Service | Image (pin exact tags) | Networks | Ports | Volumes | Depends on (healthy) |
 |---|---|---|---|---|---|
 | `traefik` | `traefik:v3.x` | public, internal | 80, 443 published | Docker socket (read-only), cert storage | none |
-| `frontend` | `nginx:alpine` + P5.js build | internal | 80 | none | none |
+| `frontend` | Node.js SSR + P5.js build | internal | 3000 | none | none |
 | `lobby-manager` | project image (Python 3.12) | internal | 8000 | none | `postgres` |
 | `game-logic` | project image (multi-stage Go build, distroless runtime) | internal | 8080, 8081 | none | `redis` |
 | `postgres` | `postgres:16` | internal | 5432 | `pg-data` | none |

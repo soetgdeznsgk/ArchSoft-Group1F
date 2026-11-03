@@ -9,7 +9,7 @@ El modo se elige al crear la sala. Cada componente de la vista C&C tiene su prop
 
 ```mermaid
 flowchart TB
-  P[presentation<br/>p5.js] -- "REST / SSE / WebSocket" --> G[api-gateway<br/>Traefik]
+  P[presentation SSR<br/>p5.js] -- "REST / SSE / WebSocket" --> G[api-gateway<br/>Traefik]
   G -- "REST, SSE" --> L[lobby-manager<br/>FastAPI]
   G -- "registro / login" --> A[auth-service<br/>Java / Spring Boot]
   G -- WebSocket --> GL[game-logic<br/>Go]
@@ -31,7 +31,8 @@ flowchart TB
 
 ```
 ArchSoft-Group1F/
-├── presentation/        Presentación web (p5.js)
+├── presentation/        Assets y clientes web (p5.js)
+├── presentation-ssr/    Servidor SSR de la presentación
 │   ├── libraries/       p5 compartido por todas las pantallas
 │   ├── lobby/           pantalla de ingreso y salas (elige el modo)
 │   ├── game/            mesa del modo clásico (/ingame/)
@@ -57,7 +58,8 @@ Convenciones:
 
 | Carpeta | Estado | Cómo usarlo |
 |---|---|---|
-| [`presentation/`](presentation) | Pantallas iniciales | Abrir `presentation/lobby/index.html` o servir la carpeta: `python -m http.server -d presentation 8080` |
+| [`presentation-ssr/`](presentation-ssr) | HTML inicial SSR y assets de la presentación | `docker compose up --build frontend` y abrir `http://localhost` |
+| [`presentation/`](presentation) | Assets y clientes web (p5.js) | Reutilizados por `presentation-ssr` |
 | [`auth-service/`](auth-service) | Registro/login, Spring Security, BCrypt, bloqueo por intentos y sesión compatible con Lobby | Ver [auth-service/README.md](auth-service/README.md) |
 | [`game-logic/`](game-logic) | Motor, API interna, WebSocket y persistencia Redis | Ver [game-logic/README.md](game-logic/README.md) |
 | [`lobby-manager/`](lobby-manager) | Sesiones de invitado, identidad de jugador y salas | Ver [lobby-manager/README.md](lobby-manager/README.md) |

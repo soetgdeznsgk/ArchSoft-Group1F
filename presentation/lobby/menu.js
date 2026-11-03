@@ -3,14 +3,29 @@ let MENUSTATE
 let WINDOW_HEIGHT = 800
 let WINDOW_LENGTH = 1280
 let errorWindow;
+let errorWindowTimeout;
+let errorCharacter;
+let errorGroup;
+let logoHoverAudio;
+let logoHoverAudioTimeout;
 
 function setup() {
+    document.getElementById("ssr-shell")?.remove();
     createCanvas(WINDOW_LENGTH, WINDOW_HEIGHT)
     enterMenuState()
 
     errorWindow = createSpan("");
     errorWindow.addClass("menu-error-msg");
-    errorWindow.hide();
+    errorWindow.addClass("section-label");
+
+    errorCharacter = createImg("assets/personaje.png", "Personaje");
+    errorCharacter.addClass("menu-error-character");
+
+    errorGroup = createDiv("");
+    errorGroup.addClass("menu-error-group");
+    errorCharacter.parent(errorGroup);
+    errorWindow.parent(errorGroup);
+    errorGroup.hide();
 }
 
 function draw() {
@@ -41,22 +56,39 @@ async function enterMenuState()
 
     menuContainer = createDiv();
     menuContainer.addClass("menu-container")
-    menuContainer.position(WINDOW_LENGTH / 2, WINDOW_HEIGHT / 3 )
 
-    const logo = createImg('assets/logo.svg', "Logo");
+    const logo = createImg('assets/logo.png', "Logo");
     logo.addClass("logo")
+    logoHoverAudio = new Audio("assets/tribu.mp3");
+    logoHoverAudio.preload = "auto";
+    logoHoverAudio.volume = 0.5;
+    logo.elt.addEventListener("mouseenter", () => {
+        clearTimeout(logoHoverAudioTimeout);
+        logoHoverAudio.pause();
+        logoHoverAudio.currentTime = 0;
+        logoHoverAudio.play().catch((error) => {
+            console.warn("No se pudo reproducir el audio del logo.", error);
+        });
+        logoHoverAudioTimeout = setTimeout(() => {
+            logoHoverAudio.pause();
+            logoHoverAudio.currentTime = 0;
+        }, 5000);
+    });
     
-    const infoGuest = createSpan("GUéST?")
+    const infoGuest = createSpan("MODO INVITADO")
+    infoGuest.addClass("section-label")
 
     usernameGuestInput = createInput("");
-    usernameGuestInput.attribute("placeholder", "GúEST NAMé")
+    usernameGuestInput.attribute("placeholder", "NOMBRE DE INVITADO")
     usernameGuestInput.addClass("menu-input");
 
-    continueButton = createButton("LóG AS GUéST");
+    continueButton = createButton("ENTRAR COMO INVITADO");
     continueButton.mousePressed(
         () => validateGuestname(usernameGuestInput.value())
     );
     continueButton.addClass("menu-navigation-button")
+    continueButton.addClass("guest-image-button")
+    continueButton.attribute("aria-label", "Entrar como invitado")
 
     const infoUser = createSpan("RéAL?")
 
@@ -94,7 +126,12 @@ async function enterMenuState()
 // Username validation
 function validateGuestname(nameToCheck)
 {
-    connectSession(nameToCheck.trim());
+    const nickname = nameToCheck.trim();
+    if (!nickname) {
+        showAuthError("Ingresa un nombre válido.");
+        return;
+    }
+    connectSession(nickname);
 }
 
 async function signinRequested(username, password) {
@@ -119,6 +156,8 @@ let session = null;
 let lobbyEvents = null;
 let currentLobby = null;
 let rankingPanel = null;
+let rankingButton = null;
+let rankingMessageTimeout = null;
 
 async function api(method, path, body) {
   const headers = { "Content-Type": "application/json" };
@@ -137,7 +176,7 @@ async function api(method, path, body) {
 async function connectSession(nickname) {
   try {
     const data = await api("POST", "/session", { nickname });
-    beginSession(data);
+    await beginSession(data, { playWelcome: true });
   } catch (err) {
     showAuthError(err.message);
   }
@@ -176,31 +215,82 @@ async function authenticate(action, username, password) {
   }
 }
 
-function beginSession(data) {
+async function beginSession(data, options = {}) {
   session = { token: data.token, player: data.player, account: data.account };
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   errorWindow.hide();
+  if (options.playWelcome) await playWelcomeSound();
   enterLobbyPreview();
+}
+
+async function playWelcomeSound() {
+  const welcomeAudio = new Audio("assets/welcome.mp3");
+  welcomeAudio.preload = "auto";
+
+  try {
+    await welcomeAudio.play();
+    await new Promise((resolve) => {
+      welcomeAudio.addEventListener("ended", resolve, { once: true });
+    });
+  } catch (error) {
+    console.error("No se pudo reproducir el sonido de bienvenida.", error);
+    showAuthError("No se pudo reproducir el sonido de bienvenida.");
+  }
 }
 
 function showAuthError(message) {
   errorWindow.elt.textContent = message;
-  errorWindow.show();
+  errorGroup.show();
+  clearTimeout(errorWindowTimeout);
+  errorWindowTimeout = setTimeout(() => {
+    errorGroup.hide();
+  }, 3000);
 }
 
 function enterLobbyPreview() {
   MENUSTATE = "LOBBY_PREVIEW";
   menuContainer.html("");
 
+  const previousBackButton = document.querySelector(".back-image-button");
+  if (previousBackButton) previousBackButton.remove();
+
+  const backButton = createButton("Volver al menú");
+  backButton.addClass("back-image-button");
+  backButton.attribute("aria-label", "Volver al menú");
+  backButton.parent(document.body);
+  backButton.mousePressed(() => {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(GAME_KEY);
+    window.location.assign("/menu/");
+  });
+
   const title = createSpan(`Hola, ${session.player.nickname}`);
+  title.addClass("section-label");
   // Modo de juego de la sala que se va a crear (quien se une por código no elige: hereda el de la sala).
+  const modeLabel = createSpan("SELECCIONA EL MODO DE JUEGO");
+  modeLabel.addClass("section-label");
   const mode = createSelect();
   mode.id("lobby-mode");
   mode.addClass("menu-input");
   mode.attribute("aria-label", "Modo de juego");
   for (const [value, label] of Object.entries(MODE_LABELS)) mode.option(label, value);
   mode.selected("CLASSIC");
-  mode.changed(() => loadRanking(mode.value()));
+  mode.changed(() => {
+    if (rankingPanel && rankingPanel.elt.style.display !== "none") loadRanking(mode.value());
+  });
+
+  rankingButton = createButton("Ver rankings");
+  rankingButton.addClass("ranking-image-button");
+  rankingButton.attribute("aria-label", "Ver rankings");
+  rankingButton.mousePressed(() => {
+    if (rankingPanel.elt.style.display === "none") {
+      rankingPanel.show();
+      loadRanking(mode.value());
+    } else {
+      rankingPanel.hide();
+    }
+  });
+
   const create = createButton("CRéAR SALA");
   create.addClass("menu-navigation-button");
   create.mousePressed(() => joinLobby(() => api("POST", "/lobbies", { mode: mode.value() })));
@@ -230,23 +320,35 @@ function enterLobbyPreview() {
   const status = createSpan("");
   status.id("menu-status");
 
-  for (const el of [title, mode, create, code, join, seats, fillBots, start, status]) menuContainer.child(el);
-
   rankingPanel = createDiv("");
   rankingPanel.addClass("ranking-panel");
-  loadRanking(mode.value());
+  rankingPanel.hide();
+
+  for (const el of [title, modeLabel, mode, create, code, join, rankingButton, rankingPanel, seats, fillBots, start, status]) {
+    menuContainer.child(el);
+  }
 }
 
 // Ratings Service (/api/ratings/, ver docs/ratings-service.md): ranking del modo elegido.
 // Si el servicio no responde, el menú sigue funcionando: solo se avisa en el panel.
 async function loadRanking(mode) {
   const panel = rankingPanel.elt;
+  clearTimeout(rankingMessageTimeout);
+  panel.replaceChildren(rankingLine("p", "Cargando rankings..."));
   try {
     const [board, mine] = await Promise.all([
       api("GET", `/ratings/leaderboard?mode=${mode}&limit=10`),
       session.account ? api("GET", `/ratings/players/${session.account.id}`) : null,
     ]);
-    panel.replaceChildren(rankingLine("h3", `Ranking · ${MODE_LABELS[mode]}`), rankingTable(board.players), myRatingLine(mine, mode));
+    const players = Array.isArray(board.players) ? board.players : [];
+    panel.replaceChildren(
+      rankingLine("h3", `Ranking · ${MODE_LABELS[mode]}`),
+      rankingTable(players),
+      myRatingLine(mine, mode)
+    );
+    if (players.length === 0) {
+      rankingMessageTimeout = setTimeout(() => rankingPanel.hide(), 5000);
+    }
   } catch (err) {
     panel.replaceChildren(rankingLine("p", "El ranking no está disponible por ahora."));
   }
@@ -259,7 +361,7 @@ function rankingLine(tag, text) {
 }
 
 function rankingTable(players) {
-  if (players.length === 0) return rankingLine("p", "Aún no hay partidas puntuadas.");
+  if (players.length === 0) return rankingLine("p", "Aún no hay rankings disponibles.");
   const table = document.createElement("table");
   const headers = ["#", "Jugador", "Puntos", "Partidas", "Victorias"];
   const rows = players.map((p) => [p.position, p.nickname, p.rating, p.games, p.wins]);
