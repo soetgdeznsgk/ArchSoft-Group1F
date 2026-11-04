@@ -131,7 +131,7 @@ flowchart TB
 | Lobby events | Lobby Manager → Traefik → P5.js | SSE (HTTP stream) | Lobby updates, and the "match starting" event carrying the `gameId` and the player's token. |
 | Game channel | P5.js ↔ Traefik ↔ Game Logic | WebSocket (HTTP upgrade, `/ws/games/{id}`) | Bidirectional, low-latency in-game messages. |
 | Match handoff | Lobby Manager → Game Logic | Internal REST (`POST /internal/games`) | Hands a lobby's roster to Go to start a match. |
-| Result callback | Game Logic → Lobby Manager | Internal REST (`POST /internal/lobbies/{lobbyId}/result`) | Reports the winner so Python can close or reset the lobby. |
+| Result event | Game Logic → RabbitMQ ← Lobby Manager | AMQP 0-9-1 (`game.ended` on exchange `bololo.events`) | Publishes the final result. The Lobby Manager consumes it, records it and closes the lobby. Go does not know the Lobby, so there is no dependency cycle between the two services. |
 | Lobby DB | Lobby Manager → PostgreSQL | SQL driver | Persistence of lobbies and history. |
 | Game DB | Game Logic → Redis | RESP (Redis protocol, `go-redis`) | Persistence of live match state and event log. |
 
@@ -153,7 +153,7 @@ flowchart LR
         CLM["Claim Resolver<br/>validation + ranking (pure)"]
         BC["Broadcaster<br/>interface, local hub"]
         ST["Redis Store"]
-        LC["Lobby Client<br/>result callback + retries"]
+        LC["Result Publisher<br/>game.ended, confirms + retries"]
     end
 
     API --> REG
@@ -167,7 +167,7 @@ flowchart LR
     ACT --> ST
     ACT --> LC
     ST --> RD[("Redis")]
-    LC -->|"/internal/lobbies/{lobbyId}/result"| LMx
+    LC -->|"AMQP game.ended"| MQx["RabbitMQ"]
 ```
 
 | Module | Responsibility | Concurrency |
@@ -630,9 +630,11 @@ sequenceDiagram
     end
     GO-->>P: GAME_OVER, then close 1000
     GO->>R: HSET status FINISHED + EXPIRE 1 h
-    GO->>LM: POST /internal/lobbies/{lobbyId}/result
-    LM-->>GO: 200 OK
+    GO->>MQ: publish game.ended (bololo.events, mandatory)
+    MQ-->>GO: confirm (ack)
     GO->>R: SREM games:active
+    MQ->>LM: deliver (queue lobby.game-ended)
+    LM-->>MQ: ack after commit
     LM-->>P: SSE lobby update (match finished)
 ```
 
@@ -813,19 +815,22 @@ With no winner: `"winnerId": null, "outcome": null, "effectiveMs": null`.
 { "type": "PING", "t": 5123004 }
 ```
 
-### 7.6 Result callback (Go → Python)
+### 7.6 Result event `game.ended` (Go → RabbitMQ → Python)
 
-`POST {LOBBY_CALLBACK_URL}/internal/lobbies/{lobbyId}/result` with header `X-Service-Token`.
+Go publishes the final result on the topic exchange `bololo.events` with routing key `game.ended` (persistent message, `message_id = gameId`). It does not call the Lobby Manager: before this change Go posted to `POST /internal/lobbies/{lobbyId}/result`, which made the Lobby and Go depend on each other.
 
 ```json
-{ "gameId": "g_7f3a", "winnerId": "p3", "endReason": "WIN", "rounds": 143, "durationMs": 512340 }
+{ "gameId": "g_7f3a", "lobbyId": "l_42", "mode": "CLASSIC", "winnerId": "p3", "winners": ["p3"],
+  "endReason": "completed", "standings": [], "finishedAt": "2026-11-03T22:00:00Z" }
 ```
 
-`winnerId` is `null` when `endReason` is `ABORTED`.
+`winnerId` is omitted when there is no single winner.
 
-- Python must treat it as **idempotent** by `gameId`, because Go may send it more than once.
-- Any `2xx` is success. On a network error or `5xx`, Go retries with exponential backoff: 1 s, 2 s, 4 s, 8 s, 16 s (5 retries).
-- The match stays in `games:active` until the callback succeeds, so a Go restart retries it ([8.4](#84-service-restart-mid-match)). If all retries fail, the result stays readable via `GET /internal/games/{id}` until the keys expire.
+- Publication counts as done only when RabbitMQ **confirms** the message and it reached at least one queue (`mandatory`). If no queue is bound yet, the broker returns it and Go retries.
+- On any failure Go retries with exponential backoff: 1 s, 2 s, 4 s, 8 s, 16 s (5 retries).
+- The match stays in `games:active` until the publication is confirmed, so a Go restart publishes it again ([8.4](#84-service-restart-mid-match)).
+- The Lobby Manager consumes from the durable queue `lobby.game-ended` and acks only after the commit. It is **idempotent** by `gameId`, because Go may publish more than once. Messages that can never be recorded (unknown lobby, mismatched game, invalid JSON) go to `lobby.game-ended.dead`.
+- Authentication is the RabbitMQ user (`RABBITMQ_USER`/`RABBITMQ_PASSWORD`), not `X-Service-Token`.
 
 ---
 
@@ -930,7 +935,8 @@ flowchart TB
     TR -->|"/api/lobbies (REST + SSE)"| LM
     TR -->|"/ws/games (WebSocket)"| GL
     LM -->|"/internal/games on :8081"| GL
-    GL -->|"/internal/lobbies/.../result on :8000"| LM
+    GL -->|"AMQP game.ended on :5672"| MQ["rabbitmq"]
+    LM -->|"consume lobby.game-ended"| MQ
     LM --> PG
     GL --> RD
 ```
@@ -971,8 +977,8 @@ Traefik uses Docker labels with `exposedByDefault=false`, so only services with 
 | `INTERNAL_PORT` | `8081` | Internal REST and `/healthz`. |
 | `REDIS_URL` | `redis://:${REDIS_PASSWORD}@redis:6379/0` | Redis connection. |
 | `JWT_SECRET` | secret | Verifies player tokens. Shared with the Lobby Manager. |
-| `SERVICE_SECRET` | secret | `X-Service-Token` for internal REST, both directions. Shared with the Lobby Manager. |
-| `LOBBY_CALLBACK_URL` | `http://lobby-manager:8000` | Base URL for the result callback. |
+| `SERVICE_SECRET` | secret | `X-Service-Token` the Lobby Manager sends to the internal REST. |
+| `RABBITMQ_URL` | `amqp://user:pass@rabbitmq:5672/` | Broker where the `game.ended` event is published. |
 | `ALLOWED_ORIGINS` | `https://bololo.example` | Accepted `Origin` values on WebSocket upgrade. |
 
 Secrets come from Docker secrets or an `.env` file that is not committed. Gameplay values in [Tunable values](#11-tunable-values) can be overridden with environment variables of the same name.
@@ -1004,7 +1010,7 @@ A three-player match, start to finish:
 6. **Speed-up.** At 1:00 the level becomes 1. Go sends `SPEED_UP` (2125 ms pause, 3600 ms card time) before the next drop (§4.3).
 7. **Disconnect.** Bruno's Wi-Fi drops at 3:10. The other two get `PLAYER_STATUS`. Two players are still connected, so play continues. Bruno reconnects at 3:25 with the same token and receives `GAME_STATE` with his hand intact (§8.5).
 8. **Win.** At 7:40 Carla grabs PINK while holding the other 7 colors. `Apply` returns `ADDED` with `0xFF`, and `IsWinner` is true. Go broadcasts `ROUND_RESULT`, then `GAME_OVER {winnerId: "p3", endReason: "WIN"}`, and closes all sockets with `1000`.
-9. **Report.** Go marks the match `FINISHED` with a 1 h TTL and calls `POST /internal/lobbies/l_42/result` (§7.6). Python stores the result in PostgreSQL, resets the lobby and notifies the players over SSE. Go removes `g_7f3a` from `games:active` and drops the actor from the registry.
+9. **Report.** Go marks the match `FINISHED` with a 1 h TTL and publishes `game.ended` on RabbitMQ (§7.6). Python consumes it, stores the result in PostgreSQL, closes the lobby and notifies the players over SSE. Go removes `g_7f3a` from `games:active` and drops the actor from the registry.
 
 ---
 

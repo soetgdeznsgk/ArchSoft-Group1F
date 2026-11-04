@@ -7,7 +7,7 @@
 | Tipo | Lógico, datos y conector asíncrono |
 | Estado | Implementado, versión 1.0 (noviembre 2026) |
 
-Mantiene un ranking de jugadores por modo de juego. Se alimenta solo: cuando termina una partida, el Lobby Manager publica un evento en RabbitMQ y este servicio lo procesa por su cuenta. Ningún jugador espera ese cálculo y ninguna partida depende de que el ranking esté disponible.
+Mantiene un ranking de jugadores por modo de juego. Se alimenta solo: cuando termina una partida, Game Logic publica `game.ended`, el Lobby Manager lo registra y publica `game.finished` en RabbitMQ y este servicio lo procesa por su cuenta. Ningún jugador espera ese cálculo y ninguna partida depende de que el ranking esté disponible.
 
 ## 1. Idea central
 
@@ -20,9 +20,10 @@ sequenceDiagram
     participant DB as Ratings DB
     participant P as Presentación
 
-    GO->>LM: POST /internal/lobbies/{id}/result
+    GO->>MQ: game.ended
+    MQ->>LM: game.ended (cola lobby.game-ended)
     Note over LM: guarda el resultado y cierra la sala
-    LM-->>GO: 200
+    LM-->>MQ: ack
     loop cada 2 s, resultados con published_at nulo
         LM->>MQ: game.finished (persistente, con confirmación)
         MQ-->>LM: confirmado

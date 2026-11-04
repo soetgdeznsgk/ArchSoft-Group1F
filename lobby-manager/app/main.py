@@ -21,6 +21,7 @@ from .config import Settings
 from .db import create_pool
 from .errors import ApiError
 from .events import LobbyEvents
+from .result_consumer import GameEndedConsumer
 from .game_client import GameLogicClient
 from .service import LobbyService
 
@@ -53,6 +54,8 @@ def create_app(
         app.state.events = events
         app.state.service = service
         tasks = [asyncio.create_task(_sweep(service))]
+        if settings.rabbitmq_url:
+            tasks.append(asyncio.create_task(GameEndedConsumer(settings.rabbitmq_url, service).run()))
         if result_broker:
             tasks.append(
                 asyncio.create_task(_publish_results(service, result_broker, settings.result_publish_interval_s))

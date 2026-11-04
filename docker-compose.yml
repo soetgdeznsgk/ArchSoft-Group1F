@@ -25,6 +25,8 @@ services:
       context: .
       dockerfile: presentation-ssr/Dockerfile
     restart: unless-stopped
+    environment:
+      RATINGS_URL: http://ratings-service:8000
     networks:
       - internal
     labels:
@@ -129,7 +131,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:?Falta REDIS_PASSWORD en .env}@redis:6379/0
       JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
-      LOBBY_CALLBACK_URL: http://lobby-manager:8000
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
     networks:
       - internal

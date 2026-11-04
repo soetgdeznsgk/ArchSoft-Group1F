@@ -9,7 +9,9 @@ El modo se elige al crear la sala. Cada componente de la vista C&C tiene su prop
 
 ```mermaid
 flowchart TB
-  P[presentation SSR<br/>p5.js] -- "REST / SSE / WebSocket" --> G[api-gateway<br/>Traefik]
+  C[navegador<br/>menú y mesas p5.js] -- "HTTP / REST / SSE / WebSocket" --> G[api-gateway<br/>Traefik]
+  G -- "HTML con SSR" --> P[presentation-ssr<br/>Node.js]
+  P -- "ranking (REST interno)" --> RS
   G -- "REST, SSE" --> L[lobby-manager<br/>FastAPI]
   G -- "registro / login" --> A[auth-service<br/>Java / Spring Boot]
   G -- WebSocket --> GL[game-logic<br/>Go]
@@ -18,10 +20,11 @@ flowchart TB
   B -- "REST, SSE" --> L
   B -- WebSocket --> GL
   A -- "REST interno" --> L
-  L <-- "REST interno" --> GL
+  L -- "REST interno: crear partida" --> GL
+  GL -- "publica game.ended" --> MQ{{RabbitMQ}}
+  L -- "consume game.ended, publica game.finished" --> MQ
+  RS -- "consume game.finished" --> MQ
   L --> PG[(PostgreSQL)]
-  L -- "game.finished" --> MQ{{RabbitMQ}}
-  MQ -- "game.finished" --> RS
   RS --> RPG[(PostgreSQL)]
   A --> APG[(PostgreSQL)]
   GL --> R[(Redis)]

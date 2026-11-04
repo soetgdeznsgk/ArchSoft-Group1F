@@ -55,13 +55,30 @@ auth_api() {
   curl "${args[@]}" -w '\n%{http_code}' "$BASE_URL/auth$path"
 }
 
-# Reporta un resultado al Lobby como lo haría Go: REST interno, sin pasar por Traefik.
-lobby_result() {
+# Publica game.ended en RabbitMQ como lo haría Go (exchange bololo.events, con confirmación).
+publish_game_ended() {
   docker compose exec -T lobby-manager python -c "
-import os, sys, urllib.request as u
-req = u.Request('http://127.0.0.1:8000/internal/lobbies/' + sys.argv[1] + '/result', data=sys.argv[2].encode(), method='POST', headers={'X-Service-Token': os.environ['SERVICE_SECRET'], 'Content-Type': 'application/json'})
-print(u.urlopen(req, timeout=10).read().decode())
+import asyncio, json, os, sys
+import aio_pika
+
+async def main():
+    body = json.loads(sys.argv[2])
+    body['lobbyId'] = sys.argv[1]
+    connection = await aio_pika.connect(os.environ['RABBITMQ_URL'])
+    async with connection:
+        channel = await connection.channel(publisher_confirms=True, on_return_raises=True)
+        exchange = await channel.get_exchange('bololo.events')
+        message = aio_pika.Message(json.dumps(body).encode(), content_type='application/json',
+                                   delivery_mode=aio_pika.DeliveryMode.PERSISTENT, message_id=body['gameId'])
+        await exchange.publish(message, routing_key='game.ended', mandatory=True)
+    print('publicado')
+
+asyncio.run(main())
 " "$1" "$2" 2>&1
+}
+
+results_of() {
+  docker compose exec -T postgres sh -c "psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Atc \"select count(*) from game_results where game_id = '$1'\"" | tr -d '\r'
 }
 
 # Llama al REST interno de Go desde dentro de la red (no pasa por Traefik).
@@ -125,6 +142,9 @@ check "GET / redirige" "302" "$(http_code "$BASE_URL/")"
 location=$(curl -sI --max-time 5 "$BASE_URL/" | tr -d '\r' | awk 'tolower($1)=="location:"{print $2}')
 check "Location relativa a /menu/" "/menu/" "$location"
 check "GET /menu/" "200" "$(http_code "$BASE_URL/menu/")"
+menu_html=$(curl -s --max-time 10 "$BASE_URL/menu/" | tr '\n' ' ')
+check "el menu llega con datos renderizados en el servidor (SSR)" '.*id="ssr-data".*"leaderboard":\{"mode":"CLASSIC".*' "$menu_html"
+check "el menu incluye la tabla del ranking" '.*<h3>Ranking · Clásico</h3>.*|.*Aún no hay rankings disponibles.*' "$menu_html"
 check "GET /ingame/" "200" "$(http_code "$BASE_URL/ingame/")"
 check "GET /chameleon/ (modo camaleon)" "200" "$(http_code "$BASE_URL/chameleon/")"
 check "GET /chameleon/chameleon.js" "200" "$(http_code "$BASE_URL/chameleon/chameleon.js")"
@@ -201,7 +221,7 @@ else
   sleep 1
   check "token de partida ausente en logs de traefik" "0" "$(docker compose logs traefik 2>&1 | grep -c "$GAME_TOKEN")"
 
-  section "Fin de la partida (Game Logic -> Lobby)"
+  section "Fin de la partida (Game Logic -> RabbitMQ -> Lobby)"
   sim=$(internal POST "/internal/games/$GAME_ID/simulate")
   if [[ "$sim" == "403" || "$sim" == "404" ]]; then
     skip "fin de la partida y resultado" "simulacion no disponible (DEMO_MODE)"
@@ -279,7 +299,7 @@ check "bloqueo tras 5 intentos fallidos" "429" "$(status_of "$(auth_api POST /lo
 check "contrasena guardada con BCrypt" '\$2[aby]\$12\$.*' \
   "$(docker compose exec -T auth-postgres sh -c "psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -Atc \"select password_hash from accounts where username = '$USER_A'\"" | tr -d '\r')"
 
-section "Ratings (Lobby -> RabbitMQ -> Ratings)"
+section "Resultado y ratings (Game Logic -> RabbitMQ -> Lobby -> RabbitMQ -> Ratings)"
 check "GET /api/ratings/leaderboard" "200" "$(status_of "$(api GET '/ratings/leaderboard?mode=CLASSIC')")"
 check "modo desconocido en el ranking" "422" "$(status_of "$(api GET '/ratings/leaderboard?mode=POKER')")"
 check "ruta desconocida en ratings" "404" "$(http_code "$BASE_URL/api/ratings/internal")"
@@ -296,7 +316,15 @@ else
   R_PLAYER_A=$(body_of "$(api GET /session "$TOKEN_A")" | grep -o '"id":"p_[^"]*"' | head -1 | cut -d'"' -f4)
   R_PLAYER_B=$(body_of "$(api GET /session "$TOKEN_B")" | grep -o '"id":"p_[^"]*"' | head -1 | cut -d'"' -f4)
   R_BODY="{\"gameId\":\"$R_GAME\",\"mode\":\"CHAMELEON\",\"winnerId\":\"$R_PLAYER_A\",\"winners\":[\"$R_PLAYER_A\"],\"endReason\":\"all_colors\",\"standings\":[{\"player\":\"$R_PLAYER_A\",\"colors\":8,\"rank\":1},{\"player\":\"$R_PLAYER_B\",\"colors\":5,\"rank\":2}]}"
-  check "el Lobby registra el resultado" ".*\"recorded\":true.*" "$(lobby_result "$R_LOBBY" "$R_BODY")"
+  check "Go publica game.ended en RabbitMQ" "publicado" "$(publish_game_ended "$R_LOBBY" "$R_BODY")"
+  recorded=""
+  for _ in $(seq 1 20); do
+    recorded=$(results_of "$R_GAME")
+    [[ "$recorded" == "1" ]] && break
+    sleep 0.5
+  done
+  check "el Lobby consume game.ended y registra el resultado" "1" "$recorded"
+  check "la sala se cierra" "CLOSED" "$(body_of "$(api GET "/lobbies/$R_LOBBY" "$TOKEN_A")" | field status)"
   rating=""
   for _ in $(seq 1 30); do
     rating=$(body_of "$(api GET "/ratings/players/$ACCOUNT_A")" | grep -o '"rating":[0-9]*' | cut -d: -f2)
@@ -305,14 +333,18 @@ else
   done
   check "el ganador sube a 1016" "1016" "$rating"
   check "el perdedor baja a 984" ".*\"rating\":984.*" "$(body_of "$(api GET "/ratings/players/$ACCOUNT_B")")"
-  check "un reintento de Go no registra otra vez" ".*\"recorded\":false.*" "$(lobby_result "$R_LOBBY" "$R_BODY")"
+  publish_game_ended "$R_LOBBY" "$R_BODY" >/dev/null
   sleep 3
+  check "un game.ended repetido no registra otra vez" "1" "$(results_of "$R_GAME")"
   check "el reintento no suma dos veces" ".*\"games\":1.*" "$(body_of "$(api GET "/ratings/players/$ACCOUNT_A")")"
   check "el historial guarda el cambio" ".*\"ratingBefore\":1000,\"ratingAfter\":1016.*" "$(body_of "$(api GET "/ratings/players/$ACCOUNT_A/history")")"
 fi
 queues=$(docker compose exec -T rabbitmq rabbitmqctl -q list_queues name durable messages 2>&1 | tr -d '\r' | tr '\t' ' ')
 check "cola de ratings durable y vacia" ".*ratings\.game-finished true 0.*" "$(tr '\n' ';' <<<"$queues")"
 check "sin mensajes muertos" ".*ratings\.game-finished\.dead true 0.*" "$(tr '\n' ';' <<<"$queues")"
+check "cola de resultados del lobby durable y vacia" ".*lobby\.game-ended true 0.*" "$(tr '\n' ';' <<<"$queues")"
+check "sin resultados muertos en el lobby" ".*lobby\.game-ended\.dead true 0.*" "$(tr '\n' ';' <<<"$queues")"
+check "Go no conoce la URL del Lobby" "0" "$(docker compose config game-logic 2>/dev/null | grep -c LOBBY_CALLBACK_URL)"
 
 section "Datos"
 check "redis exige contrasena" "NOAUTH.*" "$(docker compose exec -T redis sh -c 'unset REDISCLI_AUTH; redis-cli ping' 2>&1 | tr -d '\r')"

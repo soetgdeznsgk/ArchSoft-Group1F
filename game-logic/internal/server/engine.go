@@ -56,7 +56,7 @@ type actionError struct {
 func (e *actionError) Error() string { return e.Code + ": " + e.Message }
 
 // engine es lo que el servidor necesita de un modo de juego. Cada modo tiene
-// un adaptador; el servidor (WebSocket, Redis, ticks y callback al Lobby) es
+// un adaptador; el servidor (WebSocket, Redis, ticks y evento game.ended) es
 // el mismo para todos.
 type engine interface {
 	Mode() string

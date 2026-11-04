@@ -19,7 +19,8 @@ game-logic/
 ├── internal/
 │   ├── game/            motor del modo clásico (+ pruebas)
 │   ├── chameleon/       motor del modo camaleón (+ pruebas)
-│   ├── server/          HTTP, WebSocket, ticks, callback al Lobby; engine.go adapta cada modo
+│   ├── server/          HTTP, WebSocket, ticks, publicación de game.ended; engine.go adapta cada modo
+│   ├── broker/          publicador AMQP de game.ended (RabbitMQ)
 │   ├── store/redis/     persistencia de snapshots
 │   └── bot/             jugador automático para simulaciones
 ├── docs/                PLAN, DISENO, PRUEBAS, RED_Y_PERSISTENCIA, MODO_CAMALEON

@@ -11,30 +11,29 @@ import (
 )
 
 type Config struct {
-	ListenAddr       string
-	RedisURL         string
-	RedisKeyPrefix   string
-	JWTSecret        []byte
-	ServiceSecret    []byte
-	LobbyCallbackURL string
-	AllowedOrigins   []string
-	TickInterval     time.Duration
-	RoundPause       time.Duration
-	StoreTimeout     time.Duration
-	CallbackTimeout  time.Duration
+	ListenAddr     string
+	RedisURL       string
+	RedisKeyPrefix string
+	JWTSecret      []byte
+	ServiceSecret  []byte
+	RabbitMQURL    string
+	AllowedOrigins []string
+	TickInterval   time.Duration
+	RoundPause     time.Duration
+	StoreTimeout   time.Duration
+	PublishTimeout time.Duration
 	// Chameleon parametriza el repartidor del modo camaleón (cero = valores por defecto).
 	Chameleon chameleon.Config
 }
 
 func LoadConfig() (Config, error) {
 	cfg := Config{
-		ListenAddr:       envOr("GAME_LOGIC_ADDR", ":8081"),
-		RedisKeyPrefix:   envOr("REDIS_KEY_PREFIX", "bololo:"),
-		LobbyCallbackURL: envOr("LOBBY_CALLBACK_URL", "http://lobby-manager:8000"),
-		TickInterval:     250 * time.Millisecond,
-		RoundPause:       3 * time.Second,
-		StoreTimeout:     200 * time.Millisecond,
-		CallbackTimeout:  3 * time.Second,
+		ListenAddr:     envOr("GAME_LOGIC_ADDR", ":8081"),
+		RedisKeyPrefix: envOr("REDIS_KEY_PREFIX", "bololo:"),
+		TickInterval:   250 * time.Millisecond,
+		RoundPause:     3 * time.Second,
+		StoreTimeout:   200 * time.Millisecond,
+		PublishTimeout: 5 * time.Second,
 	}
 	jwtSecret := os.Getenv("JWT_SECRET")
 	serviceSecret := os.Getenv("SERVICE_SECRET")
@@ -46,6 +45,10 @@ func LoadConfig() (Config, error) {
 	cfg.RedisURL = os.Getenv("REDIS_URL")
 	if cfg.RedisURL == "" {
 		return Config{}, errors.New("REDIS_URL is required")
+	}
+	cfg.RabbitMQURL = os.Getenv("RABBITMQ_URL")
+	if cfg.RabbitMQURL == "" {
+		return Config{}, errors.New("RABBITMQ_URL is required")
 	}
 	if origins := strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS")); origins != "" {
 		for _, origin := range strings.Split(origins, ",") {
@@ -65,10 +68,10 @@ func LoadConfig() (Config, error) {
 	if cfg.StoreTimeout, err = durationEnv("REDIS_WRITE_TIMEOUT", cfg.StoreTimeout); err != nil {
 		return Config{}, err
 	}
-	if cfg.CallbackTimeout, err = durationEnv("LOBBY_CALLBACK_TIMEOUT", cfg.CallbackTimeout); err != nil {
+	if cfg.PublishTimeout, err = durationEnv("RESULT_PUBLISH_TIMEOUT", cfg.PublishTimeout); err != nil {
 		return Config{}, err
 	}
-	if cfg.TickInterval <= 0 || cfg.RoundPause < 0 || cfg.StoreTimeout <= 0 || cfg.CallbackTimeout <= 0 {
+	if cfg.TickInterval <= 0 || cfg.RoundPause < 0 || cfg.StoreTimeout <= 0 || cfg.PublishTimeout <= 0 {
 		return Config{}, errors.New("service durations must be positive (ROUND_PAUSE may be zero)")
 	}
 	// Modo camaleón: duración de la partida (por defecto 3m), útil para demos cortas.
