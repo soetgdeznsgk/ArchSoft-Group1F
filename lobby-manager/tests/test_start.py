@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import httpx
-import jwt
 
-from .conftest import JWT_SECRET, SERVICE_SECRET
+from .conftest import SERVICE_SECRET, read_game_token
 
 
 async def test_no_inicia_con_menos_de_4_jugadores_e_informa_cuantos_faltan(ctx):
@@ -59,7 +58,7 @@ async def test_cada_jugador_obtiene_su_propio_token_de_partida(ctx):
 
     for user in users:
         game = (await ctx.client.get(f"/api/lobbies/{lobby['id']}", headers=user.headers)).json()["game"]
-        claims = jwt.decode(game["token"], JWT_SECRET, algorithms=["HS256"])
+        claims = read_game_token(game["token"])
         assert claims["gameId"] == game_id
         assert claims["playerId"] == user.id
         assert claims["exp"] - claims["iat"] == 2 * 3600

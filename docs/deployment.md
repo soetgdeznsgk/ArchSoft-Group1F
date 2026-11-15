@@ -182,8 +182,7 @@ Compose lee `.env` (junto a `docker-compose.yml`) y reemplaza las `${...}`. `.en
 | `POSTGRES_USER` | postgres, lobby-manager | `bololo` | |
 | `POSTGRES_DB` | postgres, lobby-manager | `bololo` | |
 | `POSTGRES_PASSWORD` | postgres, lobby-manager | hex aleatorio | Solo se aplica con volumen vacío (§7.2) |
-| `JWT_SECRET` | lobby-manager (firma), game-logic (verifica) | hex aleatorio | Debe ser el mismo en ambos |
-| `SERVICE_SECRET` | lobby-manager, game-logic | hex aleatorio | Header `X-Service-Token` del REST interno, en ambas direcciones |
+| `SERVICE_SECRET` | lobby-manager, game-logic | hex aleatorio | Header `X-Service-Token` del REST interno (lobby → game) |
 | `ALLOWED_ORIGINS` | game-logic | `https://localhost` | `Origin` aceptado en el upgrade WebSocket. Para la LAN: `https://localhost,https://<IP>` |
 | `HSTS_MAX_AGE` | traefik | `300` | `max-age` de HSTS en segundos. Corto en local porque HSTS aplica a todos los puertos de `localhost`; en producción, `31536000` |
 
@@ -250,11 +249,14 @@ docker compose ps
 
 `up` crea e inicia todos los servicios del archivo Compose; `-d` los deja ejecutándose en segundo plano; `--build` construye las imágenes del proyecto; `--wait` espera a que los servicios estén en estado `running` o `healthy`. En `docker compose ps`, los servicios con healthcheck deben aparecer como `healthy`.
 
-Antes del primer `up` hay que generar el certificado del gateway (sin él Traefik no arranca). Desde Git Bash, macOS o Linux:
+Antes del primer `up` hay que generar el certificado del gateway (sin él Traefik no arranca) y las claves con que se firman los JWT (sin ellas Compose no arranca). Desde Git Bash, macOS o Linux:
 
 ```bash
 ./scripts/gen-certs.sh --trust
+./scripts/gen-jwt-keys.sh
 ```
+
+`gen-jwt-keys.sh` crea en `secrets/jwt/` (no versionada) un par RSA para las sesiones, que firma Auth, y otro para las partidas, que firma el Lobby. Compose monta en cada contenedor solo las claves que necesita.
 
 `--trust` instala la CA local como confiable para el usuario actual, así el navegador no muestra advertencias. Detalles en [p3/esc1.md §10](p3/esc1.md#10-cómo-usarlo-equipo).
 
@@ -340,7 +342,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 | G3 | Ruta `/ws/games/{gameId}` con el prefijo completo | Traefik no recorta el prefijo (§4) |
 | G4 | `GET /healthz` en 8081 | `200 {"status":"ok","redis":"ok"}` o `503` si Redis no responde ([diseño §7.2](game-logic-design.md#72-internal-rest-api-go)) |
 | G5 | Flag `-healthcheck` en el binario | La imagen distroless no tiene shell ni `curl`. `/app -healthcheck` hace `GET http://127.0.0.1:8081/healthz` y sale con 0 o 1. Compose usará `test: ["CMD", "/app", "-healthcheck"]` |
-| G6 | Leer configuración del entorno | `WS_PORT`, `INTERNAL_PORT`, `REDIS_URL` (`redis://:${REDIS_PASSWORD}@redis:6379/0`), `JWT_SECRET`, `SERVICE_SECRET`, `RABBITMQ_URL` (`amqp://...@rabbitmq:5672/`), `ALLOWED_ORIGINS` (`http://localhost`) |
+| G6 | Leer configuración del entorno | `WS_PORT`, `INTERNAL_PORT`, `REDIS_URL` (`redis://:${REDIS_PASSWORD}@redis:6379/0`), `GAME_PUBLIC_KEY_FILE`, `SERVICE_SECRET`, `RABBITMQ_URL` (`amqp://...@rabbitmq:5672/`), `ALLOWED_ORIGINS` (`http://localhost`) |
 | G7 | No registrar la URL con el token | El JWT viaja en `?token=`; no imprimir la URL completa en los logs propios |
 | G8 | Reintentar la conexión a Redis | `depends_on` solo garantiza Redis al arrancar |
 
@@ -354,7 +356,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 | L4 | Healthcheck sin `curl` | `python:3.12-slim` no trae `curl`. Compose usará `python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"` |
 | L5 | SSE | `Content-Type: text/event-stream`, `Cache-Control: no-cache` y un comentario de keep-alive (`: ping`) cada ~15 s. No comprimir la respuesta |
 | L6 | Un solo worker de uvicorn | Si el estado de las salas y las suscripciones SSE viven en memoria, con varios workers un evento no llega a todos los clientes |
-| L7 | Configuración desde el entorno | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, host `postgres`, puerto `5432`; `JWT_SECRET`, `SERVICE_SECRET`; `GAME_LOGIC_URL` (`http://game-logic:8081`). Confirmar si prefieren una sola `DATABASE_URL` |
+| L7 | Configuración desde el entorno | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, host `postgres`, puerto `5432`; `SESSION_PUBLIC_KEY_FILE`, `GAME_PRIVATE_KEY_FILE`, `SERVICE_SECRET`; `GAME_LOGIC_URL` (`http://game-logic:8081`). Confirmar si prefieren una sola `DATABASE_URL` |
 | L8 | Esquema de la base | Decidir: scripts `.sql` en `lobby-manager/` montados en `/docker-entrypoint-initdb.d` (solo se ejecutan con el volumen vacío) o creación desde la aplicación (SQLAlchemy / Alembic) |
 | L9 | Reintentar la conexión a PostgreSQL | `depends_on` solo garantiza Postgres al arrancar |
 | L10 | Resultado idempotente | Consumo de `game.ended` desde RabbitMQ (cola `lobby.game-ended`), idempotente por `gameId` (RNF-04, [diseño §7.6](game-logic-design.md#76-result-event-gameended-go--rabbitmq--python)) |

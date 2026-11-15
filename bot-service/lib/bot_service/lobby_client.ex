@@ -10,7 +10,6 @@ defmodule BotService.LobbyClient do
 
   @callback get_session(String.t()) :: result
   @callback get_lobby(String.t(), String.t()) :: result
-  @callback create_session(String.t()) :: result
   @callback join(String.t(), String.t()) :: result
   @callback leave(String.t(), String.t()) :: result
 
@@ -19,7 +18,6 @@ defmodule BotService.LobbyClient do
 
   def get_session(token), do: request(:get, "/api/session", token)
   def get_lobby(lobby_id, token), do: request(:get, "/api/lobbies/#{lobby_id}", token)
-  def create_session(nickname), do: request(:post, "/api/session", nil, %{nickname: nickname})
   def join(lobby_id, token), do: request(:post, "/api/lobbies/#{lobby_id}/join", token)
   def leave(lobby_id, token), do: request(:post, "/api/lobbies/#{lobby_id}/leave", token)
 

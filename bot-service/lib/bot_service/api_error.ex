@@ -18,6 +18,9 @@ defmodule BotService.ApiError do
   def unavailable,
     do: new(502, "lobby_service_unavailable", "El servicio de salas no respondió. Intenta de nuevo.")
 
+  def auth_unavailable,
+    do: new(502, "auth_service_unavailable", "El servicio de sesiones no respondió. Intenta de nuevo.")
+
   def invalid_session,
     do: new(401, "invalid_session", "Tu sesión no es válida. Vuelve a ingresar tu nombre.")
 

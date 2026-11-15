@@ -33,10 +33,12 @@ services:
       GAME_LOGIC_ADDR: ":8081"
       REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379/0"
       REDIS_KEY_PREFIX: "bololo:"
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in game-logic/.env}
+      GAME_PUBLIC_KEY_FILE: /run/secrets/game_public_key
       SERVICE_SECRET: ${SERVICE_SECRET:?Set SERVICE_SECRET in game-logic/.env}
       RABBITMQ_URL: "amqp://bololo:dev-password@rabbitmq:5672/"
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+    secrets:
+      - game_public_key
     ports:
       - "127.0.0.1:${GAME_LOGIC_PORT:-18081}:8081"
     networks:
@@ -55,15 +57,27 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13.7-management-alpine
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        (
+          until rabbitmq-diagnostics -q check_running >/dev/null 2>&1; do sleep 2; done
+          rabbitmqctl -q import_definitions /etc/rabbitmq/topology.json \
+            || echo "ERROR: no se pudo declarar la topología de rabbitmq/topology.json" >&2
+        ) &
+        exec docker-entrypoint.sh rabbitmq-server
     environment:
       RABBITMQ_DEFAULT_USER: bololo
       RABBITMQ_DEFAULT_PASS: dev-password
+    volumes:
+      - ../rabbitmq/topology.json:/etc/rabbitmq/topology.json:ro
     ports:
       - "127.0.0.1:15672:15672"
     networks:
       - internal
     healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "5672"]
+      test: ["CMD-SHELL", "rabbitmqctl -q list_queues name > /tmp/queues && grep -qx lobby.game-ended /tmp/queues && grep -qx ratings.game-finished /tmp/queues"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -72,6 +86,10 @@ services:
 networks:
   internal:
     internal: true
+
+secrets:
+  game_public_key:
+    file: ../secrets/jwt/game-public.pem
 
 volumes:
   redis-data:

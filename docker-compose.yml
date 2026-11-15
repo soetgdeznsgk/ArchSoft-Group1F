@@ -70,9 +70,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres:5432/${AUTH_POSTGRES_DB:-bololo_auth}
       SPRING_DATASOURCE_USERNAME: ${AUTH_POSTGRES_USER:-bololo_auth}
       SPRING_DATASOURCE_PASSWORD: ${AUTH_POSTGRES_PASSWORD:-${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}}
-      LOBBY_MANAGER_URL: http://lobby-manager:8000
-      SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
-      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      SESSION_PRIVATE_KEY_FILE: /run/secrets/session_private_key
+      SESSION_PUBLIC_KEY_FILE: /run/secrets/session_public_key
+    secrets:
+      - session_private_key
+      - session_public_key
     networks:
       - internal
     labels:
@@ -84,8 +86,6 @@ services:
       - "traefik.http.services.auth.loadbalancer.server.port=8080"
     depends_on:
       auth-postgres:
-        condition: service_healthy
-      lobby-manager:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "sh", "-c", "wget -q --spider http://127.0.0.1:8080/healthz"]
@@ -101,13 +101,17 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
       POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en .env}
-      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      SESSION_PUBLIC_KEY_FILE: /run/secrets/session_public_key
+      GAME_PRIVATE_KEY_FILE: /run/secrets/game_private_key
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
       GAME_LOGIC_URL: http://game-logic:8081
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
       # Uvicorn acepta X-Forwarded-Proto de Traefik (que lo reescribe en cada petición
       # externa). Sin esto cree que la petición llegó por http y redirige a http://.
       FORWARDED_ALLOW_IPS: "*"
+    secrets:
+      - session_public_key
+      - game_private_key
     networks:
       - internal
     labels:
@@ -118,6 +122,8 @@ services:
       - "traefik.http.services.lobby.loadbalancer.server.port=8000"
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
@@ -154,12 +160,14 @@ services:
     environment:
       GAME_LOGIC_ADDR: ":8081"
       REDIS_URL: redis://:${REDIS_PASSWORD:?Falta REDIS_PASSWORD en .env}@redis:6379/0
-      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      GAME_PUBLIC_KEY_FILE: /run/secrets/game_public_key
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
       # Origin aceptado en el upgrade del WebSocket. Solo https: una página servida
       # en claro no puede abrir la partida. Para la LAN: https://localhost,https://<IP>
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost}
+    secrets:
+      - game_public_key
     networks:
       - internal
     labels:
@@ -170,6 +178,8 @@ services:
       - "traefik.http.services.game-ws.loadbalancer.server.port=8081"
     depends_on:
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "/app", "-healthcheck"]
@@ -184,6 +194,7 @@ services:
     restart: unless-stopped
     environment:
       LOBBY_URL: http://lobby-manager:8000
+      AUTH_URL: http://auth:8080
       GAME_LOGIC_URL: http://game-logic:8081
       BOT_THINK_MIN_MS: ${BOT_THINK_MIN_MS:-900}
       BOT_THINK_MAX_MS: ${BOT_THINK_MAX_MS:-2200}
@@ -200,6 +211,8 @@ services:
       - "traefik.http.routers.bots.priority=30"
       - "traefik.http.services.bots.loadbalancer.server.port=8090"
     depends_on:
+      auth:
+        condition: service_healthy
       lobby-manager:
         condition: service_healthy
       game-logic:
@@ -268,15 +281,26 @@ services:
     image: rabbitmq:3.13.7-management-alpine
     hostname: rabbitmq
     restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        (
+          until rabbitmq-diagnostics -q check_running >/dev/null 2>&1; do sleep 2; done
+          rabbitmqctl -q import_definitions /etc/rabbitmq/topology.json \
+            || echo "ERROR: no se pudo declarar la topología de rabbitmq/topology.json" >&2
+        ) &
+        exec docker-entrypoint.sh rabbitmq-server
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/topology.json:/etc/rabbitmq/topology.json:ro
     networks:
       - internal
     healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "5672"]
+      test: ["CMD-SHELL", "rabbitmqctl -q list_queues name > /tmp/queues && grep -qx lobby.game-ended /tmp/queues && grep -qx ratings.game-finished /tmp/queues"]
       interval: 10s
       timeout: 3s
       retries: 6
@@ -331,6 +355,16 @@ networks:
   public:
   internal:
     internal: true
+
+secrets:
+  session_private_key:
+    file: ./secrets/jwt/session-private.pem
+  session_public_key:
+    file: ./secrets/jwt/session-public.pem
+  game_private_key:
+    file: ./secrets/jwt/game-private.pem
+  game_public_key:
+    file: ./secrets/jwt/game-public.pem
 
 volumes:
   pg-data:

@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.client.RestClient;
 
 @SpringBootApplication
 public class AuthApplication {
@@ -23,10 +22,5 @@ public class AuthApplication {
     @Bean
     Clock clock() {
         return Clock.systemUTC();
-    }
-
-    @Bean
-    RestClient.Builder restClientBuilder() {
-        return RestClient.builder();
     }
 }

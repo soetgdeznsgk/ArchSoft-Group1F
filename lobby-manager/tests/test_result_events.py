@@ -4,17 +4,10 @@ from __future__ import annotations
 
 import asyncio
 
-import jwt
-
-from tests.conftest import JWT_SECRET, SERVICE_HEADERS
-
 
 async def account_user(ctx, account_id: str, nickname: str) -> dict:
-    r = await ctx.client.post(
-        "/internal/auth/session", json={"accountId": account_id, "nickname": nickname}, headers=SERVICE_HEADERS
-    )
-    assert r.status_code == 201, r.text
-    return r.json()
+    user = await ctx.login(nickname, account_id)
+    return {"player": {"id": user.id, "nickname": user.nickname}, "token": user.token}
 
 
 async def finish(ctx, lobby: dict, ranking: list[str]) -> str:
@@ -99,14 +92,3 @@ async def test_con_el_broker_caido_la_sala_cierra_y_el_evento_sale_al_volver(ctx
 
     await until(published)
     assert [e["gameId"] for e in ctx.broker.events] == [lobby["game"]["gameId"]]
-
-
-async def test_la_sesion_con_cuenta_lleva_el_account_id_y_la_de_invitado_no(ctx):
-    ana = await account_user(ctx, "account-ana", "ana")
-    guest = await ctx.login("Invitado")
-
-    claims = jwt.decode(ana["token"], JWT_SECRET, algorithms=["HS256"])
-    guest_claims = jwt.decode(guest.token, JWT_SECRET, algorithms=["HS256"])
-
-    assert claims["accountId"] == "account-ana" and claims["scope"] == "session"
-    assert "accountId" not in guest_claims

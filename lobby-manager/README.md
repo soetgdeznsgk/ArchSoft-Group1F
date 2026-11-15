@@ -32,7 +32,7 @@ lobby-manager/
 
 ## Uso rápido
 
-Solo requiere Docker
+Requiere Docker y las claves de los JWT (`./scripts/gen-jwt-keys.sh`, desde la raíz).
 
 docker compose -f lobby-manager/compose.dev.yaml up --build
 
@@ -44,9 +44,9 @@ Recorrido con `curl` (en Git Bash):
 
 ```bash
 B=http://localhost:8000
-# RF-01: ingresar con un nombre. Devuelve el jugador y su token de sesión.
-curl -s -X POST $B/api/session -H 'Content-Type: application/json' -d '{"nickname":"Ana"}'
-T=<token>
+# RF-01: las sesiones las emite Auth. Sin Auth, se firma una de invitado con la clave de desarrollo:
+T=$(python tools/dev_session.py Ana)
+curl -s $B/api/session -H "Authorization: Bearer $T"                  # crea al jugador y dice quién es
 
 curl -s -X POST $B/api/lobbies -H "Authorization: Bearer $T"          # crear sala
 curl -s $B/api/lobbies -H "Authorization: Bearer $T"                  # listar salas
@@ -61,7 +61,7 @@ curl -s -X POST http://localhost:18081/finish/<gameId>
 
 El contrato completo (rutas, eventos SSE, errores y lo que se intercambia con Go) está en [docs/lobby-manager.md](../docs/lobby-manager.md) y en [docs/openapi.json](docs/openapi.json).
 
-Auth dispone de `POST /internal/auth/session`, protegido por `X-Service-Token`, para obtener de forma idempotente un jugador asociado al UUID de cuenta y emitir el mismo token de sesión que usan los invitados. La ruta solo se consume por la red interna; Auth gestiona las contraseñas en su propia base.
+El Lobby no emite sesiones: las emite Auth, también las de invitado (`POST /auth/guest`). El Lobby verifica el token con la clave pública de sesiones (RS256) y crea al jugador la primera vez que lo ve. Las cuentas se reconocen por el claim `accountId`, así que una cuenta es siempre el mismo jugador. El Lobby sí emite los tokens de partida, con su propia clave privada.
 
 ## Configuración
 
@@ -70,8 +70,9 @@ Auth dispone de `POST /internal/auth/session`, protegido por `X-Service-Token`, 
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Sí | `bololo` | Credenciales de PostgreSQL |
 | `POSTGRES_HOST`, `POSTGRES_PORT` | No | `postgres`, `5432` | Por defecto, el servicio `postgres` de Compose |
 | `DATABASE_URL` | No | `postgresql://u:p@host:5432/db` | Reemplaza a las cinco anteriores si está definida |
-| `JWT_SECRET` | Sí | hex aleatorio | Firma los tokens. El mismo valor que usa Game Logic para verificarlos |
-| `SERVICE_SECRET` | Sí | hex aleatorio | Cabecera `X-Service-Token` del REST interno, en ambas direcciones |
+| `SESSION_PUBLIC_KEY_FILE` | Sí | `/run/secrets/session_public_key` | Clave pública PEM con que se verifican las sesiones que firma Auth |
+| `GAME_PRIVATE_KEY_FILE` | Sí | `/run/secrets/game_private_key` | Clave privada PEM con que el Lobby firma los tokens de partida. Game Logic tiene la pública |
+| `SERVICE_SECRET` | Sí | hex aleatorio | Cabecera `X-Service-Token` de las llamadas a Game Logic |
 | `GAME_LOGIC_URL` | No | `http://game-logic:8081` | Base del REST interno de Go |
 | `RABBITMQ_URL` | No | `amqp://usuario:clave@rabbitmq:5672/` | Broker de eventos. Sin ella los resultados quedan pendientes en PostgreSQL |
 | `CORS_ORIGINS` | No | `http://localhost:8080` | Solo para desarrollo, si las pantallas se sirven desde otro origen. Detrás del gateway no hace falta |
@@ -93,7 +94,7 @@ pytest
 
 | Archivo | Qué verifica | Requisitos |
 |---|---|---|
-| `test_session.py` | Ingreso con nombre, nombres inválidos, tokens inválidos | RF-01 |
+| `test_session.py` | Jugador creado con la primera sesión de Auth, cuentas estables, tokens falsos, otra clave o HS256 rechazados | RF-01 |
 | `test_lobbies.py` | Crear, listar, entrar (lista y código), límites de 10 salas y 4 jugadores, salir, eliminar la sala vacía | RF-02 a RF-07 |
 | `test_events.py` | Sala de espera por SSE, aviso de inicio con token propio, cierre, keep-alive, jugador que cierra la página | RF-08 |
 | `test_start.py` | Inicio solo con 4, entrega a Go en orden de asiento, token por jugador, fallos de Go | RF-09 |

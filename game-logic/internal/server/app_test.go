@@ -2,10 +2,15 @@ package server
 
 import (
 	"context"
+	"crypto"
 	"crypto/hmac"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
@@ -175,7 +180,7 @@ func TestWebSocketStartsMatchAndSendsPrivateViews(t *testing.T) {
 	players := testPlayers()
 	connections := make([]*websocket.Conn, len(players))
 	for i, player := range players {
-		token := signGameToken("game_1", player.ID, "jwt-secret")
+		token := signGameToken("game_1", player.ID)
 		url := "ws" + strings.TrimPrefix(httpServer.URL, "http") + "/ws/games/game_1?token=" + token
 		conn, response, err := websocket.DefaultDialer.Dial(url, nil)
 		if err != nil {
@@ -236,15 +241,60 @@ func TestWebSocketStartsMatchAndSendsPrivateViews(t *testing.T) {
 }
 
 func TestVerifyGameTokenRejectsTamperedAndExpiredTokens(t *testing.T) {
-	valid := signGameToken("game_1", "p_1", "jwt-secret")
-	gameID, playerID, err := verifyGameToken(valid, []byte("jwt-secret"))
+	valid := signGameToken("game_1", "p_1")
+	gameID, playerID, err := verifyGameToken(valid, &testGameKey.PublicKey)
 	if err != nil || gameID != "game_1" || playerID != "p_1" {
 		t.Fatalf("valid token returned %q %q %v", gameID, playerID, err)
 	}
-	for _, token := range []string{valid + "x", signTokenClaims(`{"gameId":"game_1","playerId":"p_1","iat":1,"exp":2}`, "jwt-secret")} {
-		if _, _, err := verifyGameToken(token, []byte("jwt-secret")); err == nil {
+	for _, token := range []string{valid + "x", signTokenClaims(`{"gameId":"game_1","playerId":"p_1","iat":1,"exp":2}`, testGameKey)} {
+		if _, _, err := verifyGameToken(token, &testGameKey.PublicKey); err == nil {
 			t.Fatalf("verifyGameToken(%q) succeeded", token)
 		}
+	}
+}
+
+func TestVerifyGameTokenOnlyAcceptsRS256FromTheLobbyKey(t *testing.T) {
+	now := time.Now().Unix()
+	claims := fmt.Sprintf(`{"gameId":"game_1","playerId":"p_1","iat":%d,"exp":%d}`, now, now+3600)
+	otherKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publicDER, err := x509.MarshalPKIXPublicKey(&testGameKey.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publicPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicDER})
+	forged := map[string]string{
+		"other key":                  signTokenClaims(claims, otherKey),
+		"HS256 with the public key":  signHS256(claims, publicPEM),
+		"HS256 with a shared secret": signHS256(claims, []byte("jwt-secret")),
+	}
+	for name, token := range forged {
+		if _, _, err := verifyGameToken(token, &testGameKey.PublicKey); err == nil {
+			t.Fatalf("%s: verifyGameToken succeeded", name)
+		}
+	}
+	if _, _, err := verifyGameToken(signGameToken("game_1", "p_1"), nil); err == nil {
+		t.Fatal("verifyGameToken succeeded without a public key")
+	}
+}
+
+func TestParseRSAPublicKeyReadsThePEMFromGenJWTKeys(t *testing.T) {
+	publicDER, err := x509.MarshalPKIXPublicKey(&testGameKey.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := parseRSAPublicKey(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicDER}))
+	if err != nil || !key.Equal(&testGameKey.PublicKey) {
+		t.Fatalf("parseRSAPublicKey = %v, %v", key, err)
+	}
+	privateDER, err := x509.MarshalPKCS8PrivateKey(testGameKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseRSAPublicKey(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privateDER})); err == nil {
+		t.Fatal("parseRSAPublicKey accepted a private key")
 	}
 }
 
@@ -293,7 +343,7 @@ func testApp(store StateStore) *App {
 func testAppWithResults(store StateStore) (*App, *fakeResults) {
 	results := newFakeResults()
 	return New(Config{
-		ListenAddr: ":0", JWTSecret: []byte("jwt-secret"), ServiceSecret: []byte("service-secret"),
+		ListenAddr: ":0", GamePublicKey: &testGameKey.PublicKey, ServiceSecret: []byte("service-secret"),
 		TickInterval: 10 * time.Millisecond, RoundPause: 10 * time.Millisecond,
 		StoreTimeout: time.Second, PublishTimeout: time.Second,
 	}, store, results, slog.New(slog.NewTextHandler(io.Discard, nil))), results
@@ -323,17 +373,41 @@ func createRequest(handler http.Handler, body, token string) *httptest.ResponseR
 	return response
 }
 
-func signGameToken(gameID, playerID, secret string) string {
-	now := time.Now().Unix()
-	claims := fmt.Sprintf(`{"gameId":%q,"playerId":%q,"iat":%d,"exp":%d}`, gameID, playerID, now, now+3600)
-	return signTokenClaims(claims, secret)
+// testGameKey hace de la clave privada de partidas del Lobby.
+var testGameKey = mustRSAKey()
+
+func mustRSAKey() *rsa.PrivateKey {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(err)
+	}
+	return key
 }
 
-func signTokenClaims(claims, secret string) string {
-	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
-	payload := base64.RawURLEncoding.EncodeToString([]byte(claims))
-	unsigned := header + "." + payload
-	mac := hmac.New(sha256.New, []byte(secret))
+func signGameToken(gameID, playerID string) string {
+	now := time.Now().Unix()
+	claims := fmt.Sprintf(`{"gameId":%q,"playerId":%q,"iat":%d,"exp":%d}`, gameID, playerID, now, now+3600)
+	return signTokenClaims(claims, testGameKey)
+}
+
+// signTokenClaims firma como PyJWT en el Lobby: RS256 con cabecera {"alg","typ"}.
+func signTokenClaims(claims string, key *rsa.PrivateKey) string {
+	unsigned := tokenPart(`{"alg":"RS256","typ":"JWT"}`) + "." + tokenPart(claims)
+	digest := sha256.Sum256([]byte(unsigned))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest[:])
+	if err != nil {
+		panic(err)
+	}
+	return unsigned + "." + base64.RawURLEncoding.EncodeToString(signature)
+}
+
+func signHS256(claims string, secret []byte) string {
+	unsigned := tokenPart(`{"alg":"HS256","typ":"JWT"}`) + "." + tokenPart(claims)
+	mac := hmac.New(sha256.New, secret)
 	_, _ = mac.Write([]byte(unsigned))
 	return unsigned + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+}
+
+func tokenPart(data string) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(data))
 }

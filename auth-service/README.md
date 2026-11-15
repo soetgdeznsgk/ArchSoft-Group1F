@@ -1,12 +1,13 @@
 # Auth Service
 
-Java 21 / Spring Boot service for account registration, login and account management, secured with Spring Security. It owns account credentials and its PostgreSQL database. Guests continue to use the Lobby Manager's existing `POST /api/session` endpoint.
+Java 21 / Spring Boot service that issues every player session (guests and accounts) and manages accounts, secured with Spring Security. It owns account credentials and its PostgreSQL database, and it does not depend on any other service.
 
 ## API
 
 | Route | Access | Description |
 |---|---|---|
-| `POST /auth/register` | Public | `{"username":"ana","password":"a-long-password"}`; creates an account and returns `{player, token, account}`, where `player` and `token` are the Lobby-compatible session |
+| `POST /auth/guest` | Public | `{"nickname":"Ana"}`; returns `201 {player, token}`, a guest session without password |
+| `POST /auth/register` | Public | `{"username":"ana","password":"a-long-password"}`; creates an account and returns `{player, token, account}` |
 | `POST /auth/login` | Public | Same request and response; returns a session for the existing account |
 | `GET /auth/me` | Account session | Returns `{id, username}` |
 | `POST /auth/password` | Account session | `{"currentPassword":"...","newPassword":"..."}`; responds `204` |
@@ -18,11 +19,17 @@ Usernames are case-insensitive and must be 3-20 characters using letters, number
 
 Five consecutive failures lock the account for one minute: login responds `429 too_many_attempts` with `Retry-After`, even with the correct password.
 
-After credentials are verified, Auth calls `POST /internal/auth/session` on the Lobby Manager over Compose's private network with `X-Service-Token`. The Lobby Manager idempotently maps the Auth account UUID to a player row and issues its existing session JWT. Auth never signs player or game tokens itself.
+Guest nicknames are trimmed, inner spaces collapsed, and must have 1-20 characters (`422 invalid_nickname` otherwise).
+
+## Session tokens
+
+`SessionTokens` signs every session with RS256 and the session private key, which only Auth receives. Claims: `sub` (player id), `scope: session`, `nickname`, `iat`, `exp` (12 hours) and, for accounts only, `accountId`. A guest gets a random player id; an account always gets the same one (`p_` plus its UUID without dashes), so every login reaches the Lobby as the same player.
+
+The Lobby Manager verifies sessions with the session public key and creates the player the first time it sees one. It still issues game tokens, signed with its own key pair; Auth never sees that key.
 
 ## Security model
 
-`SecurityConfig` runs Spring Security as a stateless OAuth2 resource server. Protected routes require `Authorization: Bearer <session token>`, validated with `JWT_SECRET` (HS256, at least 32 bytes), the same secret the Lobby Manager uses to sign. A token must carry `scope: session`, so game tokens are refused, and an `accountId` claim, so guest sessions get `403 account_required`.
+`SecurityConfig` runs Spring Security as a stateless OAuth2 resource server. Protected routes require `Authorization: Bearer <session token>`, verified with the session public key and RS256 only: tokens signed with another key or algorithm (for example HS256 using the public key as secret) are refused, and so are game tokens. A token must carry `scope: session` and an `accountId` claim, so guest sessions get `403 account_required`.
 
 Session tokens are stateless, so changing the password does not revoke the ones already issued: they expire on their own after 12 hours.
 
@@ -31,7 +38,8 @@ Session tokens are stateless, so changing the password does not revoke the ones 
 From the repository root, configure the `AUTH_POSTGRES_*` values in `.env`, then run:
 
 ```powershell
-docker compose up --build --wait auth auth-postgres lobby-manager postgres
+./scripts/gen-jwt-keys.sh
+docker compose up --build --wait auth auth-postgres
 ```
 
 Run service tests with:
@@ -40,4 +48,4 @@ Run service tests with:
 mvn -f auth-service/pom.xml test
 ```
 
-The Auth service requires `SERVICE_SECRET` and `JWT_SECRET` to match the Lobby Manager's values. Keep these secrets and the database password out of source control.
+Auth reads `SESSION_PRIVATE_KEY_FILE` and `SESSION_PUBLIC_KEY_FILE` (PEM files that `scripts/gen-jwt-keys.sh` creates under `secrets/jwt/` and Compose mounts as secrets). The tests generate their own key pairs. Keep the keys and the database password out of source control.

@@ -1,6 +1,10 @@
 defmodule BotService.FakeLobby do
-  @moduledoc "Lobby Manager en memoria con las mismas respuestas que el real, para las pruebas."
+  @moduledoc """
+  Lobby Manager en memoria con las mismas respuestas que el real, para las pruebas.
+  También hace de Auth (`POST /auth/guest`): las sesiones que emite son las que reconoce.
+  """
   @behaviour BotService.LobbyClient
+  @behaviour BotService.AuthClient
 
   alias BotService.ApiError
 
@@ -44,8 +48,8 @@ defmodule BotService.FakeLobby do
 
   def get_lobby(_other, _token), do: {:error, ApiError.new(404, "lobby_not_found", "La sala no existe.")}
 
-  @impl true
-  def create_session(nickname) do
+  @impl BotService.AuthClient
+  def guest_session(nickname) do
     Agent.get_and_update(__MODULE__, fn state ->
       id = "p_bot#{state.next}"
       token = "t_bot#{state.next}"

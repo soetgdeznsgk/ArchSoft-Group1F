@@ -15,7 +15,9 @@ sys.path.insert(0, str(ROOT))
 from app.config import Settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 
-app = create_app(Settings(database_url="", jwt_secret="no-se-usa", service_secret="no-se-usa"))
+app = create_app(
+    Settings(database_url="", session_public_key="no-se-usa", game_private_key="no-se-usa", service_secret="no-se-usa")
+)
 target = ROOT / "docs" / "openapi.json"
 target.write_text(json.dumps(app.openapi(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 print(f"Escrito {target.relative_to(ROOT)} ({len(app.openapi()['paths'])} rutas)")

@@ -5,9 +5,8 @@ from __future__ import annotations
 import asyncio
 from dataclasses import replace
 
-import jwt
 
-from .conftest import JWT_SECRET, make_settings, running
+from .conftest import make_settings, read_game_token, running
 from .test_result import result_body
 
 
@@ -74,7 +73,7 @@ async def test_al_iniciar_cada_jugador_recibe_su_propio_token(ctx):
             name, data = await stream.next()
             assert name == "game_starting"
             assert (data["lobbyId"], data["gameId"], data["wsPath"]) == (lobby["id"], game_id, f"/ws/games/{game_id}")
-            claims = jwt.decode(data["token"], JWT_SECRET, algorithms=["HS256"])
+            claims = read_game_token(data["token"])
             assert (claims["gameId"], claims["playerId"]) == (game_id, user.id)
 
 
@@ -85,7 +84,7 @@ async def test_quien_se_conecta_con_la_partida_iniciada_recibe_el_aviso_de_inici
         assert name == "lobby" and data["status"] == "IN_GAME"
         name, data = await stream.next()
         assert name == "game_starting"
-        assert jwt.decode(data["token"], JWT_SECRET, algorithms=["HS256"])["playerId"] == users[2].id
+        assert read_game_token(data["token"])["playerId"] == users[2].id
 
 
 async def test_el_resultado_avisa_el_cierre_y_termina_el_stream(ctx):

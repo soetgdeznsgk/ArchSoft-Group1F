@@ -61,11 +61,11 @@ Convenciones:
 
 | Carpeta | Estado | Cómo usarlo |
 |---|---|---|
-| [`presentation-ssr/`](presentation-ssr) | HTML inicial SSR y assets de la presentación | `./scripts/gen-certs.sh --trust`, `docker compose up --build` y abrir `https://localhost` |
+| [`presentation-ssr/`](presentation-ssr) | HTML inicial SSR y assets de la presentación | `./scripts/gen-certs.sh --trust`, `./scripts/gen-jwt-keys.sh`, `docker compose up --build` y abrir `https://localhost` |
 | [`presentation/`](presentation) | Assets y clientes web (p5.js) | Reutilizados por `presentation-ssr` |
-| [`auth-service/`](auth-service) | Registro/login, Spring Security, BCrypt, bloqueo por intentos y sesión compatible con Lobby | Ver [auth-service/README.md](auth-service/README.md) |
+| [`auth-service/`](auth-service) | Emite todas las sesiones (invitados y cuentas, RS256), registro/login, Spring Security, BCrypt y bloqueo por intentos | Ver [auth-service/README.md](auth-service/README.md) |
 | [`game-logic/`](game-logic) | Motor, API interna, WebSocket y persistencia Redis | Ver [game-logic/README.md](game-logic/README.md) |
-| [`lobby-manager/`](lobby-manager) | Sesiones de invitado, identidad de jugador y salas | Ver [lobby-manager/README.md](lobby-manager/README.md) |
+| [`lobby-manager/`](lobby-manager) | Verifica las sesiones de Auth, jugadores, salas y tokens de partida | Ver [lobby-manager/README.md](lobby-manager/README.md) |
 | [`bot-service/`](bot-service) | Llenar sala con bots que juegan la partida completa | Ver [bot-service/README.md](bot-service/README.md) y [docs/bot-service.md](docs/bot-service.md) |
 | [`ratings-service/`](ratings-service) | Ranking Elo por modo, alimentado por RabbitMQ | Ver [ratings-service/README.md](ratings-service/README.md) y [docs/ratings-service.md](docs/ratings-service.md) |
 | [`api-gateway/`](api-gateway) | Traefik: enrutamiento por ruta, TLS 1.2/1.3 con HSTS en :443, :80 solo redirige ([escenario 1](docs/p3/esc1.md)) | Ver su README |

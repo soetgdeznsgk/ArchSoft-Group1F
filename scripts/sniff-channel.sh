@@ -97,7 +97,7 @@ first=$("${CURL[@]}" -o /dev/null -w '%{http_code} %{redirect_url}' "http://$HOS
 ACCOUNT_TOKEN=$(post /auth/register "{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}" | field token)
 
 # 3. Sesión de invitado.
-GUEST_TOKEN=$(post /api/session '{"nickname":"Espiado"}' | field token)
+GUEST_TOKEN=$(post /auth/guest '{"nickname":"Espiado"}' | field token)
 
 # 4. Sala de espera: EventSource no admite cabeceras, el token va en la URL.
 lobby=$(post /api/lobbies '{"mode":"CHAMELEON"}' "$ACCOUNT_TOKEN")

@@ -13,17 +13,18 @@ Permite que el anfitrión de una sala ocupe los cupos libres con bots que juegan
 
 Un bot **es un jugador más**. Usa exactamente las mismas interfaces que el navegador:
 
-- REST del Lobby Manager para tener sesión y unirse (`POST /api/session`, `POST /api/lobbies/{id}/join`).
+- REST de Auth para tener sesión de invitado (`POST /auth/guest`) y REST del Lobby Manager para unirse (`POST /api/lobbies/{id}/join`).
 - SSE de la sala de espera para enterarse del inicio (`game_starting`) y no ser expulsado por ausencia.
 - WebSocket de Game Logic para recibir la vista (`view`) y enviar acciones (`draw`, `discard`, `steal`, `lay_down`, `deposit`).
 
-Por eso **ni el Lobby Manager ni Game Logic cambiaron**: no saben que hay bots. Go sigue siendo el árbitro y valida cada acción de un bot igual que la de un humano.
+Por eso **ni Auth, ni el Lobby Manager, ni Game Logic cambiaron**: no saben que hay bots. Go sigue siendo el árbitro y valida cada acción de un bot igual que la de un humano.
 
 ```mermaid
 sequenceDiagram
     participant P as Presentación
     participant G as Traefik
     participant B as Bot Service
+    participant A as Auth
     participant LM as Lobby Manager
     participant GO as Game Logic
 
@@ -32,7 +33,7 @@ sequenceDiagram
     B->>LM: GET /api/session y GET /api/lobbies/{id} con el token del usuario
     Note over B: ¿es el anfitrión? ¿sala en espera? ¿cupos libres?
     loop por cada cupo libre
-        B->>LM: POST /api/session {nickname: "Bot ..."}
+        B->>A: POST /auth/guest {nickname: "Bot ..."}
         B->>LM: POST /api/lobbies/{id}/join (token del bot)
         B->>LM: GET /api/lobbies/{id}/events (SSE, se queda abierto)
     end

@@ -15,7 +15,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api import internal, public
+from . import security
+from .api import public
 from .broker import ResultBroker, RabbitResultBroker
 from .config import Settings
 from .db import create_pool
@@ -43,6 +44,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        security.load_keys(settings)
         pool = await create_pool(settings)
         game_client = GameLogicClient(
             settings.game_logic_url, settings.service_secret, settings.game_request_timeout_s, game_transport
@@ -111,7 +113,6 @@ def create_app(
         return JSONResponse({"status": "ok", "postgres": "ok"})
 
     app.include_router(public)
-    app.include_router(internal)
     return app
 
 

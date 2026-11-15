@@ -96,6 +96,9 @@ auth_api() {
   curl "${args[@]}" -w '\n%{http_code}' "$BASE_URL/auth$path"
 }
 
+# Sesión de invitado: la emite Auth (decisión 4).
+guest() { auth_api POST /guest "" "{\"nickname\":\"$1\"}"; }
+
 # Publica game.ended en RabbitMQ como lo haría Go (exchange bololo.events, con confirmación).
 publish_game_ended() {
   docker compose exec -T lobby-manager python -c "
@@ -153,6 +156,12 @@ if [[ "$BASE_URL" == https://* ]]; then
     exit 1
   fi
 fi
+if ls secrets/jwt/{session,game}-{private,public}.pem >/dev/null 2>&1; then
+  ok "claves de los JWT generadas"
+else
+  fail "claves de los JWT generadas" "ejecuta ./scripts/gen-jwt-keys.sh"
+  exit 1
+fi
 if diff <(env_keys .env) <(env_keys .env.example) >/dev/null; then
   ok ".env y .env.example tienen las mismas claves"
 else
@@ -185,7 +194,7 @@ else
   check "traefik publica el 443" ".*:443" "$(docker compose port traefik 443 2>/dev/null)"
   check "GET por http:// redirige a https" "301|308" "$(http_code "$HTTP_URL/menu/")"
   check "la redirección conserva ruta y query" "$BASE_URL/api/lobbies\?x=1" "$(header_of location "$HTTP_URL/api/lobbies?x=1")"
-  res=$(curl -s --max-time 5 -X POST -H 'Content-Type: application/json' -d '{"nickname":"EnClaro"}' -w '\n%{http_code}' "$HTTP_URL/api/session")
+  res=$(curl -s --max-time 5 -X POST -H 'Content-Type: application/json' -d '{"nickname":"EnClaro"}' -w '\n%{http_code}' "$HTTP_URL/auth/guest")
   check "POST por http:// no llega al servicio" "308" "$(status_of "$res")"
   check "POST por http:// no entrega token" "0" "$(body_of "$res" | grep -c token)"
   check "cabecera HSTS en https" "max-age=[1-9][0-9]*" "$(header_of strict-transport-security "$BASE_URL/menu/")"
@@ -231,10 +240,12 @@ check "p5.js servido con gzip" "gzip" "$encoding"
 section "Lobby manager (REST y SSE)"
 declare -a TOKENS
 for name in Ana Beto Caro Dani; do
-  res=$(api POST /session "" "{\"nickname\":\"$name\"}")
+  res=$(guest "$name")
   TOKENS+=("$(body_of "$res" | field token)")
-  check "POST /api/session $name" "201" "$(status_of "$res")"
+  check "POST /auth/guest $name" "201" "$(status_of "$res")"
 done
+check "el Lobby ya no emite sesiones" "405" "$(status_of "$(api POST /session "" '{"nickname":"Ana"}')")"
+check "GET /api/session crea al jugador del invitado" ".*\"nickname\":\"Ana\".*" "$(body_of "$(api GET /session "${TOKENS[0]}")")"
 check "GET /api/lobbies sin sesion" "401" "$(status_of "$(api GET /lobbies)")"
 check "GET /api/lobbies con sesion" "200" "$(status_of "$(api GET /lobbies "${TOKENS[0]}")")"
 res=$(api POST /lobbies "${TOKENS[0]}")
@@ -245,7 +256,7 @@ check "POST /start con 1 jugador" "409" "$(status_of "$(api POST "/lobbies/$LOBB
 for i in 1 2 3; do
   check "jugador $((i + 1)) entra con el codigo" "200" "$(status_of "$(api POST /lobbies/join "${TOKENS[$i]}" "{\"code\":\"$CODE\"}")")"
 done
-extra=$(body_of "$(api POST /session "" '{"nickname":"Quinto"}')" | field token)
+extra=$(body_of "$(guest Quinto)" | field token)
 check "quinto jugador rechazado (sala llena)" "409" "$(status_of "$(api POST /lobbies/join "$extra" "{\"code\":\"$CODE\"}")")"
 headers=$(curl -s -N -o /dev/null -D - --max-time 2 -H 'Accept-Encoding: gzip' "$BASE_URL/api/lobbies/$LOBBY_ID/events?token=${TOKENS[0]}" | tr -d '\r')
 check "SSE Content-Type" "text/event-stream.*" "$(awk 'tolower($1)=="content-type:"{print $2}' <<<"$headers")"
@@ -324,7 +335,7 @@ fi
 section "Modo camaleon (2 a 4 jugadores)"
 declare -a CH_TOKENS
 for name in Eva Fede; do
-  CH_TOKENS+=("$(body_of "$(api POST /session "" "{\"nickname\":\"$name\"}")" | field token)")
+  CH_TOKENS+=("$(body_of "$(guest "$name")" | field token)")
 done
 res=$(api POST /lobbies "${CH_TOKENS[0]}" '{"mode":"CHAMELEON"}')
 check "POST /api/lobbies con mode CHAMELEON" "201" "$(status_of "$res")"
@@ -425,6 +436,23 @@ check "sin mensajes muertos" ".*ratings\.game-finished\.dead true 0.*" "$(tr '\n
 check "cola de resultados del lobby durable y vacia" ".*lobby\.game-ended true 0.*" "$(tr '\n' ';' <<<"$queues")"
 check "sin resultados muertos en el lobby" ".*lobby\.game-ended\.dead true 0.*" "$(tr '\n' ';' <<<"$queues")"
 check "Go no conoce la URL del Lobby" "0" "$(docker compose config game-logic 2>/dev/null | grep -c LOBBY_CALLBACK_URL)"
+
+section "Claves de los JWT y topologia del broker (decisiones 5 y 6)"
+# Se leen los montajes del contenedor: la imagen de game-logic es distroless y no trae ls.
+secrets_of() {
+  docker inspect -f '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' "$(docker compose ps -q "$1")" 2>/dev/null |
+    sed -n 's#^/run/secrets/##p' | LC_ALL=C sort | tr '\n' ' '
+}
+check "auth solo recibe las claves de sesion" "session_private_key session_public_key " \
+  "$(secrets_of auth)"
+check "lobby-manager no recibe la clave privada de sesiones" "game_private_key session_public_key " \
+  "$(secrets_of lobby-manager)"
+check "game-logic solo recibe la clave publica de partidas" "game_public_key " \
+  "$(secrets_of game-logic)"
+queues=$(docker compose exec -T rabbitmq rabbitmqctl -q list_queues name 2>/dev/null | tr -d '\r' | LC_ALL=C sort | tr '\n' ' ')
+check "el broker declara las colas de sus consumidores" \
+  "lobby.game-ended lobby.game-ended.dead name ratings.game-finished ratings.game-finished.dead |lobby.game-ended lobby.game-ended.dead ratings.game-finished ratings.game-finished.dead " \
+  "$queues"
 
 section "Datos"
 check "redis exige contrasena" "NOAUTH.*" "$(docker compose exec -T redis sh -c 'unset REDISCLI_AUTH; redis-cli ping' 2>&1 | tr -d '\r')"

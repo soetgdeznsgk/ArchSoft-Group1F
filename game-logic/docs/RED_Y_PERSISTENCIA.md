@@ -32,8 +32,9 @@ y su registro expira después de una hora.
 
 ## WebSocket
 
-Ruta: `GET /ws/games/{gameId}?token=<JWT>`. El token HS256 debe llevar
-`gameId`, `playerId`, `iat` y `exp`; Go verifica firma, expiración, partida y
+Ruta: `GET /ws/games/{gameId}?token=<JWT>`. El token lo firma el Lobby con
+RS256 y su clave privada de partidas, y debe llevar `gameId`, `playerId`, `iat`
+y `exp`. Go solo tiene la clave pública: verifica firma (solo RS256), expiración, partida y
 pertenencia del jugador antes de aceptar la conexión. El jugador en una acción
 siempre se reemplaza por la identidad del token.
 
@@ -84,7 +85,8 @@ evento de su propia cola. La publicación cuenta solo cuando el broker la
 confirma y la dejó en alguna cola; si no, se reintenta con backoff exponencial y
 la partida permanece activa en Redis hasta que se confirme.
 
-Variables requeridas: `REDIS_URL`, `JWT_SECRET`, `SERVICE_SECRET` y
+Variables requeridas: `REDIS_URL`, `GAME_PUBLIC_KEY_FILE` (PEM de la clave
+pública de partidas, la genera `scripts/gen-jwt-keys.sh`), `SERVICE_SECRET` y
 `RABBITMQ_URL`. Opcionales: `GAME_LOGIC_ADDR` (`:8081`), `REDIS_KEY_PREFIX`,
 `ALLOWED_ORIGINS`, `TICK_INTERVAL`, `ROUND_PAUSE`, `REDIS_WRITE_TIMEOUT` y
 `RESULT_PUBLISH_TIMEOUT`. Use secretos generados en el entorno, no los guarde
