@@ -10,10 +10,51 @@ set -uo pipefail
 export MSYS_NO_PATHCONV=1
 
 ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-BASE_URL="${BASE_URL:-http://localhost}"
+BASE_URL="${BASE_URL:-https://localhost}"
+# Mismo host por el puerto 80, que solo debe redirigir (escenario 1, Secure Channel).
+HTTP_URL="${HTTP_URL:-http://${BASE_URL#*://}}"
+CA_CERT="${CA_CERT:-api-gateway/ca/bololo-dev-ca.crt}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-300}"
 P5_PATH="${P5_PATH:-/libraries/p5.min.js}"
 cd "$ROOT" || exit 1
+
+# Todas las llamadas validan el certificado contra la CA local, como el navegador
+# (sin -k). --ssl-revoke-best-effort: la CA local no publica CRL y curl con
+# Schannel (Windows) fallaría; en curl con OpenSSL no tiene efecto.
+# En Git Bash, con MSYS_NO_PATHCONV=1 el curl nativo de Windows no puede abrir
+# /dev/null: sale con código 23 y deja -w a medias (por ejemplo %{redirect_url}).
+# Por eso /dev/null se traduce a "nul" allí.
+TLS_OPTS=()
+[[ "$BASE_URL" == https://* ]] && TLS_OPTS=(--cacert "$CA_CERT" --ssl-revoke-best-effort)
+case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) NULL_DEV=nul ;; *) NULL_DEV=/dev/null ;; esac
+curl() {
+  local args=() a
+  for a in "$@"; do [[ $a == /dev/null ]] && a=$NULL_DEV; args+=("$a"); done
+  command curl ${TLS_OPTS[@]+"${TLS_OPTS[@]}"} "${args[@]}"
+}
+TLS_NAME="${BASE_URL#*://}"
+TLS_NAME="${TLS_NAME%%[:/]*}"
+TLS_PORT=443
+[[ "${BASE_URL#*://}" =~ :([0-9]+) ]] && TLS_PORT="${BASH_REMATCH[1]}"
+# Solo texto imprimible: el ticket de sesión trae bytes binarios que rompen las regex de bash.
+tls_probe() { openssl s_client -connect "$TLS_NAME:$TLS_PORT" -servername "$TLS_NAME" "$@" </dev/null 2>&1 | tr -cd '[:print:]\n'; }
+# Valor de una cabecera de respuesta.
+header_of() { local name=$1; shift; curl -s -o /dev/null -D - --max-time 5 "$@" | tr -d '\r' | awk -v h="$name:" 'tolower($1)==h{print $2}'; }
+
+# Un handshake que el servidor debe rechazar. Si es el cliente openssl el que no
+# puede ofrecer esa versión o suite, la prueba se omite en lugar de pasar sola.
+tls_rejected() {
+  local name=$1 out
+  shift
+  out=$(tls_probe "$@")
+  if grep -aqE 'alert (protocol version|handshake failure|insufficient security)' <<<"$out"; then
+    ok "$name"
+  elif grep -aqE 'Cipher is [A-Z0-9]|Protocol version: TLS' <<<"$out"; then
+    fail "$name" "el servidor aceptó: $(grep -aoE 'Cipher is [^ ]+' <<<"$out" | head -1)"
+  else
+    skip "$name" "el cliente openssl no puede ofrecerlo"
+  fi
+}
 
 PASS=0
 FAIL=0
@@ -104,6 +145,14 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 ok ".env existe"
+if [[ "$BASE_URL" == https://* ]]; then
+  if [[ -s "$CA_CERT" && -s api-gateway/certs/bololo.crt && -s api-gateway/certs/bololo.key ]]; then
+    ok "certificado del gateway y CA local generados"
+  else
+    fail "certificado del gateway y CA local generados" "ejecuta ./scripts/gen-certs.sh"
+    exit 1
+  fi
+fi
 if diff <(env_keys .env) <(env_keys .env.example) >/dev/null; then
   ok ".env y .env.example tienen las mismas claves"
 else
@@ -128,6 +177,33 @@ for svc in $(docker compose ps --services); do
 done
 published=$(docker compose ps --format '{{.Service}} {{.Ports}}' | grep -- '->' | cut -d' ' -f1 | sort -u | tr '\n' ' ')
 check "solo traefik publica puertos" "traefik " "$published"
+
+section "Canal seguro (TLS, escenario 1)"
+if [[ "$BASE_URL" != https://* ]]; then
+  skip "canal seguro" "BASE_URL no es https"
+else
+  check "traefik publica el 443" ".*:443" "$(docker compose port traefik 443 2>/dev/null)"
+  check "GET por http:// redirige a https" "301|308" "$(http_code "$HTTP_URL/menu/")"
+  check "la redirección conserva ruta y query" "$BASE_URL/api/lobbies\?x=1" "$(header_of location "$HTTP_URL/api/lobbies?x=1")"
+  res=$(curl -s --max-time 5 -X POST -H 'Content-Type: application/json' -d '{"nickname":"EnClaro"}' -w '\n%{http_code}' "$HTTP_URL/api/session")
+  check "POST por http:// no llega al servicio" "308" "$(status_of "$res")"
+  check "POST por http:// no entrega token" "0" "$(body_of "$res" | grep -c token)"
+  check "cabecera HSTS en https" "max-age=[1-9][0-9]*" "$(header_of strict-transport-security "$BASE_URL/menu/")"
+  check "sin HSTS en http (el navegador la ignoraría)" "" "$(header_of strict-transport-security "$HTTP_URL/")"
+  probe=$(tls_probe -CAfile "$CA_CERT" -verify_hostname "$TLS_NAME" -verify_return_error -alpn h2,http/1.1)
+  check "certificado válido para $TLS_NAME (CA local)" "Verify return code: 0 \(ok\)" \
+    "$(grep -aoE 'Verify return code: [0-9]+ \([^)]*\)' <<<"$probe" | head -1)"
+  check "TLS 1.3 negociado" "New, TLSv1\.3" "$(grep -aoE 'New, TLSv[0-9.]+' <<<"$probe" | head -1)"
+  check "HTTP/2 negociado por ALPN" "ALPN protocol: h2" "$(grep -aoE 'ALPN protocol: [^ ]+|No ALPN negotiated' <<<"$probe" | head -1)"
+  check "TLS 1.2 con ECDHE + AES-GCM aceptado" "Cipher is ECDHE-ECDSA-AES128-GCM-SHA256" \
+    "$(tls_probe -tls1_2 -cipher ECDHE-ECDSA-AES128-GCM-SHA256 | grep -aoE 'Cipher is [^ ]+' | head -1)"
+  tls_rejected "TLS 1.0 rechazado" -tls1 -cipher 'DEFAULT:@SECLEVEL=0'
+  tls_rejected "TLS 1.1 rechazado" -tls1_1 -cipher 'DEFAULT:@SECLEVEL=0'
+  tls_rejected "suite sin ECDHE (AES128-SHA) rechazada" -tls1_2 -cipher 'AES128-SHA:@SECLEVEL=0'
+  tls_rejected "suite CBC (ECDHE-ECDSA-AES128-SHA) rechazada" -tls1_2 -cipher 'ECDHE-ECDSA-AES128-SHA:@SECLEVEL=0'
+  check "traefik solo monta el certificado, no la CA" "README.md bololo.crt bololo.key " \
+    "$(docker compose exec -T traefik ls /certs 2>/dev/null | tr -d '\r' | LC_ALL=C sort | tr '\n' ' ')"
+fi
 
 GO_REAL=false
 [[ "$(internal GET /healthz)" == *'"status":"ok"'* ]] && GO_REAL=true
@@ -185,6 +261,7 @@ else
 fi
 secret="e2e-$(openssl rand -hex 8)"
 http_code "$BASE_URL/ws/games/prueba?token=$secret" >/dev/null
+http_code "$HTTP_URL/ws/games/prueba?token=$secret" >/dev/null
 http_code "$BASE_URL/api/lobbies/$LOBBY_ID/events?token=$secret" >/dev/null
 sleep 1
 check "tokens ausentes en logs de traefik" "0" "$(docker compose logs traefik 2>&1 | grep -c "$secret")"
@@ -213,8 +290,11 @@ else
     curl -s -o /dev/null -w '%{http_code}' --max-time 2 --http1.1 \
       -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
       -H 'Sec-WebSocket-Version: 13' -H "Sec-WebSocket-Key: $(openssl rand -base64 16)" \
-      -H "Origin: $BASE_URL" "$BASE_URL/ws/games/$1?token=$2"
+      -H "Origin: ${3:-$BASE_URL}" "$BASE_URL/ws/games/$1?token=$2"
   }
+  if [[ "$BASE_URL" == https://* ]]; then
+    check "upgrade desde una pagina http:// rechazado" "403" "$(ws "$GAME_ID" "$GAME_TOKEN" "$HTTP_URL")"
+  fi
   check "upgrade con token valido" "101" "$(ws "$GAME_ID" "$GAME_TOKEN")"
   check "token invalido rechazado" "401" "$(ws "$GAME_ID" "invalido")"
   check "token de sesion rechazado" "401" "$(ws "$GAME_ID" "${TOKENS[0]}")"

@@ -1,0 +1,48 @@
+# Escenario 1 (Secure Channel) - configuracion dinamica de Traefik.
+# Se carga desde providers.file (directorio /etc/traefik/dynamic, se recarga solo).
+# Este archivo pasa por las plantillas Go de Traefik antes de leerse como YAML:
+# la linea de stsSeconds toma HSTS_MAX_AGE del entorno del contenedor.
+#
+# Detalles y motivos: docs/p3/esc1.md
+
+tls:
+  # Certificado que sirve Traefik a todo cliente: con SNI (localhost) o sin SNI
+  # (jugadores que entran por la IP de la LAN). Lo genera scripts/gen-certs.sh.
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/bololo.crt
+        keyFile: /certs/bololo.key
+
+  # Politica de todos los routers TLS (perfil "Intermediate" de Mozilla).
+  options:
+    default:
+      minVersion: VersionTLS12
+      # Solo TLS 1.2 con intercambio ECDHE (secreto hacia adelante) y cifrado
+      # autenticado (AEAD). Quedan fuera RSA estatico, CBC, 3DES y RC4.
+      # Las RSA se dejan por si se cambia el certificado por uno RSA (ACME, mkcert).
+      # En TLS 1.3 Go no deja elegir suites: las tres que ofrece son AEAD con ECDHE.
+      # No se fija curvePreferences para conservar la de Go por defecto, que
+      # empieza por X25519MLKEM768 (hibrida poscuantica) y X25519.
+      cipherSuites:
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      # false: una IP no viaja en SNI y los jugadores de la LAN entran por IP.
+      sniStrict: false
+
+http:
+  middlewares:
+    # HSTS: tras la primera visita el navegador reescribe http:// a https://
+    # antes de enviar nada (defensa contra SSL stripping). Traefik solo lo
+    # envia en respuestas HTTPS. Valor local corto (300 s) porque HSTS aplica
+    # al host en todos los puertos y bloquearia los http://localhost:PUERTO de
+    # desarrollo; en produccion HSTS_MAX_AGE=31536000 con dominio propio.
+    hsts:
+      headers:
+        stsSeconds: {{ env "HSTS_MAX_AGE" | default "300" }}
+        stsIncludeSubdomains: false
+        stsPreload: false

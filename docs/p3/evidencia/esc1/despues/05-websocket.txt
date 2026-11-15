@@ -1,0 +1,4 @@
+wss:// con Origin https://localhost      -> HTTP 101
+wss:// con Origin http://localhost       -> HTTP 403
+wss:// con Origin https://evil.example   -> HTTP 403
+ws://  (texto plano)                   -> HTTP 301, Location: https://localhost/ws/games/g_72fc3679b509?token=x

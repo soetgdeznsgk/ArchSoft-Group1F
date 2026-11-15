@@ -1,0 +1,14 @@
+$ docker compose ps --format '{{.Service}}\t{{.Ports}}' | sort
+auth	8080/tcp
+auth-postgres	5432/tcp
+bot-service	8090/tcp
+frontend	3000/tcp
+game-logic	
+lobby-manager	8000/tcp
+postgres	5432/tcp
+rabbitmq	4369/tcp, 5671-5672/tcp, 15671-15672/tcp, 15691-15692/tcp, 25672/tcp
+ratings-postgres	5432/tcp
+ratings-service	8000/tcp
+redis	6379/tcp
+traefik	0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp
+

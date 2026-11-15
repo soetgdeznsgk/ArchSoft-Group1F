@@ -1,0 +1,14 @@
+# 1. Se mueven api-gateway/certs/bololo.crt y bololo.key fuera de la carpeta montada.
+$ mv api-gateway/certs/bololo.{crt,key} <respaldo>/ && docker compose up -d --force-recreate --no-deps traefik
+$ docker compose ps -a traefik --format "{{.Service}}: {{.Status}}"
+traefik: Restarting (1) 1 second ago
+$ docker compose logs traefik | grep ERROR | tail -1
+traefik-1  | ERROR: falta el certificado TLS en api-gateway/certs/. Ejecuta ./scripts/gen-certs.sh
+$ curl -sk --max-time 3 -w "%{http_code}" https://localhost/   (sin servidor: 000)
+000
+$ curl -s --max-time 3 -w "%{http_code}" http://localhost/
+000
+
+# 2. Se restauran los archivos y Traefik vuelve a arrancar.
+$ docker compose ps traefik --format "{{.Service}}: {{.Status}}"
+traefik: Up 3 seconds (healthy)

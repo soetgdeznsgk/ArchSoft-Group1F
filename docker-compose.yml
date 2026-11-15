@@ -4,11 +4,30 @@ services:
   traefik:
     image: traefik:v3.7.14
     restart: unless-stopped
+    # Escenario 1 (Secure Channel): sin certificado no arranca (falla cerrado).
+    # Si arrancara, serviría su certificado autofirmado de ejemplo y el navegador
+    # mostraría una advertencia que se aprende a aceptar, igual que la de un atacante.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ ! -s /certs/bololo.crt ] || [ ! -s /certs/bololo.key ]; then
+          echo "ERROR: falta el certificado TLS en api-gateway/certs/. Ejecuta ./scripts/gen-certs.sh" >&2
+          exit 1
+        fi
+        exec traefik
+    environment:
+      # max-age de HSTS (dynamic/secure-channel.yml). Producción: 31536000.
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-300}
     ports:
-      - "80:80"
+      - "80:80"   # solo redirige a HTTPS
+      - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./api-gateway/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./api-gateway/dynamic:/etc/traefik/dynamic:ro
+      # Solo el certificado y su clave. La CA local (api-gateway/ca/) no se monta.
+      - ./api-gateway/certs:/certs:ro
     networks:
       - public
       - internal
@@ -32,7 +51,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.web.entrypoints=web"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls=true"
       - "traefik.http.routers.web.priority=1"
       - "traefik.http.services.web.loadbalancer.server.port=3000"
     healthcheck:
@@ -58,7 +78,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth/`)"
-      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.routers.auth.entrypoints=websecure"
+      - "traefik.http.routers.auth.tls=true"
       - "traefik.http.routers.auth.priority=10"
       - "traefik.http.services.auth.loadbalancer.server.port=8080"
     depends_on:
@@ -84,12 +105,16 @@ services:
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
       GAME_LOGIC_URL: http://game-logic:8081
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
+      # Uvicorn acepta X-Forwarded-Proto de Traefik (que lo reescribe en cada petición
+      # externa). Sin esto cree que la petición llegó por http y redirige a http://.
+      FORWARDED_ALLOW_IPS: "*"
     networks:
       - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.lobby.rule=PathPrefix(`/api/`)"
-      - "traefik.http.routers.lobby.entrypoints=web"
+      - "traefik.http.routers.lobby.entrypoints=websecure"
+      - "traefik.http.routers.lobby.tls=true"
       - "traefik.http.services.lobby.loadbalancer.server.port=8000"
     depends_on:
       postgres:
@@ -132,13 +157,16 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
+      # Origin aceptado en el upgrade del WebSocket. Solo https: una página servida
+      # en claro no puede abrir la partida. Para la LAN: https://localhost,https://<IP>
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost}
     networks:
       - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.game-ws.rule=PathPrefix(`/ws/games/`)"
-      - "traefik.http.routers.game-ws.entrypoints=web"
+      - "traefik.http.routers.game-ws.entrypoints=websecure"
+      - "traefik.http.routers.game-ws.tls=true"
       - "traefik.http.services.game-ws.loadbalancer.server.port=8081"
     depends_on:
       redis:
@@ -167,7 +195,8 @@ services:
       - "traefik.enable=true"
       # Más específica que /api/ (lobby-manager): la prioridad la hace ganar.
       - "traefik.http.routers.bots.rule=PathPrefix(`/api/bots/`)"
-      - "traefik.http.routers.bots.entrypoints=web"
+      - "traefik.http.routers.bots.entrypoints=websecure"
+      - "traefik.http.routers.bots.tls=true"
       - "traefik.http.routers.bots.priority=30"
       - "traefik.http.services.bots.loadbalancer.server.port=8090"
     depends_on:
@@ -192,12 +221,15 @@ services:
       POSTGRES_PASSWORD: ${RATINGS_POSTGRES_PASSWORD:?Falta RATINGS_POSTGRES_PASSWORD en .env}
       POSTGRES_DB: ${RATINGS_POSTGRES_DB:?Falta RATINGS_POSTGRES_DB en .env}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
+      # Igual que lobby-manager: las redirecciones salen con https:// detrás de Traefik.
+      FORWARDED_ALLOW_IPS: "*"
     networks:
       - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ratings.rule=PathPrefix(`/api/ratings/`)"
-      - "traefik.http.routers.ratings.entrypoints=web"
+      - "traefik.http.routers.ratings.entrypoints=websecure"
+      - "traefik.http.routers.ratings.tls=true"
       - "traefik.http.routers.ratings.priority=30"
       - "traefik.http.services.ratings.loadbalancer.server.port=8000"
     depends_on:

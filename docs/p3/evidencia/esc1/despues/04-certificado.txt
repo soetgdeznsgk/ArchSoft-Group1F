@@ -1,0 +1,50 @@
+$ openssl x509 -in api-gateway/certs/bololo.crt -noout -subject -issuer -dates -ext subjectAltName,keyUsage,extendedKeyUsage,basicConstraints
+subject=O=Bololo 1F, CN=localhost
+issuer=O=Bololo 1F (desarrollo local), CN=Bololo Dev CA - Sebas
+notBefore=Nov 15 00:17:06 2026 GMT
+notAfter=Dec 17 00:17:06 2027 GMT
+X509v3 Basic Constraints: critical
+    CA:FALSE
+X509v3 Key Usage: critical
+    Digital Signature
+X509v3 Extended Key Usage: 
+    TLS Web Server Authentication
+X509v3 Subject Alternative Name: 
+    DNS:localhost, IP Address:127.0.0.1, IP Address:0:0:0:0:0:0:0:1
+
+$ openssl x509 -in api-gateway/certs/bololo.crt -noout -text | grep -E 'Public Key Algorithm|Public-Key|ASN1 OID|Signature Algorithm' | sort -u
+                ASN1 OID: prime256v1
+                Public-Key: (256 bit)
+            Public Key Algorithm: id-ecPublicKey
+        Signature Algorithm: ecdsa-with-SHA256
+    Signature Algorithm: ecdsa-with-SHA256
+
+$ openssl x509 -in api-gateway/ca/bololo-dev-ca.crt -noout -subject -dates -ext basicConstraints,keyUsage,nameConstraints
+subject=O=Bololo 1F (desarrollo local), CN=Bololo Dev CA - Sebas
+notBefore=Nov 15 00:16:49 2026 GMT
+notAfter=Feb 17 00:16:49 2029 GMT
+X509v3 Basic Constraints: critical
+    CA:TRUE, pathlen:0
+X509v3 Key Usage: critical
+    Certificate Sign, CRL Sign
+X509v3 Name Constraints: critical
+    Permitted:
+      DNS:localhost
+      DNS:test
+      DNS:local
+      DNS:home.arpa
+      IP:127.0.0.0/255.0.0.0
+      IP:10.0.0.0/255.0.0.0
+      IP:172.16.0.0/255.240.0.0
+      IP:192.168.0.0/255.255.0.0
+      IP:0:0:0:0:0:0:0:1/FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF
+
+$ openssl verify -CAfile api-gateway/ca/bololo-dev-ca.crt api-gateway/certs/bololo.crt
+api-gateway/certs/bololo.crt: OK
+
+# Certificado falso para www.google.com firmado con la clave de la CA local:
+$ openssl verify -CAfile api-gateway/ca/bololo-dev-ca.crt api-gateway/ca/.tmp.xG0VIW/google.crt
+CN=www.google.com
+error 47 at 0 depth lookup: permitted subtree violation
+error api-gateway/ca/.tmp.xG0VIW/google.crt: verification failed
+
