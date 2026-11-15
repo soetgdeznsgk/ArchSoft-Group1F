@@ -76,8 +76,8 @@ fi
 # Partida de 2 jugadores (modo camaleón) para probar el WebSocket con un token válido.
 new_game() {
   local base=$1 tls=$2 a b lobby code start
-  a=$(curl -s $tls -X POST -H 'Content-Type: application/json' -d '{"nickname":"EvidA"}' "$base/api/session" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
-  b=$(curl -s $tls -X POST -H 'Content-Type: application/json' -d '{"nickname":"EvidB"}' "$base/api/session" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+  a=$(curl -s $tls -X POST -H 'Content-Type: application/json' -d '{"nickname":"EvidA"}' "$base/auth/guest" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+  b=$(curl -s $tls -X POST -H 'Content-Type: application/json' -d '{"nickname":"EvidB"}' "$base/auth/guest" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
   lobby=$(curl -s $tls -X POST -H 'Content-Type: application/json' -H "Authorization: Bearer $a" -d '{"mode":"CHAMELEON"}' "$base/api/lobbies")
   code=$(grep -o '"code":"[^"]*"' <<<"$lobby" | cut -d'"' -f4)
   curl -s $tls -X POST -H 'Content-Type: application/json' -H "Authorization: Bearer $b" -d "{\"code\":\"$code\"}" "$base/api/lobbies/join" >/dev/null
@@ -92,7 +92,7 @@ if [[ "$PHASE" == "antes" ]]; then
   {
     run "curl -sI http://localhost/"
     run "curl -sI http://localhost/menu/ | tr -d '\r' | grep -iE '^(HTTP|content-type|strict-transport-security)'"
-    run "curl -s -X POST -H 'Content-Type: application/json' -d '{\"nickname\":\"Evidencia\"}' -w '\n[HTTP %{http_code} sobre %{scheme}]\n' http://localhost/api/session | sed -E 's/(eyJ[A-Za-z0-9_-]{10})[A-Za-z0-9._-]*/\1...[recortado]/g'"
+    run "curl -s -X POST -H 'Content-Type: application/json' -d '{\"nickname\":\"Evidencia\"}' -w '\n[HTTP %{http_code} sobre %{scheme}]\n' http://localhost/auth/guest | sed -E 's/(eyJ[A-Za-z0-9_-]{10})[A-Za-z0-9._-]*/\1...[recortado]/g'"
   } >"$D/02-http.txt"
 
   run "openssl s_client -connect localhost:443 -servername localhost -brief </dev/null; echo \"[exit \$?]\"" >"$D/03-tls.txt"
@@ -113,7 +113,7 @@ else
   {
     run "curl -sI http://localhost/"
     run "curl -sI http://localhost/ws/games/g_x?token=abc | tr -d '\r' | grep -iE '^(HTTP|location)'"
-    run "curl -s -X POST -H 'Content-Type: application/json' -d '{\"nickname\":\"Evidencia\"}' -w '\n[HTTP %{http_code}, Location: %{redirect_url}]\n' http://localhost/api/session"
+    run "curl -s -X POST -H 'Content-Type: application/json' -d '{\"nickname\":\"Evidencia\"}' -w '\n[HTTP %{http_code}, Location: %{redirect_url}]\n' http://localhost/auth/guest"
     run "curl -sI $TLS https://localhost/menu/ | tr -d '\r' | grep -iE '^(HTTP|content-type|strict-transport-security)'"
     run "curl -s $TLS -o /dev/null -w 'HTTP/%{http_version}, ssl_verify_result=%{ssl_verify_result} (0 = certificado valido)\n' https://localhost/menu/"
   } >"$D/02-redireccion-hsts.txt"

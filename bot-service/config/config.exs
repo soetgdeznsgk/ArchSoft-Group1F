@@ -9,5 +9,5 @@ config :bot_service, server: config_env() != :test
 
 if config_env() == :test do
   config :logger, level: :warning
-  config :bot_service, lobby_client: BotService.FakeLobby
+  config :bot_service, lobby_client: BotService.FakeLobby, auth_client: BotService.FakeLobby
 end

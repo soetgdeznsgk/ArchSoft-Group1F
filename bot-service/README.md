@@ -82,7 +82,7 @@ docker build -t bololo/bot-service .            # formato, compilación sin adve
 docker build --target test .                    # solo pruebas
 ```
 
-En el sistema completo se levanta con el `docker-compose.yml` de la raíz. Para ver las partidas más rápido, bajar la pausa en `.env`:
+En el sistema completo se levanta con el `docker-compose.yml` de la raíz. Cada bot pide su sesión de invitado a Auth (`AUTH_URL`, por defecto `http://auth:8080`) y juega con ella en el Lobby (`LOBBY_URL`) y en Game Logic (`GAME_LOGIC_URL`). Para ver las partidas más rápido, bajar la pausa en `.env`:
 
 ```
 BOT_THINK_MIN_MS=100

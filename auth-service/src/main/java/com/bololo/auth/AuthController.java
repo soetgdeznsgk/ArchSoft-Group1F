@@ -24,6 +24,12 @@ class AuthController {
         this.jdbc = jdbc;
     }
 
+    @PostMapping("/auth/guest")
+    @ResponseStatus(HttpStatus.CREATED)
+    SessionResponse guest(@RequestBody GuestRequest request) {
+        return authService.guest(request.nickname());
+    }
+
     @PostMapping("/auth/register")
     @ResponseStatus(HttpStatus.CREATED)
     SessionResponse register(@Valid @RequestBody RegisterRequest request) {

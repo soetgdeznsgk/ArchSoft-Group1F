@@ -1,6 +1,9 @@
 package server
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -14,7 +17,8 @@ type Config struct {
 	ListenAddr     string
 	RedisURL       string
 	RedisKeyPrefix string
-	JWTSecret      []byte
+	// GamePublicKey verifica los tokens de partida. Solo el Lobby tiene la clave privada.
+	GamePublicKey  *rsa.PublicKey
 	ServiceSecret  []byte
 	RabbitMQURL    string
 	AllowedOrigins []string
@@ -35,12 +39,16 @@ func LoadConfig() (Config, error) {
 		StoreTimeout:   200 * time.Millisecond,
 		PublishTimeout: 5 * time.Second,
 	}
-	jwtSecret := os.Getenv("JWT_SECRET")
+	keyFile := os.Getenv("GAME_PUBLIC_KEY_FILE")
 	serviceSecret := os.Getenv("SERVICE_SECRET")
-	if jwtSecret == "" || serviceSecret == "" {
-		return Config{}, errors.New("JWT_SECRET and SERVICE_SECRET are required")
+	if keyFile == "" || serviceSecret == "" {
+		return Config{}, errors.New("GAME_PUBLIC_KEY_FILE and SERVICE_SECRET are required")
 	}
-	cfg.JWTSecret = []byte(jwtSecret)
+	publicKey, err := loadRSAPublicKey(keyFile)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.GamePublicKey = publicKey
 	cfg.ServiceSecret = []byte(serviceSecret)
 	cfg.RedisURL = os.Getenv("REDIS_URL")
 	if cfg.RedisURL == "" {
@@ -58,7 +66,6 @@ func LoadConfig() (Config, error) {
 			}
 		}
 	}
-	var err error
 	if cfg.TickInterval, err = durationEnv("TICK_INTERVAL", cfg.TickInterval); err != nil {
 		return Config{}, err
 	}
@@ -82,6 +89,31 @@ func LoadConfig() (Config, error) {
 		return Config{}, errors.New("CHAMELEON_GAME_DURATION must be positive")
 	}
 	return cfg, nil
+}
+
+// loadRSAPublicKey lee la clave pública PEM (SubjectPublicKeyInfo) que genera scripts/gen-jwt-keys.sh.
+func loadRSAPublicKey(path string) (*rsa.PublicKey, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read game public key: %w", err)
+	}
+	return parseRSAPublicKey(data)
+}
+
+func parseRSAPublicKey(data []byte) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, errors.New("game public key: expected a PEM PUBLIC KEY block")
+	}
+	parsed, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse game public key: %w", err)
+	}
+	key, ok := parsed.(*rsa.PublicKey)
+	if !ok {
+		return nil, errors.New("game public key is not RSA")
+	}
+	return key, nil
 }
 
 func envOr(key, fallback string) string {

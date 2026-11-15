@@ -85,7 +85,7 @@ Las rutas pasan por el gateway y son públicas: un ranking no contiene datos pri
 
 `accountId` es `null` para invitados y bots. `rank` empieza en 1 y los empates comparten posición. Las victorias se cuentan con `winners` y no con `rank`: una partida de Camaleón que acaba por tiempo con 0 colores deja a todos en `rank` 1 y a `winners` vacío.
 
-El Lobby publica con `mandatory`: si la cola aún no existe porque Ratings no ha arrancado, el mensaje vuelve, el resultado sigue pendiente y se reintenta.
+El Lobby publica con `mandatory`. La cola `ratings.game-finished` la declara el broker al arrancar (`rabbitmq/topology.json`), así que existe aunque Ratings no haya arrancado nunca: el evento espera en ella. Si aun así el mensaje vuelve (topología mal configurada), el resultado sigue pendiente y se reintenta.
 
 ## 4. Cómo se calcula el puntaje
 

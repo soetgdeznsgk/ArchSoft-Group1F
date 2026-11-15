@@ -1,4 +1,8 @@
-"""Rutas HTTP. Las públicas van bajo /api/ (Traefik no recorta el prefijo); las internas no se enrutan."""
+"""Rutas HTTP, todas bajo /api/ (Traefik no recorta el prefijo).
+
+El Lobby no emite sesiones: las emite Auth (POST /auth/guest, /auth/login, /auth/register).
+Aquí solo se verifican, y el jugador se crea la primera vez que llega con una sesión válida.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -16,21 +20,17 @@ from .modes import DEFAULT_MODE
 from .schemas import (
     CreateLobbyIn,
     ErrorOut,
-    AuthSessionIn,
     JoinByCodeIn,
     Lobby,
     LobbySummary,
     MeOut,
     Player,
-    SessionIn,
-    SessionOut,
 )
 from .service import LobbyService, game_starting_event, lobby_event
 
 public = APIRouter(prefix="/api")
-internal = APIRouter(prefix="/internal", tags=["interno (Auth Service)"])
 
-bearer = HTTPBearer(auto_error=False, description="Token de sesión devuelto por POST /api/session.")
+bearer = HTTPBearer(auto_error=False, description="Token de sesión emitido por Auth (POST /auth/guest o /auth/login).")
 
 
 def _error(*statuses: int) -> dict:
@@ -47,9 +47,9 @@ Service = Annotated[LobbyService, Depends(get_service)]
 async def _player_from(request: Request, token: str | None) -> Player:
     if not token:
         raise errors.invalid_session()
-    player_id = security.read_session_token(request.app.state.settings, token)
-    player = await request.app.state.service.get_player(player_id)
-    if player is None:  # p. ej. la base se recreó y el navegador conserva un token viejo
+    session = security.read_session_token(request.app.state.settings, token)
+    player = await request.app.state.service.resolve_player(session)
+    if player is None:
         raise errors.invalid_session()
     return player
 
@@ -76,27 +76,13 @@ CurrentPlayer = Annotated[Player, Depends(current_player)]
 # --- sesión (RF-01) ----------------------------------------------------------
 
 
-@public.post("/session", status_code=201, tags=["sesión"], responses=_error(422))
-async def create_session(body: SessionIn, service: Service) -> SessionOut:
-    """Ingresa con un nombre de jugador, sin cuenta ni contraseña."""
-    return await service.create_session(body.nickname)
-
-
-@internal.post("/auth/session", status_code=201, responses=_error(401, 422))
-async def create_account_session(
-    body: AuthSessionIn,
-    request: Request,
-    service: Service,
-    x_service_token: Annotated[str | None, Header()] = None,
-) -> SessionOut:
-    """Provisiona idempotentemente un jugador para una cuenta autenticada por Auth."""
-    security.check_service_token(request.app.state.settings, x_service_token)
-    return await service.create_account_session(body.account_id, body.nickname)
-
-
 @public.get("/session", tags=["sesión"], responses=_error(401))
 async def get_session(player: CurrentPlayer, service: Service) -> MeOut:
-    """Quién soy y en qué sala estoy. Sirve para restaurar la pantalla tras recargar la página."""
+    """Quién soy y en qué sala estoy.
+
+    Los clientes la llaman después de recibir la sesión de Auth: el `player` de aquí es el que
+    aparece en las salas. También sirve para restaurar la pantalla tras recargar la página.
+    """
     return MeOut(player=player, lobby=await service.current_lobby(player.id))
 
 

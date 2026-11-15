@@ -45,12 +45,12 @@ versionados:
 
 ```dotenv
 REDIS_PASSWORD=valor_hexadecimal
-JWT_SECRET=secreto_hexadecimal
 SERVICE_SECRET=otro_secreto_hexadecimal
 ```
 
-Genera valores aleatorios, por ejemplo, con `openssl rand -hex 32`. Desde la
-raíz del repositorio:
+Genera valores aleatorios, por ejemplo, con `openssl rand -hex 32`. Los tokens
+de partida se verifican con la clave pública que genera
+`./scripts/gen-jwt-keys.sh` en `secrets/jwt/`. Desde la raíz del repositorio:
 
 ```powershell
 docker compose -f game-logic/compose.dev.yaml up --build --wait

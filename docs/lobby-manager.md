@@ -32,13 +32,14 @@ sequenceDiagram
 
     alt cuenta registrada
         P->>A: POST /auth/register o /auth/login
-        A->>LM: POST /internal/auth/session (X-Service-Token)
-        LM-->>A: 201 {player, token} compatible con sesión Lobby
-        A-->>P: {player, token}
+        A-->>P: {player, token, account} (sesión firmada por Auth)
     else invitado
-        P->>LM: POST /api/session {nickname}
-        LM-->>P: 201 {player, token}
+        P->>A: POST /auth/guest {nickname}
+        A-->>P: 201 {player, token}
     end
+    P->>LM: GET /api/session (Bearer token)
+    LM->>PG: crea el jugador si es la primera vez
+    LM-->>P: {player, lobby}
     P->>LM: POST /api/lobbies (o /join)
     LM->>PG: transacción con candado
     LM-->>P: sala
@@ -62,27 +63,27 @@ sequenceDiagram
 
 Las rutas públicas pasan por el gateway: Lobby usa `fetch("/api/...")`; Auth usa `/auth/...`.
 
-Registro y login pasan por `/auth/register` y `/auth/login` hacia Auth. Auth conserva las credenciales y solicita al Lobby, por la red interna, el token de sesión común. El flujo invitado existente sigue usando `POST /api/session`.
+Todas las sesiones las emite Auth (decisión 4): las de invitado con `POST /auth/guest` y las de cuenta con `/auth/register` y `/auth/login`. El Lobby no emite sesiones; solo las verifica.
 
 ### 2.1 Sesión
 
-`POST /api/session` con `{"nickname": "Ana"}` devuelve:
+`POST /auth/guest` con `{"nickname": "Ana"}` devuelve:
 
 ```json
-{ "player": { "id": "p_3f9a1c2b7d4e", "nickname": "Ana" }, "token": "<token de sesión>" }
+{ "player": { "id": "p_9b1e0c4d2a7f3e8b6c5d4a1f", "nickname": "Ana" }, "token": "<token de sesión>" }
 ```
 
-El token se envía en **todas** las demás peticiones como `Authorization: Bearer <token>`. Conviene guardarlo en `sessionStorage`, que es por pestaña: así cuatro pestañas son cuatro jugadores. Dura 12 horas.
+El token se envía en **todas** las peticiones al Lobby como `Authorization: Bearer <token>`. Conviene guardarlo en `sessionStorage`, que es por pestaña: así cuatro pestañas son cuatro jugadores. Dura 12 horas.
 
-`GET /api/session` devuelve `{player, lobby}`: sirve para saber, al recargar la página, si el jugador ya estaba en una sala. Si responde `401`, hay que volver a pedir el nombre.
+Con el token recién emitido, el cliente llama `GET /api/session`, que devuelve `{player, lobby}`. El `player` de esa respuesta es el que aparece en las salas: el Lobby lo crea la primera vez que ve la sesión. También sirve para saber, al recargar la página, si el jugador ya estaba en una sala. Si responde `401`, hay que volver a pedir la sesión.
 
 ### 2.2 Rutas
 
 | Método y ruta | Cuerpo | Respuesta | Requisito |
 |---|---|---|---|
-| `POST /api/session` | `{nickname}` | `201` `{player, token}` | RF-01 |
-| `POST /auth/register` | `{username, password}` | `201` `{player, token}` | Auth |
-| `POST /auth/login` | `{username, password}` | `200` `{player, token}` | Auth |
+| `POST /auth/guest` | `{nickname}` | `201` `{player, token}` | RF-01 (Auth) |
+| `POST /auth/register` | `{username, password}` | `201` `{player, token, account}` | Auth |
+| `POST /auth/login` | `{username, password}` | `200` `{player, token, account}` | Auth |
 | `GET /api/session` | | `200` `{player, lobby}` | RF-01 |
 | `GET /api/lobbies` | | `200` lista de `{id, code, playerCount, maxPlayers, createdAt}` | RF-04 |
 | `POST /api/lobbies` | | `201` sala | RF-02, RF-03 |
@@ -177,9 +178,14 @@ Todos los errores tienen la misma forma. `message` está en español y se puede 
 
 ## 3. Para Auth
 
-Auth llama `POST /internal/auth/session` en la red privada, con `X-Service-Token: <SERVICE_SECRET>` y cuerpo `{"accountId":"<UUID de cuenta>","nickname":"ana"}`. La operación es idempotente por `accountId`: devuelve el mismo jugador y un nuevo token de sesión compatible con `POST /api/session`. El endpoint nunca debe publicarse a través de Traefik.
+Auth no llama al Lobby. Firma las sesiones con RS256 y su clave privada; el Lobby las verifica con la clave pública de sesiones y solo acepta RS256. Claims que el Lobby lee:
 
-El token de estas sesiones incluye además el claim `accountId`, que Auth usa para identificar la cuenta en sus rutas protegidas. Las sesiones de invitado no lo llevan.
+| Claim | Uso |
+|---|---|
+| `sub` | Id del jugador para un invitado. Para una cuenta se usa solo la primera vez |
+| `scope` | Debe ser `session` |
+| `nickname` | Nombre con que se crea el jugador (1 a 20 caracteres) |
+| `accountId` | Solo en sesiones de cuenta. El Lobby busca al jugador por este claim, así que una cuenta es siempre el mismo jugador, y un invitado nunca puede tomar el jugador de una cuenta |
 
 Cuando se registra un resultado, el Lobby publica el evento `game.finished` en RabbitMQ. El contrato está en [ratings-service.md](ratings-service.md) §3.
 
@@ -209,7 +215,7 @@ Los dos sentidos usan la cabecera `X-Service-Token: <SERVICE_SECRET>` y solo exi
 
 ### 3.2 El token de partida
 
-Uno por jugador, firmado con `JWT_SECRET` y algoritmo HS256. Llega al cliente por SSE y este lo pasa en `?token=` al abrir el WebSocket.
+Uno por jugador, firmado con RS256 y la clave privada de partidas, que solo tiene el Lobby. Game Logic lo verifica con la clave pública. Llega al cliente por SSE y este lo pasa en `?token=` al abrir el WebSocket.
 
 ```json
 { "gameId": "g_7f3a9c1e2b4d", "playerId": "p_3f9a1c2b7d4e", "iat": 1791379990, "exp": 1791387190 }
@@ -267,7 +273,7 @@ Estado de los pendientes de [deployment.md §12.2](deployment.md#122-lobby-manag
 | L4 | Healthcheck sin `curl` | Usar el comando de abajo |
 | L5 | SSE | Hecho: `text/event-stream`, `Cache-Control: no-cache`, `: ping` cada 15 s, sin compresión |
 | L6 | Un solo worker | Hecho; fijo en el `CMD` |
-| L7 | Configuración | Lee `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (host `postgres`, puerto `5432` por defecto), `JWT_SECRET`, `SERVICE_SECRET` y `GAME_LOGIC_URL`. También acepta `DATABASE_URL`, pero no hace falta |
+| L7 | Configuración | Lee `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (host `postgres`, puerto `5432` por defecto), `SESSION_PUBLIC_KEY_FILE`, `GAME_PRIVATE_KEY_FILE`, `SERVICE_SECRET` y `GAME_LOGIC_URL`. También acepta `DATABASE_URL`, pero no hace falta |
 | L8 | Esquema | Lo crea la aplicación al arrancar. No hay que montar nada en `/docker-entrypoint-initdb.d` |
 | L9 | Reintentar la conexión | Hecho: reintenta 30 s al arrancar y `/healthz` refleja si la base se cae después |
 | L10 | Callback idempotente | Hecho (§3.3) |
@@ -282,7 +288,8 @@ Servicio para reemplazar el relleno en `docker-compose.yml` (las `labels` y `dep
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      SESSION_PUBLIC_KEY_FILE: /run/secrets/session_public_key
+      GAME_PRIVATE_KEY_FILE: /run/secrets/game_private_key
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
       GAME_LOGIC_URL: http://game-logic:8081
     networks:

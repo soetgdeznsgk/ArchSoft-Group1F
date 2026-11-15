@@ -21,7 +21,7 @@ El pegamento **no está commiteado**: `git status` y `git diff` muestran exactam
 | `docker-compose.yml` | `game-logic`: de relleno (`whoami`) al servicio real (`build` con `APP=server`, variables, healthcheck `/app -healthcheck`). Traefik apunta al puerto **8081** | Go de la rama atiende WebSocket, REST interno y `/healthz` en un solo puerto (`GAME_LOGIC_ADDR=:8081`) |
 | `docker-compose.yml`, `api-gateway/traefik.yml` | Proyecto `bololo-integrado` y red `bololo-integrado_internal` | No mezclar contenedores ni volúmenes con el stack original |
 | `presentation/Dockerfile` | `/ingame/` sirve `presentation/game/`; `/menu/` sirve `presentation/lobby/` | Los nombres de origen distinguen la mesa de juego y la pantalla de ingreso/salas |
-| `presentation/lobby/menu.js` | Integra la sesión (`POST /api/session`), crear y unirse a salas, sala de espera por SSE, iniciar y pasar a `/ingame/` | La conexión REST y el flujo del menú están en el mismo archivo |
+| `presentation/lobby/menu.js` | Integra la sesión (`POST /auth/guest` en Auth y `GET /api/session` en el Lobby), crear y unirse a salas, sala de espera por SSE, iniciar y pasar a `/ingame/` | La conexión REST y el flujo del menú están en el mismo archivo |
 | `presentation/lobby/index.html`, `style.css` | Carga el script del lobby y sus estilos | Pantalla de ingreso y salas |
 | `presentation/game/client/ingame/connection.js` | Abre el WebSocket con `GameSocket`, traduce el mensaje `view` de Go al estado `game` de `sketch.js` y envía las acciones (`draw`, `discard`, `lay_down`, `deposit`) | `sketch.js` es la vista gráfica de la mesa |
 | `presentation/game/index.html` | Carga `connection.js` como módulo | |

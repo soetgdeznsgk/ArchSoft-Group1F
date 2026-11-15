@@ -3,9 +3,6 @@ package com.bololo.auth;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.DispatcherType;
@@ -20,7 +17,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -28,8 +25,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
 /**
- * Public endpoints issue sessions; protected ones accept the Lobby session JWT.
- * Auth only verifies that token: the Lobby Manager remains its issuer.
+ * Las rutas públicas emiten sesiones; las protegidas aceptan el JWT de sesión que firma
+ * SessionTokens. Solo se acepta RS256 con la clave pública de sesiones: un token de partida
+ * (firmado por el Lobby con otra clave) no pasa.
  */
 @Configuration
 class SecurityConfig {
@@ -50,7 +48,7 @@ class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/guest", "/auth/register", "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/healthz").permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/me").hasAuthority(SESSION_AUTHORITY)
                         .requestMatchers(HttpMethod.POST, "/auth/password").hasAuthority(SESSION_AUTHORITY)
@@ -66,9 +64,10 @@ class SecurityConfig {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(@Value("${app.jwt-secret}") String secret) {
-        SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+    JwtDecoder jwtDecoder(@Value("${app.session-public-key-file}") String publicKeyFile) {
+        return NimbusJwtDecoder.withPublicKey(PemKeys.publicKey(publicKeyFile))
+                .signatureAlgorithm(SignatureAlgorithm.RS256)
+                .build();
     }
 
     private static void writeError(

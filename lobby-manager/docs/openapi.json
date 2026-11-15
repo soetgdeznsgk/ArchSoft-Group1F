@@ -32,7 +32,7 @@
           "sesión"
         ],
         "summary": "Get Session",
-        "description": "Quién soy y en qué sala estoy. Sirve para restaurar la pantalla tras recargar la página.",
+        "description": "Quién soy y en qué sala estoy.\n\nLos clientes la llaman después de recibir la sesión de Auth: el `player` de aquí es el que\naparece en las salas. También sirve para restaurar la pantalla tras recargar la página.",
         "operationId": "get_session_api_session_get",
         "responses": {
           "200": {
@@ -61,46 +61,6 @@
             "HTTPBearer": []
           }
         ]
-      },
-      "post": {
-        "tags": [
-          "sesión"
-        ],
-        "summary": "Create Session",
-        "description": "Ingresa con un nombre de jugador, sin cuenta ni contraseña.",
-        "operationId": "create_session_api_session_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SessionIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/lobbies": {
@@ -199,7 +159,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -709,203 +669,10 @@
           }
         }
       }
-    },
-    "/internal/auth/session": {
-      "post": {
-        "tags": [
-          "interno (Game Logic)"
-        ],
-        "summary": "Create Account Session",
-        "description": "Provisiona idempotentemente un jugador para una cuenta autenticada por Auth.",
-        "operationId": "create_account_session_internal_auth_session_post",
-        "parameters": [
-          {
-            "name": "x-service-token",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Service-Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthSessionIn"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        }
-      }
-    },
-    "/internal/lobbies/{lobby_id}/result": {
-      "post": {
-        "tags": [
-          "interno (Game Logic)"
-        ],
-        "summary": "Record Result",
-        "description": "Go reporta el resultado final. Idempotente por `gameId`: un reintento responde 200 con `recorded: false`.",
-        "operationId": "record_result_internal_lobbies__lobby_id__result_post",
-        "parameters": [
-          {
-            "name": "lobby_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Lobby Id"
-            }
-          },
-          {
-            "name": "x-service-token",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Service-Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResultIn"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResultOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
-      "AuthSessionIn": {
-        "properties": {
-          "accountId": {
-            "type": "string",
-            "title": "Accountid",
-            "examples": [
-              "34f1f808-6934-4c15-a267-b6f427cef015"
-            ]
-          },
-          "nickname": {
-            "type": "string",
-            "title": "Nickname",
-            "examples": [
-              "ana"
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "accountId",
-          "nickname"
-        ],
-        "title": "AuthSessionIn"
-      },
       "CreateLobbyIn": {
         "properties": {
           "mode": {
@@ -1226,109 +993,6 @@
         ],
         "title": "Player"
       },
-      "ResultIn": {
-        "properties": {
-          "gameId": {
-            "type": "string",
-            "title": "Gameid"
-          },
-          "winnerId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Winnerid"
-          },
-          "winners": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Winners",
-            "description": "Más de uno solo si persiste el empate."
-          },
-          "endReason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Endreason"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "gameId"
-        ],
-        "title": "ResultIn",
-        "description": "Resultado que reporta Go. Los campos no listados se guardan tal cual en payload."
-      },
-      "ResultOut": {
-        "properties": {
-          "gameId": {
-            "type": "string",
-            "title": "Gameid"
-          },
-          "lobbyId": {
-            "type": "string",
-            "title": "Lobbyid"
-          },
-          "recorded": {
-            "type": "boolean",
-            "title": "Recorded",
-            "description": "false si el resultado ya estaba registrado (reintento)."
-          }
-        },
-        "type": "object",
-        "required": [
-          "gameId",
-          "lobbyId",
-          "recorded"
-        ],
-        "title": "ResultOut"
-      },
-      "SessionIn": {
-        "properties": {
-          "nickname": {
-            "type": "string",
-            "title": "Nickname",
-            "examples": [
-              "Ana"
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "nickname"
-        ],
-        "title": "SessionIn"
-      },
-      "SessionOut": {
-        "properties": {
-          "player": {
-            "$ref": "#/components/schemas/Player"
-          },
-          "token": {
-            "type": "string",
-            "title": "Token",
-            "description": "Token de sesión. Se envía como Authorization: Bearer <token>."
-          }
-        },
-        "type": "object",
-        "required": [
-          "player",
-          "token"
-        ],
-        "title": "SessionOut"
-      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -1373,7 +1037,7 @@
     "securitySchemes": {
       "HTTPBearer": {
         "type": "http",
-        "description": "Token de sesión devuelto por POST /api/session.",
+        "description": "Token de sesión emitido por Auth (POST /auth/guest o /auth/login).",
         "scheme": "bearer"
       }
     }

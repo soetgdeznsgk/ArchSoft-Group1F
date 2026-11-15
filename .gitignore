@@ -8,3 +8,4 @@ api-gateway/certs/*
 # Capturas de tráfico: la del "antes" contiene contraseñas y JWT en claro.
 *.pcap
 *.pcapng
+secrets/

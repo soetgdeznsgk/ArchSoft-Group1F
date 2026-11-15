@@ -10,7 +10,9 @@ from urllib.parse import quote
 @dataclass(frozen=True)
 class Settings:
     database_url: str
-    jwt_secret: str
+    # PEM de la clave pública de sesiones (Auth firma) y de la privada de partidas (el Lobby firma).
+    session_public_key: str
+    game_private_key: str
     service_secret: str
     game_logic_url: str = "http://game-logic:8081"
     cors_origins: tuple[str, ...] = ()
@@ -40,6 +42,14 @@ class Settings:
                 raise RuntimeError(f"Falta la variable de entorno {name}")
             return value
 
+        def file_contents(name: str) -> str:
+            path = required(name)
+            try:
+                with open(path, encoding="ascii") as file:
+                    return file.read()
+            except OSError as exc:
+                raise RuntimeError(f"No se pudo leer {name}={path}: {exc}") from None
+
         database_url = os.environ.get("DATABASE_URL")
         if not database_url:
             user = quote(required("POSTGRES_USER"), safe="")
@@ -62,7 +72,8 @@ class Settings:
 
         return cls(
             database_url=database_url,
-            jwt_secret=required("JWT_SECRET"),
+            session_public_key=file_contents("SESSION_PUBLIC_KEY_FILE"),
+            game_private_key=file_contents("GAME_PRIVATE_KEY_FILE"),
             service_secret=required("SERVICE_SECRET"),
             cors_origins=origins,
             **optional,

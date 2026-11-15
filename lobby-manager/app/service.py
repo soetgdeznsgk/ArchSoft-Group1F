@@ -20,11 +20,10 @@ from .db import LOBBY_LIMIT_LOCK
 from .events import LobbyEvents
 from .game_client import GameLogicClient, GameServiceError
 from .modes import DEFAULT_MODE, GameMode, player_limits
-from .schemas import GameAccess, Lobby, LobbyPlayer, LobbySummary, Player, ResultIn, ResultOut, SessionOut
+from .schemas import GameAccess, Lobby, LobbyPlayer, LobbySummary, Player, ResultIn, ResultOut
 
 log = logging.getLogger("lobby.service")
 
-NICKNAME_MAX = 20
 # Sin 0/O ni 1/I/L, que se confunden al dictar el código.
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 6
@@ -58,37 +57,30 @@ class LobbyService:
 
     # --- jugadores -----------------------------------------------------------
 
-    async def create_session(self, nickname: str) -> SessionOut:
-        nickname = " ".join(nickname.split())
-        if not nickname:
-            raise errors.invalid_nickname("Escribe un nombre de jugador.")
-        if len(nickname) > NICKNAME_MAX:
-            raise errors.invalid_nickname(f"El nombre puede tener máximo {NICKNAME_MAX} caracteres.")
-        player = Player(id=_new_id("p"), nickname=nickname)
-        await self._pool.execute("INSERT INTO players (id, nickname) VALUES ($1, $2)", player.id, player.nickname)
-        return SessionOut(player=player, token=security.issue_session_token(self._settings, player.id))
+    async def resolve_player(self, session: security.Session) -> Player | None:
+        """Jugador de una sesión emitida por Auth. Se crea la primera vez que el Lobby lo ve.
 
-    async def create_account_session(self, account_id: str, nickname: str) -> SessionOut:
-        nickname = " ".join(nickname.split())
-        if not nickname or len(nickname) > NICKNAME_MAX:
-            raise errors.invalid_nickname(f"El nombre debe tener entre 1 y {NICKNAME_MAX} caracteres.")
-        row = await self._pool.fetchrow(
-            """
-            INSERT INTO players (id, nickname, account_id)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (account_id) DO UPDATE SET account_id = EXCLUDED.account_id
-            RETURNING id, nickname
-            """,
-            _new_id("p"),
-            nickname,
-            account_id,
-        )
-        player = Player(id=row["id"], nickname=row["nickname"])
-        return SessionOut(player=player, token=security.issue_session_token(self._settings, player.id, account_id))
-
-    async def get_player(self, player_id: str) -> Player | None:
-        row = await self._pool.fetchrow("SELECT id, nickname FROM players WHERE id = $1", player_id)
-        return Player(id=row["id"], nickname=row["nickname"]) if row else None
+        Las cuentas se buscan por `accountId`: así una cuenta creada antes de que Auth emitiera
+        las sesiones conserva su jugador. Un invitado nunca puede tomar el jugador de una cuenta.
+        """
+        if session.account_id is None:
+            lookup = "SELECT id, nickname, account_id FROM players WHERE id = $1"
+            key = session.player_id
+        else:
+            lookup = "SELECT id, nickname, account_id FROM players WHERE account_id = $1"
+            key = session.account_id
+        row = await self._pool.fetchrow(lookup, key)
+        if row is None:
+            await self._pool.execute(
+                "INSERT INTO players (id, nickname, account_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+                session.player_id,
+                session.nickname,
+                session.account_id,
+            )
+            row = await self._pool.fetchrow(lookup, key)
+        if row is None or row["account_id"] != session.account_id:
+            return None
+        return Player(id=row["id"], nickname=row["nickname"])
 
     async def current_lobby(self, player_id: str) -> Lobby | None:
         async with self._pool.acquire() as conn:

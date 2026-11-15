@@ -11,16 +11,8 @@ class ApiError(Exception):
         self.message = message
 
 
-def invalid_nickname(message: str) -> ApiError:
-    return ApiError(422, "invalid_nickname", message)
-
-
 def invalid_session() -> ApiError:
     return ApiError(401, "invalid_session", "Tu sesión no es válida o expiró. Ingresa de nuevo con tu nombre.")
-
-
-def unauthorized_service() -> ApiError:
-    return ApiError(401, "unauthorized", "Token de servicio ausente o incorrecto.")
 
 
 def lobby_not_found(by_code: bool = False) -> ApiError:

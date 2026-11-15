@@ -173,9 +173,21 @@ async function api(method, path, body) {
   return data;
 }
 
+// Las sesiones las emite Auth, también las de invitado (solo con un nombre).
+async function authRequest(path, body) {
+  const response = await fetch(`/auth/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || `Error ${response.status}`);
+  return data;
+}
+
 async function connectSession(nickname) {
   try {
-    const data = await api("POST", "/session", { nickname });
+    const data = await authRequest("guest", { nickname });
     await beginSession(data, { playWelcome: true });
   } catch (err) {
     showAuthError(err.message);
@@ -202,21 +214,23 @@ async function authenticate(action, username, password) {
     return;
   }
   try {
-    const response = await fetch(`/auth/${action}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: normalizedUsername, password }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || `Error ${response.status}`);
-    beginSession(data);
+    const data = await authRequest(action, { username: normalizedUsername, password });
+    await beginSession(data);
   } catch (err) {
     showAuthError("Servidor :" + err.message);
   }
 }
 
+// El jugador que aparece en las salas es el del Lobby: se pide con la sesión recién emitida.
 async function beginSession(data, options = {}) {
-  session = { token: data.token, player: data.player, account: data.account };
+  session = { token: data.token, player: data.player, account: data.account ?? null };
+  try {
+    const me = await api("GET", "/session");
+    session.player = me.player;
+  } catch (err) {
+    session = null;
+    throw err;
+  }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   errorWindow.hide();
   if (options.playWelcome) await playWelcomeSound();

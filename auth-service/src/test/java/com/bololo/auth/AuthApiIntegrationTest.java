@@ -1,11 +1,9 @@
 package com.bololo.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
@@ -15,6 +13,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
@@ -31,7 +30,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -39,37 +39,43 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
             "spring.datasource.url=jdbc:h2:mem:auth;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
             "spring.datasource.username=sa",
             "spring.datasource.password=",
-            "spring.datasource.driver-class-name=org.h2.Driver",
-            "SERVICE_SECRET=test-service-secret",
-            "JWT_SECRET=" + AuthApiIntegrationTest.JWT_SECRET
+            "spring.datasource.driver-class-name=org.h2.Driver"
         })
 class AuthApiIntegrationTest {
-    static final String JWT_SECRET = "test-jwt-secret-with-at-least-32-bytes-0123456789";
-
     @Autowired
     private TestRestTemplate http;
 
     @Autowired
     private JdbcTemplate jdbc;
 
-    @MockitoBean
-    private LobbySessionProvider lobbySessions;
+    @DynamicPropertySource
+    static void sessionKeys(DynamicPropertyRegistry properties) {
+        properties.add("SESSION_PRIVATE_KEY_FILE", TestKeys.SESSION_PRIVATE_FILE::toString);
+        properties.add("SESSION_PUBLIC_KEY_FILE", TestKeys.SESSION_PUBLIC_FILE::toString);
+    }
 
     @BeforeEach
-    void resetDatabaseAndLobby() {
+    void resetDatabase() {
         jdbc.update("DELETE FROM accounts");
-        when(lobbySessions.createSession(any(UUID.class), anyString()))
-                .thenAnswer(invocation -> {
-                    UUID accountId = invocation.getArgument(0);
-                    String nickname = invocation.getArgument(1);
-                    return new LobbySessionResponse(
-                            new PlayerResponse("p_" + accountId, nickname),
-                            "lobby-token-" + accountId);
-                });
     }
 
     @Test
-    void registrationAndLoginReturnLobbyCompatibleSessions() {
+    void guestSessionWorksWithoutAccountAndCannotUseAccountRoutes() {
+        ResponseEntity<Map<String, Object>> guest = post("/auth/guest", Map.of("nickname", "Ana"));
+
+        assertThat(guest.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(guest.getBody()).containsKeys("player", "token").doesNotContainKey("account");
+        ResponseEntity<Map<String, Object>> me = get("/auth/me", guest.getBody().get("token").toString());
+        assertThat(me.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(me.getBody()).containsEntry("code", "account_required");
+
+        ResponseEntity<Map<String, Object>> blank = post("/auth/guest", Map.of("nickname", "   "));
+        assertThat(blank.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(blank.getBody()).containsEntry("code", "invalid_nickname");
+    }
+
+    @Test
+    void registrationAndLoginReturnTheSamePlayerAndAUsableToken() {
         Map<String, String> request = Map.of("username", "Ana", "password", "safe-pass-123");
 
         ResponseEntity<Map<String, Object>> registered = post("/auth/register", request);
@@ -79,9 +85,11 @@ class AuthApiIntegrationTest {
         assertThat(loggedIn.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<String, Object> registrationBody = registered.getBody();
         Map<String, Object> loginBody = loggedIn.getBody();
-        assertThat(registrationBody).containsKeys("player", "token");
+        assertThat(registrationBody).containsKeys("player", "token", "account");
         assertThat(registrationBody.get("player")).isEqualTo(loginBody.get("player"));
-        assertThat(registrationBody.get("token")).isEqualTo(loginBody.get("token"));
+        ResponseEntity<Map<String, Object>> me = get("/auth/me", loginBody.get("token").toString());
+        assertThat(me.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(me.getBody()).containsEntry("username", "ana");
     }
 
     @Test
@@ -128,17 +136,29 @@ class AuthApiIntegrationTest {
         assertThat(get("/auth/me", null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(get("/auth/me", "not-a-jwt").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(get("/auth/me", sessionToken(id, -60)).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(get("/auth/me", token(claims(id, "session", 3600), "another-secret-with-at-least-32-bytes-000"))
+        assertThat(get("/auth/me", token(claims(id, "session", 3600), TestKeys.OTHER)).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void onlyRs256WithTheSessionKeyIsAccepted() {
+        JWTClaimsSet session = claims(UUID.randomUUID().toString(), "session", 3600);
+        String publicKeyAsHmacSecret = new String(TestKeys.SESSION.getPublic().getEncoded(), StandardCharsets.ISO_8859_1);
+
+        assertThat(get("/auth/me", hmacToken(session, publicKeyAsHmacSecret)).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(get("/auth/me", hmacToken(session, "old-shared-jwt-secret-with-at-least-32-bytes"))
                 .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
-    void gameTokensAndGuestSessionsAreForbidden() {
-        JWTClaimsSet gameToken = claims(UUID.randomUUID().toString(), null, 3600);
+    void tokensWithoutSessionScopeAndGuestSessionsAreForbidden() {
+        JWTClaimsSet withoutScope = claims(UUID.randomUUID().toString(), null, 3600);
         JWTClaimsSet guest = claims(null, "session", 3600);
 
-        assertThat(get("/auth/me", token(gameToken, JWT_SECRET)).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        ResponseEntity<Map<String, Object>> response = get("/auth/me", token(guest, JWT_SECRET));
+        assertThat(get("/auth/me", token(withoutScope, TestKeys.SESSION)).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        ResponseEntity<Map<String, Object>> response = get("/auth/me", token(guest, TestKeys.SESSION));
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(response.getBody()).containsEntry("code", "account_required");
     }
@@ -200,7 +220,7 @@ class AuthApiIntegrationTest {
     }
 
     private static String sessionToken(String accountId, long lifetimeSeconds) {
-        return token(claims(accountId, "session", lifetimeSeconds), JWT_SECRET);
+        return token(claims(accountId, "session", lifetimeSeconds), TestKeys.SESSION);
     }
 
     private static JWTClaimsSet claims(String accountId, String scope, long lifetimeSeconds) {
@@ -216,10 +236,20 @@ class AuthApiIntegrationTest {
         return claims.build();
     }
 
-    private static String token(JWTClaimsSet claims, String secret) {
+    private static String token(JWTClaimsSet claims, KeyPair keys) {
+        try {
+            SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), claims);
+            jwt.sign(new RSASSASigner(keys.getPrivate()));
+            return jwt.serialize();
+        } catch (JOSEException failure) {
+            throw new IllegalStateException(failure);
+        }
+    }
+
+    private static String hmacToken(JWTClaimsSet claims, String secret) {
         try {
             SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
-            jwt.sign(new MACSigner(secret.getBytes(StandardCharsets.UTF_8)));
+            jwt.sign(new MACSigner(secret.getBytes(StandardCharsets.ISO_8859_1)));
             return jwt.serialize();
         } catch (JOSEException failure) {
             throw new IllegalStateException(failure);
