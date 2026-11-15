@@ -8,10 +8,14 @@ let errorCharacter;
 let errorGroup;
 let logoHoverAudio;
 let logoHoverAudioTimeout;
+let soundToggle;
+let soundEnabled = localStorage.getItem("bololo.sound-enabled") !== "True";
+const activeAudios = new Set();
 
 function setup() {
     document.getElementById("ssr-shell")?.remove();
     createCanvas(WINDOW_LENGTH, WINDOW_HEIGHT)
+    createSoundToggle();
     enterMenuState()
 
     errorWindow = createSpan("");
@@ -49,6 +53,42 @@ function drawStart() {
     // DOM nodes handle the draw operation, but for escalability's sake this stays
 }
 
+function createSoundToggle() {
+    soundToggle = createButton("");
+    soundToggle.addClass("sound-toggle");
+    soundToggle.attribute("aria-label", soundEnabled ? "Desactivar sonidos" : "Activar sonidos");
+    soundToggle.attribute("aria-pressed", String(!soundEnabled));
+    soundToggle.parent(document.body);
+    soundToggle.mousePressed(toggleSound);
+    updateSoundToggle();
+}
+
+function updateSoundToggle() {
+    soundToggle?.toggleClass("is-muted", !soundEnabled);
+    soundToggle?.attribute("aria-label", soundEnabled ? "Desactivar sonidos" : "Activar sonidos");
+    soundToggle?.attribute("aria-pressed", String(!soundEnabled));
+}
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem("bololo.sound-enabled", String(soundEnabled));
+
+    if (!soundEnabled) {
+        for (const audio of activeAudios) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    }
+
+    updateSoundToggle();
+}
+
+function registerAudio(audio) {
+    activeAudios.add(audio);
+    audio.addEventListener("ended", () => activeAudios.delete(audio), { once: true });
+    return audio;
+}
+
 // State setup behavior
 async function enterMenuState()
 {
@@ -59,10 +99,11 @@ async function enterMenuState()
 
     const logo = createImg('assets/logo.png', "Logo");
     logo.addClass("logo")
-    logoHoverAudio = new Audio("assets/tribu.mp3");
+    logoHoverAudio = registerAudio(new Audio("assets/tribu.mp3"));
     logoHoverAudio.preload = "auto";
     logoHoverAudio.volume = 0.5;
     logo.elt.addEventListener("mouseenter", () => {
+        if (!soundEnabled) return;
         clearTimeout(logoHoverAudioTimeout);
         logoHoverAudio.pause();
         logoHoverAudio.currentTime = 0;
@@ -224,7 +265,9 @@ async function beginSession(data, options = {}) {
 }
 
 async function playWelcomeSound() {
-  const welcomeAudio = new Audio("assets/welcome.mp3");
+  if (!soundEnabled) return;
+
+  const welcomeAudio = registerAudio(new Audio("assets/welcome.mp3"));
   welcomeAudio.preload = "auto";
 
   try {

@@ -27,6 +27,16 @@ const figures = [
     { symbol: "✿", color: "#df83b0" }
 ];
 
+let cardBackImage;
+
+function preload() {
+    cardBackImage = loadImage(
+        "./assets/trasera.png",
+        undefined,
+        () => console.error("No se pudo cargar la imagen trasera.png.")
+    );
+}
+
 function setup() {
     const host = document.getElementById("game-canvas");
     const canvas = createCanvas(host.clientWidth, 500);
@@ -211,25 +221,12 @@ function drawCard(x, y, w, h, card, visible) {
     rect(x, y, w, h, 7);
 
     if (!card || (!visible && card.id === undefined)) {
-        noStroke();
-        fill("#244b3a");
-        rect(x + 5, y + 5, w - 10, h - 10, 4);
-
-        stroke("#d8bc77");
-        noFill();
-        rect(x + 9, y + 9, w - 18, h - 18, 3);
-        noStroke();
-        fill("#e4c77d");
-        textAlign(CENTER, CENTER);
-        textSize(Math.min(22, w * 0.35));
-        text("B", x + w / 2, y + h / 2);
+        drawCardBack(x, y, w, h);
         return;
     }
 
     if (visible && !card) {
-        fill("#244b3a");
-        noStroke();
-        rect(x + 5, y + 5, w - 10, h - 10, 4);
+        drawCardBack(x, y, w, h);
         return;
     }
 
@@ -258,6 +255,17 @@ function drawCard(x, y, w, h, card, visible) {
     fill("#3b433c");
     textSize(11);
     text(String(card.figure + 1), x + w / 2, y + h * 0.8);
+}
+
+function drawCardBack(x, y, w, h) {
+    noStroke();
+    if (cardBackImage) {
+        image(cardBackImage, x + 5, y + 5, w - 10, h - 10);
+        return;
+    }
+
+    fill("#244b3a");
+    rect(x + 5, y + 5, w - 10, h - 10, 4);
 }
 
 function drawTurnIndicator() {
