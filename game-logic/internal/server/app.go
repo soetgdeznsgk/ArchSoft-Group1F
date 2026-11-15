@@ -3,7 +3,9 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/hmac"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -450,7 +452,12 @@ func decodeJWTPart(part string, target any) error {
 	return decoder.Decode(target)
 }
 
-func verifyGameToken(token string, secret []byte) (string, string, error) {
+// verifyGameToken solo acepta RS256 firmado con la clave privada del Lobby. Que el algoritmo
+// esté fijo impide, por ejemplo, un token HS256 que use la clave pública como secreto.
+func verifyGameToken(token string, key *rsa.PublicKey) (string, string, error) {
+	if key == nil {
+		return "", "", errors.New("game public key is not configured")
+	}
 	if len(token) == 0 || len(token) > 8192 {
 		return "", "", errors.New("invalid token length")
 	}
@@ -462,16 +469,15 @@ func verifyGameToken(token string, secret []byte) (string, string, error) {
 		Algorithm string `json:"alg"`
 		Type      string `json:"typ"`
 	}
-	if err := decodeJWTPart(parts[0], &header); err != nil || header.Algorithm != "HS256" {
+	if err := decodeJWTPart(parts[0], &header); err != nil || header.Algorithm != "RS256" {
 		return "", "", errors.New("unsupported token algorithm")
 	}
 	signature, err := base64.RawURLEncoding.DecodeString(parts[2])
 	if err != nil {
 		return "", "", errors.New("malformed token signature")
 	}
-	mac := hmac.New(sha256.New, secret)
-	_, _ = mac.Write([]byte(parts[0] + "." + parts[1]))
-	if !hmac.Equal(signature, mac.Sum(nil)) {
+	digest := sha256.Sum256([]byte(parts[0] + "." + parts[1]))
+	if err := rsa.VerifyPKCS1v15(key, crypto.SHA256, digest[:], signature); err != nil {
 		return "", "", errors.New("invalid token signature")
 	}
 	var claims struct {

@@ -691,11 +691,11 @@ Returns `404` if the match is unknown or has expired from Redis.
 
 ### 7.3 Player token (JWT)
 
-The Lobby Manager signs one token per player when the match starts and delivers it over the player's SSE stream. Go verifies it with the shared `JWT_SECRET`.
+The Lobby Manager signs one token per player when the match starts and delivers it over the player's SSE stream. It signs with its own RSA private key; Go only has the public key (`GAME_PUBLIC_KEY_FILE`), so it can verify tokens but not create them.
 
 | Item | Value |
 |---|---|
-| Algorithm | HS256 (any other `alg` is rejected) |
+| Algorithm | RS256 (any other `alg` is rejected, including HS256) |
 | Claims | `gameId`, `playerId`, `exp` (and `iat`) |
 | Lifetime | `exp = iat + 2 h`, long enough to reconnect at any time during the match |
 
@@ -826,7 +826,7 @@ Go publishes the final result on the topic exchange `bololo.events` with routing
 
 `winnerId` is omitted when there is no single winner.
 
-- Publication counts as done only when RabbitMQ **confirms** the message and it reached at least one queue (`mandatory`). If no queue is bound yet, the broker returns it and Go retries.
+- Publication counts as done only when RabbitMQ **confirms** the message and it reached at least one queue (`mandatory`). The broker declares `lobby.game-ended` itself at startup (`rabbitmq/topology.json`), so Go does not depend on the Lobby having started; a returned message means the topology is misconfigured, and Go retries.
 - On any failure Go retries with exponential backoff: 1 s, 2 s, 4 s, 8 s, 16 s (5 retries).
 - The match stays in `games:active` until the publication is confirmed, so a Go restart publishes it again ([8.4](#84-service-restart-mid-match)).
 - The Lobby Manager consumes from the durable queue `lobby.game-ended` and acks only after the commit. It is **idempotent** by `gameId`, because Go may publish more than once. Messages that can never be recorded (unknown lobby, mismatched game, invalid JSON) go to `lobby.game-ended.dead`.
@@ -976,7 +976,7 @@ Traefik uses Docker labels with `exposedByDefault=false`, so only services with 
 | `WS_PORT` | `8080` | Public WebSocket listener (routed by Traefik). |
 | `INTERNAL_PORT` | `8081` | Internal REST and `/healthz`. |
 | `REDIS_URL` | `redis://:${REDIS_PASSWORD}@redis:6379/0` | Redis connection. |
-| `JWT_SECRET` | secret | Verifies player tokens. Shared with the Lobby Manager. |
+| `GAME_PUBLIC_KEY_FILE` | `/run/secrets/game_public_key` | PEM public key that verifies player tokens. Only the Lobby Manager has the private key. |
 | `SERVICE_SECRET` | secret | `X-Service-Token` the Lobby Manager sends to the internal REST. |
 | `RABBITMQ_URL` | `amqp://user:pass@rabbitmq:5672/` | Broker where the `game.ended` event is published. |
 | `ALLOWED_ORIGINS` | `https://bololo.example` | Accepted `Origin` values on WebSocket upgrade. |

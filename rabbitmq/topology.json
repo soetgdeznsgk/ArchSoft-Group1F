@@ -1,0 +1,19 @@
+{
+  "exchanges": [
+    {"name": "bololo.events", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {}},
+    {"name": "lobby.dead", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "internal": false, "arguments": {}},
+    {"name": "bololo.events.dead", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "internal": false, "arguments": {}}
+  ],
+  "queues": [
+    {"name": "lobby.game-ended", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {"x-dead-letter-exchange": "lobby.dead"}},
+    {"name": "lobby.game-ended.dead", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "ratings.game-finished", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {"x-dead-letter-exchange": "bololo.events.dead"}},
+    {"name": "ratings.game-finished.dead", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}}
+  ],
+  "bindings": [
+    {"source": "bololo.events", "vhost": "/", "destination": "lobby.game-ended", "destination_type": "queue", "routing_key": "game.ended", "arguments": {}},
+    {"source": "lobby.dead", "vhost": "/", "destination": "lobby.game-ended.dead", "destination_type": "queue", "routing_key": "lobby.game-ended.dead", "arguments": {}},
+    {"source": "bololo.events", "vhost": "/", "destination": "ratings.game-finished", "destination_type": "queue", "routing_key": "game.finished", "arguments": {}},
+    {"source": "bololo.events.dead", "vhost": "/", "destination": "ratings.game-finished.dead", "destination_type": "queue", "routing_key": "ratings.game-finished.dead", "arguments": {}}
+  ]
+}

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import json
 
-import jwt
 
-from .conftest import JWT_SECRET
+from .conftest import read_game_token
 
 
 async def test_sin_cuerpo_la_sala_es_clasica(ctx):
@@ -57,7 +56,7 @@ async def test_camaleon_inicia_con_dos_y_entrega_el_modo_a_go(ctx):
         # El aviso a los demás jugadores trae el modo para abrir la pantalla correcta.
         data = await stream.next_named("game_starting")
         assert data["mode"] == "CHAMELEON" and data["gameId"] == started["game"]["gameId"]
-        assert jwt.decode(data["token"], JWT_SECRET, algorithms=["HS256"])["playerId"] == users[1].id
+        assert read_game_token(data["token"])["playerId"] == users[1].id
 
     assert ctx.game.bodies[0] == {
         "gameId": started["game"]["gameId"],

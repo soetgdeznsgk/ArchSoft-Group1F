@@ -95,7 +95,7 @@ func isType(typ string) func(message) bool {
 
 func dial(t *testing.T, srv *httptest.Server, player string) *websocket.Conn {
 	t.Helper()
-	url := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/games/game_1?token=" + signGameToken("game_1", player, "jwt-secret")
+	url := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/games/game_1?token=" + signGameToken("game_1", player)
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -239,7 +239,7 @@ func TestChameleonGameOverWebSocket(t *testing.T) {
 	}
 	waitFor(t, func() bool { return store.get("game_1").Status == "finished" })
 	// Una partida terminada ya no acepta conexiones.
-	url := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/games/game_1?token=" + signGameToken("game_1", "p_2", "jwt-secret")
+	url := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/games/game_1?token=" + signGameToken("game_1", "p_2")
 	if _, resp, err := websocket.DefaultDialer.Dial(url, nil); err == nil || resp.StatusCode != http.StatusGone {
 		t.Fatalf("conexión tras el fin: %v", err)
 	}

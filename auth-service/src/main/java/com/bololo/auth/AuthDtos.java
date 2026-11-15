@@ -1,5 +1,7 @@
 package com.bololo.auth;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -18,16 +20,15 @@ record RegisterRequest(
         String username,
         @NotBlank String password) {}
 
+record GuestRequest(String nickname) {}
+
 record ChangePasswordRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {}
 
 record PlayerResponse(String id, String nickname) {}
 
 record AccountResponse(String id, String username) {}
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record SessionResponse(PlayerResponse player, String token, AccountResponse account) {}
 
 record ErrorResponse(String code, String message) {}
-
-record LobbySessionRequest(String accountId, String nickname) {}
-
-record LobbySessionResponse(PlayerResponse player, String token) {}

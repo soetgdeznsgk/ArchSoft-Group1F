@@ -1,0 +1,17 @@
+# A. Cliente Linux (curl + OpenSSL) en la red public, directo a traefik
+Latencia por el gateway: https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=1 (N=200)
+  cliente                      curl 8.14.1 (x86_64-alpine-linux-musl) libcurl/8.14.1 OpenSSL/3.3.2
+  protocolo negociado          HTTP/2
+  conexión nueva, TCP          mediana   0.65 ms   p95   0.82 ms   min   0.50 ms   max   1.29 ms
+  conexión nueva, TCP + TLS    mediana   7.85 ms   p95  11.54 ms   min   6.87 ms   max  16.51 ms
+  conexión nueva, total        mediana  10.26 ms   p95  14.58 ms   min   9.02 ms   max  21.14 ms
+  conexión reutilizada, total  mediana   1.55 ms   p95   1.85 ms   min   1.36 ms   max   1.98 ms
+
+# B. Cliente del host por el puerto publicado
+Latencia por el gateway: https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=1 (N=200)
+  cliente                      curl 8.12.1 (x86_64-w64-mingw32) libcurl/8.12.1 Schannel
+  protocolo negociado          HTTP/1.1
+  conexión nueva, TCP          mediana   1.20 ms   p95   1.57 ms   min   1.04 ms   max   3.91 ms
+  conexión nueva, TCP + TLS    mediana  21.86 ms   p95  26.63 ms   min  19.86 ms   max  32.90 ms
+  conexión nueva, total        mediana  52.99 ms   p95  58.05 ms   min  49.80 ms   max  59.92 ms
+  conexión reutilizada, total  mediana   2.07 ms   p95   2.77 ms   min   1.64 ms   max   3.23 ms

@@ -9,12 +9,17 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import secrets
+import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 
 import httpx
+import jwt
 import pytest
 import uvicorn
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from pydantic import ValidationError
 
@@ -24,9 +29,46 @@ from app.main import create_app
 from app.result_consumer import apply_game_ended
 
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
-JWT_SECRET = "secreto-jwt-solo-para-pruebas-0123456789abcdef"
 SERVICE_SECRET = "secreto-servicio-solo-para-pruebas-0123456789"
-SERVICE_HEADERS = {"X-Service-Token": SERVICE_SECRET}
+
+
+def _rsa_pair() -> tuple[str, str]:
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private = key.private_bytes(
+        serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
+    ).decode()
+    public = key.public_key().public_bytes(
+        serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+    ).decode()
+    return private, public
+
+
+# Las de sesión hacen de Auth; las de partida son las del Lobby y su pública la tendría Go.
+SESSION_PRIVATE_KEY, SESSION_PUBLIC_KEY = _rsa_pair()
+GAME_PRIVATE_KEY, GAME_PUBLIC_KEY = _rsa_pair()
+OTHER_PRIVATE_KEY, _ = _rsa_pair()
+
+
+def session_token(
+    player_id: str,
+    nickname: str,
+    account_id: str | None = None,
+    *,
+    key: str = SESSION_PRIVATE_KEY,
+    algorithm: str = "RS256",
+    **extra,
+) -> str:
+    """Token de sesión como lo emite Auth."""
+    now = int(time.time())
+    claims = {"sub": player_id, "scope": "session", "nickname": nickname, "iat": now, "exp": now + 3600, **extra}
+    if account_id is not None:
+        claims["accountId"] = account_id
+    return jwt.encode(claims, key, algorithm=algorithm)
+
+
+def read_game_token(token: str) -> dict:
+    """Lo que verifica Go: RS256 con la clave pública de partidas."""
+    return jwt.decode(token, GAME_PUBLIC_KEY, algorithms=["RS256"])
 
 
 class FakeGameLogic:
@@ -152,11 +194,13 @@ class Ctx:
             return Reply(422, {"code": "invalid_request", "message": str(exc)})
         return Reply(200, result.model_dump(by_alias=True))
 
-    async def login(self, nickname: str) -> User:
-        r = await self.client.post("/api/session", json={"nickname": nickname})
-        assert r.status_code == 201, r.text
-        body = r.json()
-        return User(body["player"]["id"], body["player"]["nickname"], body["token"])
+    async def login(self, nickname: str, account_id: str | None = None) -> User:
+        """Recibe una sesión de Auth y la presenta al Lobby, como hace el menú."""
+        token = session_token(f"p_{secrets.token_hex(12)}", nickname, account_id)
+        r = await self.client.get("/api/session", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200, r.text
+        player = r.json()["player"]
+        return User(player["id"], player["nickname"], token)
 
     async def lobby_with(self, players: int, mode: str | None = None) -> tuple[dict, list[User]]:
         """Crea una sala con esa cantidad de jugadores. Devuelve la sala y los jugadores en orden de asiento.
@@ -192,7 +236,8 @@ class Ctx:
 def make_settings(**overrides) -> Settings:
     base = Settings(
         database_url=TEST_DATABASE_URL or "",
-        jwt_secret=JWT_SECRET,
+        session_public_key=SESSION_PUBLIC_KEY,
+        game_private_key=GAME_PRIVATE_KEY,
         service_secret=SERVICE_SECRET,
         game_logic_url="http://game-logic.test:8081",
         db_connect_timeout_s=5,

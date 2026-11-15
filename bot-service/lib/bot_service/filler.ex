@@ -5,14 +5,14 @@ defmodule BotService.Filler do
   Solo el anfitrión puede llenar o vaciar. El anfitrión es el jugador de menor
   asiento: quien creó la sala (asiento 0) o, si salió, el que lleva más tiempo.
   La identidad se comprueba preguntándole al Lobby con el token del usuario, así
-  que este servicio no necesita conocer `JWT_SECRET`.
+  que este servicio no necesita ninguna clave de los tokens.
 
-  Cada bot se registra en el Lobby como cualquier jugador (sesión + unirse) y
-  después se arranca su proceso bajo el supervisor. El cupo lo controla el Lobby
+  Cada bot entra como cualquier invitado: pide su sesión a Auth, se une a la
+  sala en el Lobby y después se arranca su proceso bajo el supervisor. El cupo lo controla el Lobby
   con su candado por sala: si un humano entra al mismo tiempo, el bot sobrante
   recibe `lobby_full` y simplemente no se agrega.
   """
-  alias BotService.{ApiError, Bot, LobbyClient, Names}
+  alias BotService.{ApiError, AuthClient, Bot, LobbyClient, Names}
 
   @spec fill(String.t(), String.t(), pos_integer() | nil) ::
           {:ok, map(), [map()]} | {:error, ApiError.t()}
@@ -101,7 +101,7 @@ defmodule BotService.Filler do
   end
 
   defp add_bot(lobby_id, nickname) do
-    with {:ok, %{"player" => player, "token" => bot_token}} <- client().create_session(nickname),
+    with {:ok, %{"player" => player, "token" => bot_token}} <- AuthClient.impl().guest_session(nickname),
          {:ok, _lobby} <- client().join(lobby_id, bot_token),
          {:ok, _pid} <-
            DynamicSupervisor.start_child(

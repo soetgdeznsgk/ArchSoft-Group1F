@@ -1,0 +1,419 @@
+<mxfile host="app.diagrams.net" agent="Kiro" version="24.7.17">
+  <diagram id="bololo-deployment-view" name="Deployment View">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3700" pageHeight="2500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- TITLE -->
+        <mxCell id="title" value="&lt;b&gt;Deployment View · BOLOLó (ArchSoft 1-F)&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=24;fontColor=#00A651;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="3660" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="bandTop" value="&lt;b&gt;SOFTWARE ELEMENTS&lt;/b&gt; · components of the C&amp;C view" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=13;fontColor=#404040;" vertex="1" parent="1">
+          <mxGeometry x="20" y="62" width="700" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- SOFTWARE ELEMENTS · top band -->
+        <mxCell id="swLobbyFe" value="&lt;b&gt;bololo_lobby_fe&lt;/b&gt;&lt;br&gt;Menu and Lobby UI · /menu/&lt;br&gt;JS · p5.js 1.10.0&lt;br&gt;p5.sound 1.0.1&lt;br&gt;&lt;i&gt;served by frontend&lt;/i&gt;" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="180" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swGameFe" value="&lt;b&gt;bololo_game_fe&lt;/b&gt;&lt;br&gt;/ingame/ · p5.js 1.10.0&lt;br&gt;/chameleon/ · DOM&lt;br&gt;GameSocket (WebSocket)&lt;br&gt;&lt;i&gt;served by frontend&lt;/i&gt;" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="240" y="100" width="180" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swGat" value="&lt;b&gt;bololo_gat&lt;/b&gt;&lt;br&gt;API Gateway&lt;br&gt;Traefik v3.7.14&lt;br&gt;routes from Docker labels" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="590" y="100" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swWeb" value="&lt;b&gt;bololo_web_ssr&lt;/b&gt; · Presentation server&lt;br&gt;Node.js 22.14.0 · node:http + zlib gzip&lt;br&gt;renders /menu/ (with ranking),&lt;br&gt;/ingame/, /chameleon/&lt;br&gt;serves client bundles + /libraries/" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="100" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swRatings" value="&lt;b&gt;bololo_ratings&lt;/b&gt; · Elo ranking per mode&lt;br&gt;Python 3.12 · FastAPI 0.143.0&lt;br&gt;Uvicorn 0.54.0 · asyncpg 0.32.0&lt;br&gt;aio-pika 10.2.1&lt;br&gt;REST API + game.finished consumer" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="100" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swMq" value="&lt;b&gt;bololo_mq&lt;/b&gt; · Message broker&lt;br&gt;RabbitMQ 3.13.7&lt;br&gt;exchange bololo.events (topic)&lt;br&gt;game.ended → lobby.game-ended&lt;br&gt;game.finished → ratings.game-finished" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1710" y="100" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swLobby" value="&lt;b&gt;bololo_lobby&lt;/b&gt;&lt;br&gt;Python 3.12 · FastAPI 0.143.0&lt;br&gt;Uvicorn 0.54.0 · asyncpg 0.32.0&lt;br&gt;PyJWT 2.15.1 · httpx 0.28.1 · aio-pika 10.2.1&lt;br&gt;sessions · lobbies · SSE · results" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2120" y="100" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swGame" value="&lt;b&gt;bololo_game&lt;/b&gt;&lt;br&gt;Go 1.27.2 static binary&lt;br&gt;Classic + Chameleon engines&lt;br&gt;gorilla/websocket 1.5.3 · go-redis v9.7.3&lt;br&gt;amqp091-go 1.16.0" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2530" y="100" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swBots" value="&lt;b&gt;bololo_bots&lt;/b&gt; 1.0.0 · CLASSIC + CHAMELEON&lt;br&gt;Elixir 1.17.3 · Erlang/OTP 27.1.2&lt;br&gt;Bandit 1.14.0 · Plug 1.20.3 · Req 0.7.5&lt;br&gt;Mint 1.11.0 · mint_web_socket 1.0.6&lt;br&gt;Jason 1.4.5" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2940" y="100" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swAuth" value="&lt;b&gt;bololo_auth&lt;/b&gt; 1.0.0&lt;br&gt;Java 21 · Spring Boot 3.5.5&lt;br&gt;Spring Security · OAuth2 Resource Server&lt;br&gt;JWT HS256 · BCrypt · Spring JDBC&lt;br&gt;lockout after failed attempts" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="3350" y="100" width="260" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- INFRASTRUCTURE -->
+        <mxCell id="infra" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#E2F0D9;strokeColor=#00A651;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="15" y="300" width="3675" height="1310" as="geometry" />
+        </mxCell>
+        <mxCell id="infraLabel" value="&lt;i&gt;Infrastructure&lt;/i&gt;" style="text;html=1;align=center;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=16;fontColor=#404040;" vertex="1" parent="1">
+          <mxGeometry x="1870" y="305" width="360" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneUser" value="" style="rounded=0;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 4;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="30" y="340" width="420" height="1250" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneUserLabel" value="&lt;b&gt;USER ZONE&lt;/b&gt;&lt;br&gt;Internet / LAN (untrusted)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="45" y="1505" width="390" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="nodePlayer" value="«device»&lt;br&gt;&lt;b&gt;Player PC / laptop / phone&lt;/b&gt;" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#B4C6E7;strokeColor=#2F5597;fontSize=10;verticalAlign=bottom;spacingBottom=10;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="50" y="560" width="380" height="440" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeBrowser" value="«executionEnvironment»&lt;br&gt;&lt;b&gt;Web browser&lt;/b&gt;&lt;br&gt;Chrome / Firefox / Edge&lt;br&gt;HTML5 · ES modules · Canvas&lt;br&gt;WebSocket · EventSource (SSE)&lt;br&gt;sessionStorage per tab = per player" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#DEEBF7;strokeColor=#2F5597;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="65" y="640" width="320" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeHost" value="" style="shape=cube;size=20;direction=south;html=1;whiteSpace=wrap;fillColor=#F7FBF4;strokeColor=#548235;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="460" y="340" width="3220" height="1240" as="geometry" />
+        </mxCell>
+        <mxCell id="hostLabel" value="«device» &lt;b&gt;Docker host&lt;/b&gt;&lt;br&gt;Docker Engine + Docker Compose v2 · project bololo-integrado&lt;br&gt;Linux containers · restart: unless-stopped" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="352" width="370" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="netPublic" value="" style="rounded=0;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 4;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="480" y="420" width="350" height="820" as="geometry" />
+        </mxCell>
+        <mxCell id="netPublicLabel" value="&lt;b&gt;NETWORK: public&lt;/b&gt;&lt;br&gt;bridge · bololo-integrado_public&lt;br&gt;only published port: 80" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="485" y="425" width="190" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeTraefik" value="«container»&lt;br&gt;&lt;b&gt;traefik&lt;/b&gt;&lt;br&gt;image traefik:v3.7.14&lt;br&gt;networks: public + internal&lt;br&gt;entryPoint web :80 (host 80:80)&lt;br&gt;ping :8080 (not published)&lt;br&gt;&lt;br&gt;&lt;b&gt;config&lt;/b&gt;&lt;br&gt;api-gateway/traefik.yml (ro)&lt;br&gt;/var/run/docker.sock (ro)&lt;br&gt;&lt;br&gt;&lt;b&gt;routes&lt;/b&gt; (Docker labels, no prefix stripping)&lt;br&gt;/ → frontend:3000 (prio 1)&lt;br&gt;/auth/ → auth:8080 (prio 10)&lt;br&gt;/api/ → lobby-manager:8000&lt;br&gt;/api/bots/ → bot-service:8090 (prio 30)&lt;br&gt;/api/ratings/ → ratings-service:8000 (prio 30)&lt;br&gt;/ws/games/ → game-logic:8081&lt;br&gt;/internal/* → not routed&lt;br&gt;&lt;br&gt;read/write timeout 0 (WS, SSE)&lt;br&gt;JSON access log without path&lt;br&gt;healthcheck traefik healthcheck --ping" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#F8CECC;strokeColor=#B85450;fontSize=10;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="570" y="500" width="240" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeDocker" value="«executionEnvironment»&lt;br&gt;&lt;b&gt;Docker Engine (dockerd)&lt;/b&gt;&lt;br&gt;/var/run/docker.sock&lt;br&gt;runs healthchecks&lt;br&gt;restart: unless-stopped&lt;br&gt;depends_on: service_healthy" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#595959;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="480" y="1290" width="350" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="netInternal" value="" style="rounded=0;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 4;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="850" y="420" width="2810" height="840" as="geometry" />
+        </mxCell>
+        <mxCell id="netInternalLabel" value="&lt;b&gt;NETWORK: internal&lt;/b&gt;&lt;br&gt;bridge · bololo-integrado_internal&lt;br&gt;&lt;i&gt;internal: true&lt;/i&gt; → no Internet egress,&lt;br&gt;ports cannot be published&lt;br&gt;Docker DNS (service-name:port)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;fontColor=#1F3864;" vertex="1" parent="1">
+          <mxGeometry x="2955" y="1075" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneVolumes" value="" style="rounded=0;html=1;whiteSpace=wrap;dashed=1;dashPattern=4 4;fillColor=#FFFBEA;strokeColor=#BF9000;" vertex="1" parent="1">
+          <mxGeometry x="850" y="1280" width="2810" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneVolumesLabel" value="&lt;b&gt;Host storage&lt;/b&gt; · Docker named volumes&lt;br&gt;survive restarts, removed only by docker compose down -v" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="860" y="1288" width="400" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ENVIRONMENTAL ELEMENTS · app row -->
+        <mxCell id="nodeFrontend" value="«container»&lt;br&gt;&lt;b&gt;frontend&lt;/b&gt;&lt;br&gt;build presentation-ssr/Dockerfile&lt;br&gt;(context: repo root)&lt;br&gt;image node:22.14.0-alpine · user app&lt;br&gt;:3000 · env RATINGS_URL&lt;br&gt;healthcheck GET /healthz" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#C9DAF8;strokeColor=#2F5597;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="560" width="260" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeRatings" value="«container»&lt;br&gt;&lt;b&gt;ratings-service&lt;/b&gt;&lt;br&gt;build ./ratings-service&lt;br&gt;image python:3.12-slim · user nobody&lt;br&gt;:8000&lt;br&gt;healthcheck GET /healthz" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#C9DAF8;strokeColor=#2F5597;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="560" width="260" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeMq" value="«container»&lt;br&gt;&lt;b&gt;rabbitmq&lt;/b&gt;&lt;br&gt;image rabbitmq:3.13.7-management-alpine&lt;br&gt;AMQP :5672&lt;br&gt;management :15672 (not routed)&lt;br&gt;healthcheck nc -z :5672" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#FFE6CC;strokeColor=#D79B00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1710" y="560" width="260" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeLobby" value="«container»&lt;br&gt;&lt;b&gt;lobby-manager&lt;/b&gt;&lt;br&gt;build ./lobby-manager&lt;br&gt;image python:3.12-slim · user nobody&lt;br&gt;:8000 · 1 Uvicorn worker&lt;br&gt;healthcheck GET /healthz" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#C9DAF8;strokeColor=#2F5597;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2120" y="560" width="260" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeGame" value="«container»&lt;br&gt;&lt;b&gt;game-logic&lt;/b&gt;&lt;br&gt;build ./game-logic (APP=server)&lt;br&gt;built in golang:1.27.2-bookworm&lt;br&gt;image distroless/static-debian12:nonroot&lt;br&gt;:8081 · env REDIS_URL, RABBITMQ_URL&lt;br&gt;healthcheck /app -healthcheck" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#C9DAF8;strokeColor=#2F5597;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2530" y="560" width="260" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeBot" value="«container»&lt;br&gt;&lt;b&gt;bot-service&lt;/b&gt;&lt;br&gt;build ./bot-service&lt;br&gt;built in hexpm/elixir:1.17.3-erlang-27.1.2&lt;br&gt;image alpine:3.20.3 · user bot&lt;br&gt;:8090&lt;br&gt;healthcheck GET /healthz" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#C9DAF8;strokeColor=#2F5597;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2940" y="560" width="260" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeAuth" value="«container»&lt;br&gt;&lt;b&gt;auth&lt;/b&gt;&lt;br&gt;build ./auth-service&lt;br&gt;built in maven:3.9.9-eclipse-temurin-21&lt;br&gt;image eclipse-temurin:21-jre-alpine&lt;br&gt;:8080 · user app&lt;br&gt;healthcheck GET /healthz" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#C9DAF8;strokeColor=#2F5597;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="3350" y="560" width="260" height="240" as="geometry" />
+        </mxCell>
+
+        <!-- ENVIRONMENTAL ELEMENTS · data row and volumes -->
+        <mxCell id="nodeRatingsPg" value="«container»&lt;br&gt;&lt;b&gt;ratings-postgres&lt;/b&gt;&lt;br&gt;image postgres:16.15-alpine&lt;br&gt;:5432 · DB bololo_ratings&lt;br&gt;healthcheck pg_isready" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#D5E8D4;strokeColor=#548235;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="1060" width="260" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="volRatings" value="«volume»&lt;br&gt;&lt;b&gt;ratings-pg-data&lt;/b&gt;&lt;br&gt;/var/lib/postgresql/data" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=8;html=1;whiteSpace=wrap;fillColor=#FFF2CC;strokeColor=#BF9000;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1448" y="1310" width="120" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="nodePg" value="«container»&lt;br&gt;&lt;b&gt;postgres&lt;/b&gt;&lt;br&gt;image postgres:16.15-alpine&lt;br&gt;:5432 · DB bololo&lt;br&gt;healthcheck pg_isready" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#D5E8D4;strokeColor=#548235;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2120" y="1060" width="260" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="volPg" value="«volume»&lt;br&gt;&lt;b&gt;pg-data&lt;/b&gt;&lt;br&gt;/var/lib/postgresql/data" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=8;html=1;whiteSpace=wrap;fillColor=#FFF2CC;strokeColor=#BF9000;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="2268" y="1310" width="120" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeRedis" value="«container»&lt;br&gt;&lt;b&gt;redis&lt;/b&gt;&lt;br&gt;image redis:7.4.11-alpine&lt;br&gt;:6379 · AOF everysec&lt;br&gt;requirepass · redis-cli ping" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#D5E8D4;strokeColor=#548235;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2530" y="1060" width="260" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="volRedis" value="«volume»&lt;br&gt;&lt;b&gt;redis-data&lt;/b&gt;&lt;br&gt;/data (AOF)" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=8;html=1;whiteSpace=wrap;fillColor=#FFF2CC;strokeColor=#BF9000;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="2678" y="1310" width="120" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="nodeAuthPg" value="«container»&lt;br&gt;&lt;b&gt;auth-postgres&lt;/b&gt;&lt;br&gt;image postgres:16.15-alpine&lt;br&gt;:5432 · DB bololo_auth&lt;br&gt;healthcheck pg_isready" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#D5E8D4;strokeColor=#548235;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="3350" y="1060" width="260" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="volAuth" value="«volume»&lt;br&gt;&lt;b&gt;auth-pg-data&lt;/b&gt;&lt;br&gt;/var/lib/postgresql/data" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=8;html=1;whiteSpace=wrap;fillColor=#FFF2CC;strokeColor=#BF9000;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="3498" y="1310" width="120" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="volMq" value="«volume»&lt;br&gt;&lt;b&gt;rabbitmq-data&lt;/b&gt;&lt;br&gt;/var/lib/rabbitmq" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=8;html=1;whiteSpace=wrap;fillColor=#FFF2CC;strokeColor=#BF9000;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1858" y="1310" width="120" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- SOFTWARE ELEMENTS · bottom band (data stores, deployment spec) -->
+        <mxCell id="swRatingsDb" value="«data store»&lt;br&gt;&lt;b&gt;bololo_ratings_db&lt;/b&gt;&lt;br&gt;PostgreSQL 16.15&lt;br&gt;ratings · processed_games&lt;br&gt;rating_changes" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1278" y="1660" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swLobbyDb" value="«data store»&lt;br&gt;&lt;b&gt;bololo_lobby_db&lt;/b&gt;&lt;br&gt;PostgreSQL 16.15&lt;br&gt;players · lobbies&lt;br&gt;lobby_players · game_results" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2098" y="1660" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swGameDb" value="«data store»&lt;br&gt;&lt;b&gt;bololo_game_db&lt;/b&gt;&lt;br&gt;Redis 7.4.11&lt;br&gt;bololo:game:{gameId}&lt;br&gt;games:active" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2508" y="1660" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swAuthDb" value="«data store»&lt;br&gt;&lt;b&gt;bololo_auth_db&lt;/b&gt;&lt;br&gt;PostgreSQL 16.15&lt;br&gt;accounts" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="3328" y="1660" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="swCompose" value="«deployment spec»&lt;br&gt;&lt;b&gt;docker-compose.yml + .env&lt;/b&gt;&lt;br&gt;12 services · 2 networks · 5 volumes&lt;br&gt;secrets via ${VAR:?}" style="shape=note;size=12;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="535" y="1660" width="240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="bandBottom" value="&lt;b&gt;SOFTWARE ELEMENTS&lt;/b&gt; · data stores of the C&amp;C view and deployment specification" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=13;fontColor=#404040;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1805" width="900" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ALLOCATION · deployed_in -->
+        <mxCell id="dLobbyFe" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.7969;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swLobbyFe" target="nodeBrowser">
+          <mxGeometry x="-0.8293" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dGameFe" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.1719;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swGameFe" target="nodeBrowser">
+          <mxGeometry x="-0.8293" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dGat" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swGat" target="nodeTraefik">
+          <mxGeometry x="-0.7407" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dWeb" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swWeb" target="nodeFrontend">
+          <mxGeometry x="-0.7879" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dRatings" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swRatings" target="nodeRatings">
+          <mxGeometry x="-0.7879" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dMq" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swMq" target="nodeMq">
+          <mxGeometry x="-0.7879" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dLobby" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swLobby" target="nodeLobby">
+          <mxGeometry x="-0.7879" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dGame" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swGame" target="nodeGame">
+          <mxGeometry x="-0.7879" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dBots" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swBots" target="nodeBot">
+          <mxGeometry x="-0.7879" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dAuth" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swAuth" target="nodeAuth">
+          <mxGeometry x="-0.7879" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dRatingsDb" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swRatingsDb" target="nodeRatingsPg">
+          <mxGeometry x="-0.8333" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dLobbyDb" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swLobbyDb" target="nodePg">
+          <mxGeometry x="-0.8333" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dGameDb" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swGameDb" target="nodeRedis">
+          <mxGeometry x="-0.8333" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dAuthDb" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swAuthDb" target="nodeAuthPg">
+          <mxGeometry x="-0.8333" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="dCompose" value="deployed_in" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="swCompose" target="nodeDocker">
+          <mxGeometry x="-0.2500" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- CONNECTORS · user zone → gateway -->
+        <mxCell id="eC1" value="&lt;b&gt;C1&lt;/b&gt; · HTTP/1.1 :80&lt;br&gt;REST /auth/, /api/ · SSE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;strokeWidth=3;exitX=0.2857;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3143;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeBrowser" target="nodeTraefik">
+          <mxGeometry x="-0.0054" relative="1" as="geometry"><mxPoint x="0" y="-30" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC2" value="&lt;b&gt;C2&lt;/b&gt; · HTTP/1.1 :80&lt;br&gt;+ WebSocket upgrade" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#7030A0;fontColor=#7030A0;strokeWidth=2;strokeWidth=3;exitX=0.7143;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4857;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeBrowser" target="nodeTraefik">
+          <mxGeometry x="-0.0054" relative="1" as="geometry"><mxPoint x="0" y="-30" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- CONNECTORS · gateway bus (C8 first so the blue routes draw over the shared segment) -->
+        <mxCell id="eC8" value="&lt;b&gt;C8&lt;/b&gt; · WebSocket&lt;br&gt;/ws/games/ :8081" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#7030A0;fontColor=#7030A0;strokeWidth=2;exitX=0.5429;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeTraefik" target="nodeGame">
+          <mxGeometry x="0.9568" relative="1" as="geometry"><Array as="points"><mxPoint x="2582" y="880" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC3" value="&lt;b&gt;C3&lt;/b&gt; · HTTP&lt;br&gt;pages + assets :3000" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;exitX=0.5429;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeTraefik" target="nodeFrontend">
+          <mxGeometry x="0.6226" relative="1" as="geometry"><Array as="points"><mxPoint x="942" y="880" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC4" value="&lt;b&gt;C4&lt;/b&gt; · REST&lt;br&gt;/api/ratings/* :8000" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;exitX=0.5429;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeTraefik" target="nodeRatings">
+          <mxGeometry x="0.8714" relative="1" as="geometry"><Array as="points"><mxPoint x="1352" y="880" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC6" value="&lt;b&gt;C6&lt;/b&gt; · REST + SSE&lt;br&gt;/api/* :8000" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;exitX=0.5429;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeTraefik" target="nodeLobby">
+          <mxGeometry x="0.9445" relative="1" as="geometry"><Array as="points"><mxPoint x="2172" y="880" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC7" value="&lt;b&gt;C7&lt;/b&gt; · REST&lt;br&gt;/api/bots/* :8090" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;exitX=0.5429;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeTraefik" target="nodeBot">
+          <mxGeometry x="0.9646" relative="1" as="geometry"><Array as="points"><mxPoint x="2992" y="880" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC5" value="&lt;b&gt;C5&lt;/b&gt; · REST&lt;br&gt;/auth/* :8080" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;exitX=0.5429;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeTraefik" target="nodeAuth">
+          <mxGeometry x="0.9701" relative="1" as="geometry"><Array as="points"><mxPoint x="3402" y="880" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="busLabel" value="&lt;i&gt;bololo_gat routes over the internal network&lt;/i&gt;" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=9;fontColor=#1F4E79;" vertex="1" parent="1">
+          <mxGeometry x="815" y="884" width="260" height="18" as="geometry" />
+        </mxCell>
+
+        <!-- CONNECTORS · between neighbouring containers -->
+        <mxCell id="eC9" value="&lt;b&gt;C9&lt;/b&gt; · REST :8000&lt;br&gt;GET leaderboard&lt;br&gt;(SSR ranking)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;exitX=0.25;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeFrontend" target="nodeRatings">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC16" value="&lt;b&gt;C16&lt;/b&gt; · AMQP&lt;br&gt;consume&lt;br&gt;game.finished" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#C55A11;fontColor=#C55A11;strokeWidth=2;exitX=0.25;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeRatings" target="nodeMq">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC15" value="&lt;b&gt;C15&lt;/b&gt; · AMQP&lt;br&gt;consume&lt;br&gt;game.ended" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#C55A11;fontColor=#C55A11;strokeWidth=2;exitX=0.2083;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2083;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeLobby" target="nodeMq">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eD1" value="&lt;b&gt;D1&lt;/b&gt; · AMQP&lt;br&gt;publish&lt;br&gt;game.finished" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#C55A11;fontColor=#C55A11;strokeWidth=2;exitX=0.6667;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeLobby" target="nodeMq">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC13" value="&lt;b&gt;C13&lt;/b&gt; · REST :8081&lt;br&gt;POST /internal/&lt;br&gt;games" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;exitX=0.25;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeLobby" target="nodeGame">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC12" value="&lt;b&gt;C12&lt;/b&gt; · WebSocket&lt;br&gt;:8081" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#7030A0;fontColor=#7030A0;strokeWidth=2;exitX=0.25;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeBot" target="nodeGame">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- CONNECTORS · routed above the app row -->
+        <mxCell id="eC10" value="&lt;b&gt;C10&lt;/b&gt; · REST :8000&lt;br&gt;POST /internal/auth/session" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;jumpStyle=arc;jumpSize=10;exitX=0;exitY=0.8;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeAuth" target="nodeLobby">
+          <mxGeometry x="-0.0288" relative="1" as="geometry"><Array as="points"><mxPoint x="3402" y="440" /><mxPoint x="2289" y="440" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC11" value="&lt;b&gt;C11&lt;/b&gt; · REST + SSE&lt;br&gt;:8000" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;jumpStyle=arc;jumpSize=10;exitX=0;exitY=0.8;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeBot" target="nodeLobby">
+          <mxGeometry x="0.4858" relative="1" as="geometry"><Array as="points"><mxPoint x="2992" y="470" /><mxPoint x="2328" y="470" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC14" value="&lt;b&gt;C14&lt;/b&gt; · AMQP · publish&lt;br&gt;game.ended" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#C55A11;fontColor=#C55A11;strokeWidth=2;exitX=0;exitY=0.8;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeGame" target="nodeMq">
+          <mxGeometry x="0.5230" relative="1" as="geometry"><Array as="points"><mxPoint x="2582" y="500" /><mxPoint x="1918" y="500" /></Array><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- CONNECTORS · database drivers -->
+        <mxCell id="eC17" value="&lt;b&gt;C17&lt;/b&gt; · SQL driver&lt;br&gt;PostgreSQL v3 :5432" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#548235;fontColor=#385723;strokeWidth=1.5;exitX=1;exitY=0.4;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeRatings" target="nodeRatingsPg">
+          <mxGeometry x="0.3462" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC19" value="&lt;b&gt;C19&lt;/b&gt; · SQL driver&lt;br&gt;PostgreSQL v3 :5432" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#548235;fontColor=#385723;strokeWidth=1.5;exitX=1;exitY=0.4;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeLobby" target="nodePg">
+          <mxGeometry x="0.3462" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC20" value="&lt;b&gt;C20&lt;/b&gt; · Redis driver&lt;br&gt;RESP3 :6379" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#548235;fontColor=#385723;strokeWidth=1.5;exitX=1;exitY=0.4;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeGame" target="nodeRedis">
+          <mxGeometry x="0.3462" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="eC18" value="&lt;b&gt;C18&lt;/b&gt; · JDBC&lt;br&gt;PostgreSQL v3 :5432" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#548235;fontColor=#385723;strokeWidth=1.5;exitX=1;exitY=0.4;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeAuth" target="nodeAuthPg">
+          <mxGeometry x="0.3462" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- CONNECTORS · infrastructure -->
+        <mxCell id="eD2" value="&lt;b&gt;D2&lt;/b&gt; · Docker API&lt;br&gt;docker.sock (ro)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#7F7F7F;fontColor=#404040;strokeWidth=1.5;dashed=1;exitX=1;exitY=0.6458;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeTraefik" target="nodeDocker">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- VOLUME MOUNTS -->
+        <mxCell id="m1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeWidth=1.5;strokeColor=#BF9000;fontSize=9;fontColor=#7F6000;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;exitX=1;exitY=0.2;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeRatingsPg" target="volRatings">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeWidth=1.5;strokeColor=#BF9000;fontSize=9;fontColor=#7F6000;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;exitX=1;exitY=0.2;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodePg" target="volPg">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeWidth=1.5;strokeColor=#BF9000;fontSize=9;fontColor=#7F6000;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;exitX=1;exitY=0.2;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeRedis" target="volRedis">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeWidth=1.5;strokeColor=#BF9000;fontSize=9;fontColor=#7F6000;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;exitX=1;exitY=0.2;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeAuthPg" target="volAuth">
+          <mxGeometry x="0.0000" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m5" value="mount" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeWidth=1.5;strokeColor=#BF9000;fontSize=9;fontColor=#7F6000;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;exitX=1;exitY=0.2;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nodeMq" target="volMq">
+          <mxGeometry x="0.3725" relative="1" as="geometry"><mxPoint x="0" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- HOST PORT 80 (drawn on top of C1/C2) -->
+        <mxCell id="port80a" value="80" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="446" y="706" width="28" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="port80b" value="80" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="446" y="826" width="28" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- KEY -->
+        <mxCell id="legend" value="&lt;b&gt;KEY (notation)&lt;/b&gt;" style="rounded=0;html=1;whiteSpace=wrap;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;fontSize=13;fillColor=#FFFFFF;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1870" width="1010" height="600" as="geometry" />
+        </mxCell>
+        <mxCell id="lgComp" value="Component" style="shape=component;align=left;spacingLeft=34;spacingRight=4;verticalAlign=middle;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1910" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lgCompTxt" value="&lt;b&gt;Software element&lt;/b&gt; (component of the C&amp;C view, named bololo_*). Drawn outside the infrastructure." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="175" y="1910" width="330" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lgStore" value="" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="1975" width="60" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="lgStoreTxt" value="&lt;b&gt;Software element: data store&lt;/b&gt; of the C&amp;C view." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="175" y="1975" width="330" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="lgSpec" value="«deployment spec»" style="shape=note;size=12;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#FFFFFF;strokeColor=#7F7F7F;strokeWidth=2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2045" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="lgSpecTxt" value="&lt;b&gt;Deployment specification&lt;/b&gt; (configuration artifact executed by an environmental element)." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="175" y="2045" width="330" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="lgNode" value="Node" style="verticalAlign=top;align=left;spacingTop=8;spacingLeft=8;spacingRight=16;shape=cube;size=12;direction=south;html=1;whiteSpace=wrap;fillColor=#C9DAF8;strokeColor=#2F5597;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2105" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lgNodeTxt" value="&lt;b&gt;Environmental element&lt;/b&gt;: «device», «executionEnvironment» or «container» (Compose service). Red = gateway, orange = broker, green = data." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="175" y="2105" width="330" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lgVol" value="" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=8;html=1;whiteSpace=wrap;fillColor=#FFF2CC;strokeColor=#BF9000;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="70" y="2180" width="60" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="lgVolTxt" value="&lt;b&gt;Docker named volume&lt;/b&gt; on the host disk (environmental element)." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="175" y="2180" width="330" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="lgZone" value="" style="rounded=0;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 4;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2250" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lgZoneTxt" value="&lt;b&gt;Zone / Docker network&lt;/b&gt; = trust boundary. Traefik is the only container on both networks." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="175" y="2250" width="330" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lgIds" value="&lt;b&gt;Connector IDs&lt;/b&gt;: &lt;b&gt;C1–C20&lt;/b&gt; same ID and meaning as in the C&amp;C view. &lt;b&gt;D1–D2&lt;/b&gt; exist in the deployed code but not in the C&amp;C view.&lt;br&gt;&lt;b&gt;Events&lt;/b&gt;: game.ended (game → lobby, C14/C15) and game.finished (lobby → ratings, D1/C16)." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2315" width="470" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="lgE0" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=10;dashed=1;dashPattern=8 5;strokeColor=#E06666;strokeWidth=2;fontSize=10;fontStyle=2;fontColor=#3333FF;labelBackgroundColor=#FFFFFF;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="530" y="1925" as="sourcePoint" /><mxPoint x="630" y="1925" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="lgE0Txt" value="&lt;i&gt;deployed_in&lt;/i&gt;: allocated-to relation, software element → environmental element" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="1910" width="370" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lgE1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#1F4E79;fontColor=#1F4E79;strokeWidth=1.5;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="530" y="1965" as="sourcePoint" /><mxPoint x="630" y="1965" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="lgE1Txt" value="HTTP/1.1: REST (JSON) and SSE (text/event-stream)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="1955" width="370" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lgE2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#7030A0;fontColor=#7030A0;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="530" y="2000" as="sourcePoint" /><mxPoint x="630" y="2000" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="lgE2Txt" value="WebSocket (RFC 6455, upgrade over HTTP/1.1)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="1990" width="370" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lgE3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#C55A11;fontColor=#C55A11;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="530" y="2035" as="sourcePoint" /><mxPoint x="630" y="2035" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="lgE3Txt" value="AMQP 0-9-1 (RabbitMQ, asynchronous events)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="2025" width="370" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lgE4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;strokeColor=#548235;fontColor=#385723;strokeWidth=1.5;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="530" y="2070" as="sourcePoint" /><mxPoint x="630" y="2070" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="lgE4Txt" value="Database driver (PostgreSQL v3, Redis RESP3)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="2060" width="370" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lgE5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;endSize=9;fontSize=9;labelBackgroundColor=#FFFFFF;strokeColor=#7F7F7F;fontColor=#404040;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="530" y="2105" as="sourcePoint" /><mxPoint x="630" y="2105" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="lgE5Txt" value="Docker Engine API over the Unix socket" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="2095" width="370" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lgE6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeWidth=1.5;strokeColor=#BF9000;fontSize=9;fontColor=#7F6000;labelBackgroundColor=#FFFFFF;jumpStyle=arc;jumpSize=10;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="530" y="2140" as="sourcePoint" /><mxPoint x="630" y="2140" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="lgE6Txt" value="Docker named volume mount" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="2130" width="370" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lgNote" value="&lt;b&gt;Arrow direction&lt;/b&gt; (connectors) = the side that opens the connection. For the AMQP consumers (C15, C16) messages flow broker → consumer.&lt;br&gt;&lt;b&gt;Edge label&lt;/b&gt; = connector ID · protocol · target port · purpose.&lt;br&gt;&lt;b&gt;Ports&lt;/b&gt;: only host port 80 is published (squares on the host border); C1 and C2 share it. Every other port exists only on the internal network.&lt;br&gt;&lt;b&gt;Gateway routes&lt;/b&gt; C3–C8 share one line from traefik and branch to each container." style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="530" y="2180" width="480" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- CONNECTOR CATALOG -->
+        <mxCell id="catalog" value="&lt;div style=&quot;font-size:13px;font-weight:bold;margin-bottom:4px&quot;&gt;CONNECTOR CATALOG (communication paths)&lt;/div&gt;&lt;table border=&quot;1&quot; cellpadding=&quot;2&quot; style=&quot;border-collapse:collapse;width:100%;font-size:10px;&quot;&gt;&lt;tr style=&quot;background:#D9D9D9;font-weight:bold&quot;&gt;&lt;td&gt;ID&lt;/td&gt;&lt;td&gt;Source → Target (container)&lt;/td&gt;&lt;td&gt;Connector / protocol&lt;/td&gt;&lt;td&gt;Port&lt;/td&gt;&lt;td&gt;Purpose / payload&lt;/td&gt;&lt;td&gt;Security&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C1&lt;/td&gt;&lt;td&gt;bololo_lobby_fe (browser) → traefik&lt;/td&gt;&lt;td&gt;HTTP/1.1 over TCP: REST (JSON) + SSE&lt;/td&gt;&lt;td&gt;host 80 → 80&lt;/td&gt;&lt;td&gt;/menu/ page, /auth/*, /api/* (incl. /api/ratings/, /api/bots/), SSE /api/lobbies/:id/events&lt;/td&gt;&lt;td&gt;No TLS (prototype); Bearer token; SSE token in ?token=&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C2&lt;/td&gt;&lt;td&gt;bololo_game_fe (browser) → traefik&lt;/td&gt;&lt;td&gt;HTTP/1.1 + WebSocket upgrade (RFC 6455)&lt;/td&gt;&lt;td&gt;host 80 → 80&lt;/td&gt;&lt;td&gt;/ingame/ and /chameleon/ pages, /ws/games/:gameId&lt;/td&gt;&lt;td&gt;No TLS; game JWT in ?token=&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C3&lt;/td&gt;&lt;td&gt;traefik → frontend (bololo_web_ssr)&lt;/td&gt;&lt;td&gt;HTTP/1.1&lt;/td&gt;&lt;td&gt;3000&lt;/td&gt;&lt;td&gt;SSR HTML shells (/menu/, /ingame/, /chameleon/) + static assets&lt;/td&gt;&lt;td&gt;Router web, priority 1&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C4&lt;/td&gt;&lt;td&gt;traefik → ratings-service&lt;/td&gt;&lt;td&gt;HTTP/1.1 REST (JSON)&lt;/td&gt;&lt;td&gt;8000&lt;/td&gt;&lt;td&gt;GET /api/ratings/leaderboard, /players/:id, /players/:id/history&lt;/td&gt;&lt;td&gt;Read-only; priority 30&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C5&lt;/td&gt;&lt;td&gt;traefik → auth&lt;/td&gt;&lt;td&gt;HTTP/1.1 REST (JSON)&lt;/td&gt;&lt;td&gt;8080&lt;/td&gt;&lt;td&gt;/auth/register, /auth/login, /auth/me, /auth/password&lt;/td&gt;&lt;td&gt;BCrypt; JWT HS256 (JWT_SECRET)&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C6&lt;/td&gt;&lt;td&gt;traefik → lobby-manager&lt;/td&gt;&lt;td&gt;HTTP/1.1 REST (JSON) + SSE&lt;/td&gt;&lt;td&gt;8000&lt;/td&gt;&lt;td&gt;/api/session, /api/lobbies..., /api/lobbies/:id/events&lt;/td&gt;&lt;td&gt;Bearer session token&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C7&lt;/td&gt;&lt;td&gt;traefik → bot-service&lt;/td&gt;&lt;td&gt;HTTP/1.1 REST (JSON)&lt;/td&gt;&lt;td&gt;8090&lt;/td&gt;&lt;td&gt;POST /api/bots/lobbies/:id/fill, GET, DELETE&lt;/td&gt;&lt;td&gt;Bearer session token; priority 30&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C8&lt;/td&gt;&lt;td&gt;traefik → game-logic&lt;/td&gt;&lt;td&gt;WebSocket (RFC 6455)&lt;/td&gt;&lt;td&gt;8081&lt;/td&gt;&lt;td&gt;/ws/games/:gameId: player actions, events and views&lt;/td&gt;&lt;td&gt;Game JWT; Origin check (ALLOWED_ORIGINS)&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C9&lt;/td&gt;&lt;td&gt;frontend (bololo_web_ssr) → ratings-service&lt;/td&gt;&lt;td&gt;HTTP/1.1 REST (Node fetch)&lt;/td&gt;&lt;td&gt;8000&lt;/td&gt;&lt;td&gt;GET /api/ratings/leaderboard?mode=CLASSIC&amp;amp;limit=10, rendered into /menu/; 800 ms timeout, menu is served without ranking on failure. Direct, not through the gateway&lt;/td&gt;&lt;td&gt;Public data, no token (RATINGS_URL)&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C10&lt;/td&gt;&lt;td&gt;auth → lobby-manager&lt;/td&gt;&lt;td&gt;HTTP/1.1 REST (Spring RestClient)&lt;/td&gt;&lt;td&gt;8000&lt;/td&gt;&lt;td&gt;POST /internal/auth/session (creates the player session for an account)&lt;/td&gt;&lt;td&gt;X-Service-Token (SERVICE_SECRET)&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C11&lt;/td&gt;&lt;td&gt;bot-service → lobby-manager&lt;/td&gt;&lt;td&gt;HTTP/1.1 REST (Req) + SSE (Mint)&lt;/td&gt;&lt;td&gt;8000&lt;/td&gt;&lt;td&gt;/api/session, /api/lobbies/:id, join, leave, /events (direct, not through the gateway)&lt;/td&gt;&lt;td&gt;Session token per bot&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C12&lt;/td&gt;&lt;td&gt;bot-service → game-logic&lt;/td&gt;&lt;td&gt;WebSocket (mint_web_socket)&lt;/td&gt;&lt;td&gt;8081&lt;/td&gt;&lt;td&gt;/ws/games/:gameId, same protocol as the browser; CLASSIC and CHAMELEON&lt;/td&gt;&lt;td&gt;Game JWT&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C13&lt;/td&gt;&lt;td&gt;lobby-manager → game-logic&lt;/td&gt;&lt;td&gt;HTTP/1.1 REST (httpx)&lt;/td&gt;&lt;td&gt;8081&lt;/td&gt;&lt;td&gt;POST /internal/games {gameId, lobbyId, mode, players}, GET /internal/games/:id&lt;/td&gt;&lt;td&gt;X-Service-Token&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C14&lt;/td&gt;&lt;td&gt;game-logic → rabbitmq&lt;/td&gt;&lt;td&gt;AMQP 0-9-1 over TCP (amqp091-go 1.16.0)&lt;/td&gt;&lt;td&gt;5672&lt;/td&gt;&lt;td&gt;Publish game.ended {gameId, lobbyId, mode, winners, endReason, standings, finishedAt} to bololo.events; publisher confirms + mandatory, 6 attempts (1–16 s backoff)&lt;/td&gt;&lt;td&gt;RABBITMQ_USER / RABBITMQ_PASSWORD&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C15&lt;/td&gt;&lt;td&gt;lobby-manager → rabbitmq&lt;/td&gt;&lt;td&gt;AMQP 0-9-1 over TCP (aio-pika)&lt;/td&gt;&lt;td&gt;5672&lt;/td&gt;&lt;td&gt;Consume lobby.game-ended, prefetch 1, ack after commit (idempotent by gameId), unrecordable messages to lobby.game-ended.dead&lt;/td&gt;&lt;td&gt;RABBITMQ_USER / RABBITMQ_PASSWORD&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C16&lt;/td&gt;&lt;td&gt;ratings-service → rabbitmq&lt;/td&gt;&lt;td&gt;AMQP 0-9-1 over TCP (aio-pika)&lt;/td&gt;&lt;td&gt;5672&lt;/td&gt;&lt;td&gt;Consume ratings.game-finished, prefetch 1, ack after commit, dead letters to bololo.events.dead&lt;/td&gt;&lt;td&gt;RABBITMQ_USER / RABBITMQ_PASSWORD&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C17&lt;/td&gt;&lt;td&gt;ratings-service → ratings-postgres&lt;/td&gt;&lt;td&gt;SQL driver: PostgreSQL protocol v3 (asyncpg)&lt;/td&gt;&lt;td&gt;5432&lt;/td&gt;&lt;td&gt;ratings, processed_games, rating_changes&lt;/td&gt;&lt;td&gt;DB user bololo_ratings&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C18&lt;/td&gt;&lt;td&gt;auth → auth-postgres&lt;/td&gt;&lt;td&gt;JDBC driver (PostgreSQL protocol v3)&lt;/td&gt;&lt;td&gt;5432&lt;/td&gt;&lt;td&gt;accounts&lt;/td&gt;&lt;td&gt;DB user bololo_auth&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C19&lt;/td&gt;&lt;td&gt;lobby-manager → postgres&lt;/td&gt;&lt;td&gt;SQL driver: PostgreSQL protocol v3 (asyncpg)&lt;/td&gt;&lt;td&gt;5432&lt;/td&gt;&lt;td&gt;players, lobbies, lobby_players, game_results&lt;/td&gt;&lt;td&gt;DB user bololo&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;C20&lt;/td&gt;&lt;td&gt;game-logic → redis&lt;/td&gt;&lt;td&gt;Redis driver: RESP3 over TCP (go-redis v9)&lt;/td&gt;&lt;td&gt;6379&lt;/td&gt;&lt;td&gt;Match snapshots bololo:game:{id}, games:active&lt;/td&gt;&lt;td&gt;requirepass (REDIS_PASSWORD)&lt;/td&gt;&lt;/tr&gt;&lt;tr style=&quot;background:#FFF2CC&quot;&gt;&lt;td&gt;D1&lt;/td&gt;&lt;td&gt;lobby-manager → rabbitmq&lt;/td&gt;&lt;td&gt;AMQP 0-9-1 over TCP (aio-pika)&lt;/td&gt;&lt;td&gt;5672&lt;/td&gt;&lt;td&gt;Publish game.finished to bololo.events from an outbox (every 2 s, publisher confirms + mandatory), after recording game.ended. Not in the C&amp;amp;C view, which only draws C15 between lobby and broker&lt;/td&gt;&lt;td&gt;RABBITMQ_USER / RABBITMQ_PASSWORD&lt;/td&gt;&lt;/tr&gt;&lt;tr style=&quot;background:#FFF2CC&quot;&gt;&lt;td&gt;D2&lt;/td&gt;&lt;td&gt;traefik → Docker Engine&lt;/td&gt;&lt;td&gt;Docker Engine API, HTTP over Unix socket&lt;/td&gt;&lt;td&gt;docker.sock&lt;/td&gt;&lt;td&gt;Reads container labels to build the routes (infrastructure connector)&lt;/td&gt;&lt;td&gt;Bind mount read-only&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;strokeColor=#000000;fillColor=#FFFFFF;spacing=8;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="1870" width="2630" height="600" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

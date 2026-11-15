@@ -10,10 +10,51 @@ set -uo pipefail
 export MSYS_NO_PATHCONV=1
 
 ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-BASE_URL="${BASE_URL:-http://localhost}"
+BASE_URL="${BASE_URL:-https://localhost}"
+# Mismo host por el puerto 80, que solo debe redirigir (escenario 1, Secure Channel).
+HTTP_URL="${HTTP_URL:-http://${BASE_URL#*://}}"
+CA_CERT="${CA_CERT:-api-gateway/ca/bololo-dev-ca.crt}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-300}"
 P5_PATH="${P5_PATH:-/libraries/p5.min.js}"
 cd "$ROOT" || exit 1
+
+# Todas las llamadas validan el certificado contra la CA local, como el navegador
+# (sin -k). --ssl-revoke-best-effort: la CA local no publica CRL y curl con
+# Schannel (Windows) fallaría; en curl con OpenSSL no tiene efecto.
+# En Git Bash, con MSYS_NO_PATHCONV=1 el curl nativo de Windows no puede abrir
+# /dev/null: sale con código 23 y deja -w a medias (por ejemplo %{redirect_url}).
+# Por eso /dev/null se traduce a "nul" allí.
+TLS_OPTS=()
+[[ "$BASE_URL" == https://* ]] && TLS_OPTS=(--cacert "$CA_CERT" --ssl-revoke-best-effort)
+case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) NULL_DEV=nul ;; *) NULL_DEV=/dev/null ;; esac
+curl() {
+  local args=() a
+  for a in "$@"; do [[ $a == /dev/null ]] && a=$NULL_DEV; args+=("$a"); done
+  command curl ${TLS_OPTS[@]+"${TLS_OPTS[@]}"} "${args[@]}"
+}
+TLS_NAME="${BASE_URL#*://}"
+TLS_NAME="${TLS_NAME%%[:/]*}"
+TLS_PORT=443
+[[ "${BASE_URL#*://}" =~ :([0-9]+) ]] && TLS_PORT="${BASH_REMATCH[1]}"
+# Solo texto imprimible: el ticket de sesión trae bytes binarios que rompen las regex de bash.
+tls_probe() { openssl s_client -connect "$TLS_NAME:$TLS_PORT" -servername "$TLS_NAME" "$@" </dev/null 2>&1 | tr -cd '[:print:]\n'; }
+# Valor de una cabecera de respuesta.
+header_of() { local name=$1; shift; curl -s -o /dev/null -D - --max-time 5 "$@" | tr -d '\r' | awk -v h="$name:" 'tolower($1)==h{print $2}'; }
+
+# Un handshake que el servidor debe rechazar. Si es el cliente openssl el que no
+# puede ofrecer esa versión o suite, la prueba se omite en lugar de pasar sola.
+tls_rejected() {
+  local name=$1 out
+  shift
+  out=$(tls_probe "$@")
+  if grep -aqE 'alert (protocol version|handshake failure|insufficient security)' <<<"$out"; then
+    ok "$name"
+  elif grep -aqE 'Cipher is [A-Z0-9]|Protocol version: TLS' <<<"$out"; then
+    fail "$name" "el servidor aceptó: $(grep -aoE 'Cipher is [^ ]+' <<<"$out" | head -1)"
+  else
+    skip "$name" "el cliente openssl no puede ofrecerlo"
+  fi
+}
 
 PASS=0
 FAIL=0
@@ -54,6 +95,9 @@ auth_api() {
   [[ -n "$body" ]] && args+=(-d "$body")
   curl "${args[@]}" -w '\n%{http_code}' "$BASE_URL/auth$path"
 }
+
+# Sesión de invitado: la emite Auth (decisión 4).
+guest() { auth_api POST /guest "" "{\"nickname\":\"$1\"}"; }
 
 # Publica game.ended en RabbitMQ como lo haría Go (exchange bololo.events, con confirmación).
 publish_game_ended() {
@@ -104,6 +148,20 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 ok ".env existe"
+if [[ "$BASE_URL" == https://* ]]; then
+  if [[ -s "$CA_CERT" && -s api-gateway/certs/bololo.crt && -s api-gateway/certs/bololo.key ]]; then
+    ok "certificado del gateway y CA local generados"
+  else
+    fail "certificado del gateway y CA local generados" "ejecuta ./scripts/gen-certs.sh"
+    exit 1
+  fi
+fi
+if ls secrets/jwt/{session,game}-{private,public}.pem >/dev/null 2>&1; then
+  ok "claves de los JWT generadas"
+else
+  fail "claves de los JWT generadas" "ejecuta ./scripts/gen-jwt-keys.sh"
+  exit 1
+fi
 if diff <(env_keys .env) <(env_keys .env.example) >/dev/null; then
   ok ".env y .env.example tienen las mismas claves"
 else
@@ -128,6 +186,33 @@ for svc in $(docker compose ps --services); do
 done
 published=$(docker compose ps --format '{{.Service}} {{.Ports}}' | grep -- '->' | cut -d' ' -f1 | sort -u | tr '\n' ' ')
 check "solo traefik publica puertos" "traefik " "$published"
+
+section "Canal seguro (TLS, escenario 1)"
+if [[ "$BASE_URL" != https://* ]]; then
+  skip "canal seguro" "BASE_URL no es https"
+else
+  check "traefik publica el 443" ".*:443" "$(docker compose port traefik 443 2>/dev/null)"
+  check "GET por http:// redirige a https" "301|308" "$(http_code "$HTTP_URL/menu/")"
+  check "la redirección conserva ruta y query" "$BASE_URL/api/lobbies\?x=1" "$(header_of location "$HTTP_URL/api/lobbies?x=1")"
+  res=$(curl -s --max-time 5 -X POST -H 'Content-Type: application/json' -d '{"nickname":"EnClaro"}' -w '\n%{http_code}' "$HTTP_URL/auth/guest")
+  check "POST por http:// no llega al servicio" "308" "$(status_of "$res")"
+  check "POST por http:// no entrega token" "0" "$(body_of "$res" | grep -c token)"
+  check "cabecera HSTS en https" "max-age=[1-9][0-9]*" "$(header_of strict-transport-security "$BASE_URL/menu/")"
+  check "sin HSTS en http (el navegador la ignoraría)" "" "$(header_of strict-transport-security "$HTTP_URL/")"
+  probe=$(tls_probe -CAfile "$CA_CERT" -verify_hostname "$TLS_NAME" -verify_return_error -alpn h2,http/1.1)
+  check "certificado válido para $TLS_NAME (CA local)" "Verify return code: 0 \(ok\)" \
+    "$(grep -aoE 'Verify return code: [0-9]+ \([^)]*\)' <<<"$probe" | head -1)"
+  check "TLS 1.3 negociado" "New, TLSv1\.3" "$(grep -aoE 'New, TLSv[0-9.]+' <<<"$probe" | head -1)"
+  check "HTTP/2 negociado por ALPN" "ALPN protocol: h2" "$(grep -aoE 'ALPN protocol: [^ ]+|No ALPN negotiated' <<<"$probe" | head -1)"
+  check "TLS 1.2 con ECDHE + AES-GCM aceptado" "Cipher is ECDHE-ECDSA-AES128-GCM-SHA256" \
+    "$(tls_probe -tls1_2 -cipher ECDHE-ECDSA-AES128-GCM-SHA256 | grep -aoE 'Cipher is [^ ]+' | head -1)"
+  tls_rejected "TLS 1.0 rechazado" -tls1 -cipher 'DEFAULT:@SECLEVEL=0'
+  tls_rejected "TLS 1.1 rechazado" -tls1_1 -cipher 'DEFAULT:@SECLEVEL=0'
+  tls_rejected "suite sin ECDHE (AES128-SHA) rechazada" -tls1_2 -cipher 'AES128-SHA:@SECLEVEL=0'
+  tls_rejected "suite CBC (ECDHE-ECDSA-AES128-SHA) rechazada" -tls1_2 -cipher 'ECDHE-ECDSA-AES128-SHA:@SECLEVEL=0'
+  check "traefik solo monta el certificado, no la CA" "README.md bololo.crt bololo.key " \
+    "$(docker compose exec -T traefik ls /certs 2>/dev/null | tr -d '\r' | LC_ALL=C sort | tr '\n' ' ')"
+fi
 
 GO_REAL=false
 [[ "$(internal GET /healthz)" == *'"status":"ok"'* ]] && GO_REAL=true
@@ -155,10 +240,12 @@ check "p5.js servido con gzip" "gzip" "$encoding"
 section "Lobby manager (REST y SSE)"
 declare -a TOKENS
 for name in Ana Beto Caro Dani; do
-  res=$(api POST /session "" "{\"nickname\":\"$name\"}")
+  res=$(guest "$name")
   TOKENS+=("$(body_of "$res" | field token)")
-  check "POST /api/session $name" "201" "$(status_of "$res")"
+  check "POST /auth/guest $name" "201" "$(status_of "$res")"
 done
+check "el Lobby ya no emite sesiones" "405" "$(status_of "$(api POST /session "" '{"nickname":"Ana"}')")"
+check "GET /api/session crea al jugador del invitado" ".*\"nickname\":\"Ana\".*" "$(body_of "$(api GET /session "${TOKENS[0]}")")"
 check "GET /api/lobbies sin sesion" "401" "$(status_of "$(api GET /lobbies)")"
 check "GET /api/lobbies con sesion" "200" "$(status_of "$(api GET /lobbies "${TOKENS[0]}")")"
 res=$(api POST /lobbies "${TOKENS[0]}")
@@ -169,7 +256,7 @@ check "POST /start con 1 jugador" "409" "$(status_of "$(api POST "/lobbies/$LOBB
 for i in 1 2 3; do
   check "jugador $((i + 1)) entra con el codigo" "200" "$(status_of "$(api POST /lobbies/join "${TOKENS[$i]}" "{\"code\":\"$CODE\"}")")"
 done
-extra=$(body_of "$(api POST /session "" '{"nickname":"Quinto"}')" | field token)
+extra=$(body_of "$(guest Quinto)" | field token)
 check "quinto jugador rechazado (sala llena)" "409" "$(status_of "$(api POST /lobbies/join "$extra" "{\"code\":\"$CODE\"}")")"
 headers=$(curl -s -N -o /dev/null -D - --max-time 2 -H 'Accept-Encoding: gzip' "$BASE_URL/api/lobbies/$LOBBY_ID/events?token=${TOKENS[0]}" | tr -d '\r')
 check "SSE Content-Type" "text/event-stream.*" "$(awk 'tolower($1)=="content-type:"{print $2}' <<<"$headers")"
@@ -185,6 +272,7 @@ else
 fi
 secret="e2e-$(openssl rand -hex 8)"
 http_code "$BASE_URL/ws/games/prueba?token=$secret" >/dev/null
+http_code "$HTTP_URL/ws/games/prueba?token=$secret" >/dev/null
 http_code "$BASE_URL/api/lobbies/$LOBBY_ID/events?token=$secret" >/dev/null
 sleep 1
 check "tokens ausentes en logs de traefik" "0" "$(docker compose logs traefik 2>&1 | grep -c "$secret")"
@@ -213,8 +301,11 @@ else
     curl -s -o /dev/null -w '%{http_code}' --max-time 2 --http1.1 \
       -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
       -H 'Sec-WebSocket-Version: 13' -H "Sec-WebSocket-Key: $(openssl rand -base64 16)" \
-      -H "Origin: $BASE_URL" "$BASE_URL/ws/games/$1?token=$2"
+      -H "Origin: ${3:-$BASE_URL}" "$BASE_URL/ws/games/$1?token=$2"
   }
+  if [[ "$BASE_URL" == https://* ]]; then
+    check "upgrade desde una pagina http:// rechazado" "403" "$(ws "$GAME_ID" "$GAME_TOKEN" "$HTTP_URL")"
+  fi
   check "upgrade con token valido" "101" "$(ws "$GAME_ID" "$GAME_TOKEN")"
   check "token invalido rechazado" "401" "$(ws "$GAME_ID" "invalido")"
   check "token de sesion rechazado" "401" "$(ws "$GAME_ID" "${TOKENS[0]}")"
@@ -244,7 +335,7 @@ fi
 section "Modo camaleon (2 a 4 jugadores)"
 declare -a CH_TOKENS
 for name in Eva Fede; do
-  CH_TOKENS+=("$(body_of "$(api POST /session "" "{\"nickname\":\"$name\"}")" | field token)")
+  CH_TOKENS+=("$(body_of "$(guest "$name")" | field token)")
 done
 res=$(api POST /lobbies "${CH_TOKENS[0]}" '{"mode":"CHAMELEON"}')
 check "POST /api/lobbies con mode CHAMELEON" "201" "$(status_of "$res")"
@@ -345,6 +436,23 @@ check "sin mensajes muertos" ".*ratings\.game-finished\.dead true 0.*" "$(tr '\n
 check "cola de resultados del lobby durable y vacia" ".*lobby\.game-ended true 0.*" "$(tr '\n' ';' <<<"$queues")"
 check "sin resultados muertos en el lobby" ".*lobby\.game-ended\.dead true 0.*" "$(tr '\n' ';' <<<"$queues")"
 check "Go no conoce la URL del Lobby" "0" "$(docker compose config game-logic 2>/dev/null | grep -c LOBBY_CALLBACK_URL)"
+
+section "Claves de los JWT y topologia del broker (decisiones 5 y 6)"
+# Se leen los montajes del contenedor: la imagen de game-logic es distroless y no trae ls.
+secrets_of() {
+  docker inspect -f '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' "$(docker compose ps -q "$1")" 2>/dev/null |
+    sed -n 's#^/run/secrets/##p' | LC_ALL=C sort | tr '\n' ' '
+}
+check "auth solo recibe las claves de sesion" "session_private_key session_public_key " \
+  "$(secrets_of auth)"
+check "lobby-manager no recibe la clave privada de sesiones" "game_private_key session_public_key " \
+  "$(secrets_of lobby-manager)"
+check "game-logic solo recibe la clave publica de partidas" "game_public_key " \
+  "$(secrets_of game-logic)"
+queues=$(docker compose exec -T rabbitmq rabbitmqctl -q list_queues name 2>/dev/null | tr -d '\r' | LC_ALL=C sort | tr '\n' ' ')
+check "el broker declara las colas de sus consumidores" \
+  "lobby.game-ended lobby.game-ended.dead name ratings.game-finished ratings.game-finished.dead |lobby.game-ended lobby.game-ended.dead ratings.game-finished ratings.game-finished.dead " \
+  "$queues"
 
 section "Datos"
 check "redis exige contrasena" "NOAUTH.*" "$(docker compose exec -T redis sh -c 'unset REDISCLI_AUTH; redis-cli ping' 2>&1 | tr -d '\r')"

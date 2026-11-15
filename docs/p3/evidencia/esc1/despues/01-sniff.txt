@@ -1,0 +1,19 @@
+
+Captura del tramo navegador <-> gateway (traefik, puertos 80 y 443)
+  BASE_URL                            https://localhost
+  primera visita a http://localhost/  301 https://localhost/
+  upgrade del WebSocket               101
+  paquetes en :80 (HTTP)              10
+  paquetes en :443 (TLS)              122
+  peticiones HTTP legibles            1
+
+  Secreto                             Veces legible en la captura
+  contraseña de la cuenta             0
+  token de sesión de la cuenta        0
+  token de sesión de invitado         0
+  token de partida (WebSocket)        0
+
+  Peticiones legibles en la captura (JWT recortados):
+         1 GET / HTTP/1.1
+
+  RESULTADO: ningún secreto viaja en claro.

@@ -1,9 +1,11 @@
 package com.bololo.auth;
 
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,23 +18,33 @@ import org.springframework.stereotype.Service;
 class AuthService {
     static final int MAX_FAILED_LOGINS = 5;
     static final Duration LOCK_DURATION = Duration.ofMinutes(1);
+    static final int NICKNAME_MAX = 20;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final AccountRepository accounts;
     private final PasswordEncoder passwordEncoder;
-    private final LobbySessionProvider lobbySessions;
+    private final SessionTokens sessionTokens;
     private final Clock clock;
     private final String decoyHash;
 
     AuthService(
             AccountRepository accounts,
             PasswordEncoder passwordEncoder,
-            LobbySessionProvider lobbySessions,
+            SessionTokens sessionTokens,
             Clock clock) {
         this.accounts = accounts;
         this.passwordEncoder = passwordEncoder;
-        this.lobbySessions = lobbySessions;
+        this.sessionTokens = sessionTokens;
         this.clock = clock;
         this.decoyHash = passwordEncoder.encode(UUID.randomUUID().toString());
+    }
+
+    /** Sesión de invitado: solo un nombre, sin cuenta ni contraseña. */
+    SessionResponse guest(String nicknameInput) {
+        String nickname = normalizeNickname(nicknameInput);
+        String playerId = "p_" + HexFormat.of().formatHex(randomBytes(12));
+        PlayerResponse player = new PlayerResponse(playerId, nickname);
+        return new SessionResponse(player, sessionTokens.issue(playerId, nickname, null), null);
     }
 
     SessionResponse register(String usernameInput, String password) {
@@ -97,12 +109,36 @@ class AuthService {
         }
     }
 
+    /**
+     * El jugador de una cuenta tiene un id fijo derivado de ella, así que cada inicio de sesión
+     * llega al Lobby como el mismo jugador.
+     */
     private SessionResponse sessionFor(Account account) {
-        LobbySessionResponse lobbySession = lobbySessions.createSession(account.id(), account.username());
+        String accountId = account.id().toString();
+        String playerId = "p_" + accountId.replace("-", "");
+        PlayerResponse player = new PlayerResponse(playerId, account.username());
         return new SessionResponse(
-                lobbySession.player(),
-                lobbySession.token(),
-                new AccountResponse(account.id().toString(), account.username()));
+                player,
+                sessionTokens.issue(playerId, account.username(), accountId),
+                new AccountResponse(accountId, account.username()));
+    }
+
+    private static byte[] randomBytes(int length) {
+        byte[] bytes = new byte[length];
+        RANDOM.nextBytes(bytes);
+        return bytes;
+    }
+
+    private static String normalizeNickname(String nickname) {
+        String normalized = nickname == null ? "" : String.join(" ", nickname.trim().split("\\s+"));
+        if (normalized.isEmpty()) {
+            throw new AuthException(422, "invalid_nickname", "Escribe un nombre de jugador.");
+        }
+        if (normalized.codePointCount(0, normalized.length()) > NICKNAME_MAX) {
+            throw new AuthException(
+                    422, "invalid_nickname", "El nombre puede tener máximo " + NICKNAME_MAX + " caracteres.");
+        }
+        return normalized;
     }
 
     private static String normalizeUsername(String username) {

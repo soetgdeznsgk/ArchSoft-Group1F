@@ -6,6 +6,7 @@ int = fn name, default -> name |> System.get_env(to_string(default)) |> String.t
 config :bot_service,
   port: int.("PORT", 8090),
   lobby_url: System.get_env("LOBBY_URL", "http://lobby-manager:8000"),
+  auth_url: System.get_env("AUTH_URL", "http://auth:8080"),
   game_logic_url: System.get_env("GAME_LOGIC_URL", "http://game-logic:8081"),
   # Pausa antes de cada acción en su turno, para que los humanos alcancen a ver la jugada.
   think_ms: {int.("BOT_THINK_MIN_MS", 900), int.("BOT_THINK_MAX_MS", 2200)},

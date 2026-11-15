@@ -4,11 +4,30 @@ services:
   traefik:
     image: traefik:v3.7.14
     restart: unless-stopped
+    # Escenario 1 (Secure Channel): sin certificado no arranca (falla cerrado).
+    # Si arrancara, serviría su certificado autofirmado de ejemplo y el navegador
+    # mostraría una advertencia que se aprende a aceptar, igual que la de un atacante.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ ! -s /certs/bololo.crt ] || [ ! -s /certs/bololo.key ]; then
+          echo "ERROR: falta el certificado TLS en api-gateway/certs/. Ejecuta ./scripts/gen-certs.sh" >&2
+          exit 1
+        fi
+        exec traefik
+    environment:
+      # max-age de HSTS (dynamic/secure-channel.yml). Producción: 31536000.
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-300}
     ports:
-      - "80:80"
+      - "80:80"   # solo redirige a HTTPS
+      - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./api-gateway/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./api-gateway/dynamic:/etc/traefik/dynamic:ro
+      # Solo el certificado y su clave. La CA local (api-gateway/ca/) no se monta.
+      - ./api-gateway/certs:/certs:ro
     networks:
       - public
       - internal
@@ -32,7 +51,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.web.entrypoints=web"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls=true"
       - "traefik.http.routers.web.priority=1"
       - "traefik.http.services.web.loadbalancer.server.port=3000"
     healthcheck:
@@ -50,21 +70,22 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres:5432/${AUTH_POSTGRES_DB:-bololo_auth}
       SPRING_DATASOURCE_USERNAME: ${AUTH_POSTGRES_USER:-bololo_auth}
       SPRING_DATASOURCE_PASSWORD: ${AUTH_POSTGRES_PASSWORD:-${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}}
-      LOBBY_MANAGER_URL: http://lobby-manager:8000
-      SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
-      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      SESSION_PRIVATE_KEY_FILE: /run/secrets/session_private_key
+      SESSION_PUBLIC_KEY_FILE: /run/secrets/session_public_key
+    secrets:
+      - session_private_key
+      - session_public_key
     networks:
       - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth/`)"
-      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.routers.auth.entrypoints=websecure"
+      - "traefik.http.routers.auth.tls=true"
       - "traefik.http.routers.auth.priority=10"
       - "traefik.http.services.auth.loadbalancer.server.port=8080"
     depends_on:
       auth-postgres:
-        condition: service_healthy
-      lobby-manager:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "sh", "-c", "wget -q --spider http://127.0.0.1:8080/healthz"]
@@ -80,19 +101,29 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
       POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en .env}
-      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      SESSION_PUBLIC_KEY_FILE: /run/secrets/session_public_key
+      GAME_PRIVATE_KEY_FILE: /run/secrets/game_private_key
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
       GAME_LOGIC_URL: http://game-logic:8081
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
+      # Uvicorn acepta X-Forwarded-Proto de Traefik (que lo reescribe en cada petición
+      # externa). Sin esto cree que la petición llegó por http y redirige a http://.
+      FORWARDED_ALLOW_IPS: "*"
+    secrets:
+      - session_public_key
+      - game_private_key
     networks:
       - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.lobby.rule=PathPrefix(`/api/`)"
-      - "traefik.http.routers.lobby.entrypoints=web"
+      - "traefik.http.routers.lobby.entrypoints=websecure"
+      - "traefik.http.routers.lobby.tls=true"
       - "traefik.http.services.lobby.loadbalancer.server.port=8000"
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
@@ -129,19 +160,26 @@ services:
     environment:
       GAME_LOGIC_ADDR: ":8081"
       REDIS_URL: redis://:${REDIS_PASSWORD:?Falta REDIS_PASSWORD en .env}@redis:6379/0
-      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env}
+      GAME_PUBLIC_KEY_FILE: /run/secrets/game_public_key
       SERVICE_SECRET: ${SERVICE_SECRET:?Falta SERVICE_SECRET en .env}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
+      # Origin aceptado en el upgrade del WebSocket. Solo https: una página servida
+      # en claro no puede abrir la partida. Para la LAN: https://localhost,https://<IP>
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost}
+    secrets:
+      - game_public_key
     networks:
       - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.game-ws.rule=PathPrefix(`/ws/games/`)"
-      - "traefik.http.routers.game-ws.entrypoints=web"
+      - "traefik.http.routers.game-ws.entrypoints=websecure"
+      - "traefik.http.routers.game-ws.tls=true"
       - "traefik.http.services.game-ws.loadbalancer.server.port=8081"
     depends_on:
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "/app", "-healthcheck"]
@@ -156,6 +194,7 @@ services:
     restart: unless-stopped
     environment:
       LOBBY_URL: http://lobby-manager:8000
+      AUTH_URL: http://auth:8080
       GAME_LOGIC_URL: http://game-logic:8081
       BOT_THINK_MIN_MS: ${BOT_THINK_MIN_MS:-900}
       BOT_THINK_MAX_MS: ${BOT_THINK_MAX_MS:-2200}
@@ -167,10 +206,13 @@ services:
       - "traefik.enable=true"
       # Más específica que /api/ (lobby-manager): la prioridad la hace ganar.
       - "traefik.http.routers.bots.rule=PathPrefix(`/api/bots/`)"
-      - "traefik.http.routers.bots.entrypoints=web"
+      - "traefik.http.routers.bots.entrypoints=websecure"
+      - "traefik.http.routers.bots.tls=true"
       - "traefik.http.routers.bots.priority=30"
       - "traefik.http.services.bots.loadbalancer.server.port=8090"
     depends_on:
+      auth:
+        condition: service_healthy
       lobby-manager:
         condition: service_healthy
       game-logic:
@@ -192,12 +234,15 @@ services:
       POSTGRES_PASSWORD: ${RATINGS_POSTGRES_PASSWORD:?Falta RATINGS_POSTGRES_PASSWORD en .env}
       POSTGRES_DB: ${RATINGS_POSTGRES_DB:?Falta RATINGS_POSTGRES_DB en .env}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
+      # Igual que lobby-manager: las redirecciones salen con https:// detrás de Traefik.
+      FORWARDED_ALLOW_IPS: "*"
     networks:
       - internal
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ratings.rule=PathPrefix(`/api/ratings/`)"
-      - "traefik.http.routers.ratings.entrypoints=web"
+      - "traefik.http.routers.ratings.entrypoints=websecure"
+      - "traefik.http.routers.ratings.tls=true"
       - "traefik.http.routers.ratings.priority=30"
       - "traefik.http.services.ratings.loadbalancer.server.port=8000"
     depends_on:
@@ -236,15 +281,26 @@ services:
     image: rabbitmq:3.13.7-management-alpine
     hostname: rabbitmq
     restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        (
+          until rabbitmq-diagnostics -q check_running >/dev/null 2>&1; do sleep 2; done
+          rabbitmqctl -q import_definitions /etc/rabbitmq/topology.json \
+            || echo "ERROR: no se pudo declarar la topología de rabbitmq/topology.json" >&2
+        ) &
+        exec docker-entrypoint.sh rabbitmq-server
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/topology.json:/etc/rabbitmq/topology.json:ro
     networks:
       - internal
     healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "5672"]
+      test: ["CMD-SHELL", "rabbitmqctl -q list_queues name > /tmp/queues && grep -qx lobby.game-ended /tmp/queues && grep -qx ratings.game-finished /tmp/queues"]
       interval: 10s
       timeout: 3s
       retries: 6
@@ -299,6 +355,16 @@ networks:
   public:
   internal:
     internal: true
+
+secrets:
+  session_private_key:
+    file: ./secrets/jwt/session-private.pem
+  session_public_key:
+    file: ./secrets/jwt/session-public.pem
+  game_private_key:
+    file: ./secrets/jwt/game-private.pem
+  game_public_key:
+    file: ./secrets/jwt/game-public.pem
 
 volumes:
   pg-data:

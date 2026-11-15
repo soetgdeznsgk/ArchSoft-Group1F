@@ -1,0 +1,14 @@
+$ curl -sI http://localhost/
+HTTP/1.1 302 Found
+Date: Sun, 15 Nov 2026 00:10:38 GMT
+Location: /menu/
+
+
+$ curl -sI http://localhost/menu/ | tr -d '\r' | grep -iE '^(HTTP|content-type|strict-transport-security)'
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+
+$ curl -s -X POST -H 'Content-Type: application/json' -d '{"nickname":"Evidencia"}' -w '\n[HTTP %{http_code} sobre %{scheme}]\n' http://localhost/api/session | sed -E 's/(eyJ[A-Za-z0-9_-]{10})[A-Za-z0-9._-]*/\1...[recortado]/g'
+{"player":{"id":"p_cd8ff4b07e4e","nickname":"Evidencia"},"token":"eyJhbGciOiJIU...[recortado]"}
+[HTTP 201 sobre http]
+

@@ -30,7 +30,7 @@ type wsClient struct {
 
 func (a *App) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
-	gameID, playerID, err := verifyGameToken(token, a.cfg.JWTSecret)
+	gameID, playerID, err := verifyGameToken(token, a.cfg.GamePublicKey)
 	if err != nil || gameID != r.PathValue("gameID") {
 		writeError(w, http.StatusUnauthorized, "invalid game token")
 		return
