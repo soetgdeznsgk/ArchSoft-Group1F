@@ -1,0 +1,36 @@
+# Negociación normal: versión, suite, intercambio de claves, ALPN y verificación del certificado.
+$ openssl s_client -connect localhost:443 -servername localhost -CAfile api-gateway/ca/bololo-dev-ca.crt -verify_hostname localhost -alpn h2,http/1.1 </dev/null 2>&1 | grep -aE '^(subject|issuer)=|Peer signature type|Server Temp Key|New, TLS|ALPN protocol|Verify return code' | sort -u
+    Verify return code: 0 (ok)
+ALPN protocol: h2
+issuer=O=Bololo 1F (desarrollo local), CN=Bololo Dev CA - Sebas
+New, TLSv1.3, Cipher is TLS_AES_128_GCM_SHA256
+Peer signature type: ECDSA
+Server Temp Key: X25519, 253 bits
+subject=O=Bololo 1F, CN=localhost
+Verify return code: 0 (ok)
+
+# Sin SNI, por IP (como un jugador de la LAN que entra con https://<IP>):
+$ openssl s_client -connect 127.0.0.1:443 -CAfile api-gateway/ca/bololo-dev-ca.crt -verify_ip 127.0.0.1 </dev/null 2>&1 | grep -aE 'Verify return code' | sort -u
+    Verify return code: 0 (ok)
+Verify return code: 0 (ok)
+
+# TLS 1.2 con una suite permitida:
+$ openssl s_client -connect localhost:443 -servername localhost -tls1_2 -cipher ECDHE-ECDSA-AES128-GCM-SHA256 </dev/null 2>&1 | grep -aoE 'New, TLSv[0-9.]+, Cipher is [^ ]+'
+New, TLSv1.2, Cipher is ECDHE-ECDSA-AES128-GCM-SHA256
+
+# Negociaciones débiles. SECLEVEL=0 hace que el cliente sí las ofrezca: el rechazo lo envía el servidor (alerta TLS).
+$ openssl s_client -connect localhost:443 -servername localhost -tls1 -cipher 'DEFAULT:@SECLEVEL=0' </dev/null 2>&1 | grep -aoE 'alert [a-z ]+|Cipher is [^ ]+' | head -1
+alert protocol version
+
+$ openssl s_client -connect localhost:443 -servername localhost -tls1_1 -cipher 'DEFAULT:@SECLEVEL=0' </dev/null 2>&1 | grep -aoE 'alert [a-z ]+|Cipher is [^ ]+' | head -1
+alert protocol version
+
+$ openssl s_client -connect localhost:443 -servername localhost -tls1_2 -cipher 'AES128-SHA:@SECLEVEL=0' </dev/null 2>&1 | grep -aoE 'alert [a-z ]+|Cipher is [^ ]+' | head -1
+alert handshake failure
+
+$ openssl s_client -connect localhost:443 -servername localhost -tls1_2 -cipher 'ECDHE-ECDSA-AES128-SHA:@SECLEVEL=0' </dev/null 2>&1 | grep -aoE 'alert [a-z ]+|Cipher is [^ ]+' | head -1
+alert handshake failure
+
+$ openssl s_client -connect localhost:443 -servername localhost -tls1_2 -cipher 'ECDHE-ECDSA-AES256-SHA384:@SECLEVEL=0' </dev/null 2>&1 | grep -aoE 'alert [a-z ]+|Cipher is [^ ]+' | head -1
+alert handshake failure
+

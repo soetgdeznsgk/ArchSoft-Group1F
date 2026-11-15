@@ -1,0 +1,2 @@
+ws:// con Origin http://localhost       -> HTTP 101
+ws:// con Origin https://evil.example   -> HTTP 403

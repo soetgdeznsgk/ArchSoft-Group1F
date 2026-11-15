@@ -1,0 +1,8 @@
+$ openssl s_client -connect localhost:443 -servername localhost -brief </dev/null; echo "[exit $?]"
+E4090000:error:8000274D:system library:BIO_connect:Unknown error:../openssl-3.2.4/crypto/bio/bio_sock2.c:178:calling connect()
+E4090000:error:10000067:BIO routines:BIO_connect:connect error:../openssl-3.2.4/crypto/bio/bio_sock2.c:180:
+E4090000:error:8000274D:system library:BIO_connect:Unknown error:../openssl-3.2.4/crypto/bio/bio_sock2.c:178:calling connect()
+E4090000:error:10000067:BIO routines:BIO_connect:connect error:../openssl-3.2.4/crypto/bio/bio_sock2.c:180:
+connect:errno=0
+[exit 1]
+

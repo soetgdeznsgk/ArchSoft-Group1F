@@ -58,7 +58,7 @@ flowchart TB
 
     subgraph HOST["Host Docker - docker compose (proyecto bololo)"]
         subgraph PUB["red: public"]
-            TR["traefik<br/>traefik:v3.7.14<br/>publica :80<br/>también en internal"]
+            TR["traefik<br/>traefik:v3.7.14<br/>publica :443 (HTTPS) y :80 (solo redirige)<br/>también en internal"]
         end
         subgraph INT["red: internal (internal: true, sin salida ni puertos publicados)"]
             FE["frontend<br/>Node.js SSR + assets<br/>:3000"]
@@ -69,7 +69,7 @@ flowchart TB
         end
     end
 
-    U -->|"HTTP / WS :80"| TR
+    U -->|"HTTPS / WSS :443"| TR
     TR -->|"/"| FE
     TR -->|"/api/ (REST + SSE)"| LM
     TR -->|"/ws/games/ (WebSocket)"| GL
@@ -102,7 +102,7 @@ Puertos que **no** se publican ni se enrutan: `8081` de Go, `/internal/*`, `5432
 
 ## 4. Contrato de rutas
 
-Las rutas públicas las define el gateway. Todo entra por el puerto 80.
+Las rutas públicas las define el gateway. Todo entra por el puerto 443 (HTTPS); el 80 solo redirige a `https://` con la misma ruta ([escenario 1](p3/esc1.md)).
 
 | Ruta pública | Destino | Router Traefik | Implementa |
 |---|---|---|---|
@@ -115,7 +115,7 @@ Reglas del contrato:
 
 1. **Traefik no recorta el prefijo.** Python recibe `/api/lobbies` completo y Go recibe `/ws/games/{id}` completo. Cada servicio declara sus rutas con el prefijo incluido.
 2. **El prefijo del lobby es `/api/`**, no `/api/lobbies`, para que Python pueda añadir rutas (por ejemplo el ingreso con nombre, RF-01) sin tocar el gateway. Se usa `/api/` con barra final porque `PathPrefix(`/api`)` también atraparía `/apiloquesea`.
-3. **El frontend usa rutas relativas**: `fetch("/api/...")`, `new EventSource("/api/...")` y `new WebSocket("ws://" + location.host + "/ws/games/...")`.
+3. **El frontend usa rutas relativas**: `fetch("/api/...")`, `new EventSource("/api/...")` y `new WebSocket(scheme + "://" + location.host + "/ws/games/...")`, con `scheme` igual a `wss` cuando la página es `https:`.
 4. Los `/healthz` de cada servicio se consultan dentro del contenedor y no se publican.
 
 ## 5. API Gateway (Traefik)
@@ -124,7 +124,7 @@ Archivos: [`api-gateway/traefik.yml`](../api-gateway/traefik.yml) (configuració
 
 | Aspecto | Configuración | Por qué |
 |---|---|---|
-| Entrada | `entryPoints.web` en `:80` | Solo HTTP para el prototipo (§13) |
+| Entrada | `entryPoints.websecure` en `:443` (TLS 1.2/1.3, HSTS) y `entryPoints.web` en `:80`, que solo redirige | Secure Channel ([escenario 1](p3/esc1.md)). Certificado y política TLS en `api-gateway/dynamic/secure-channel.yml` |
 | Descubrimiento | Provider Docker con `exposedByDefault: false` | Solo se publica lo que tenga `traefik.enable=true`; las bases nunca quedan expuestas por accidente |
 | WebSocket y SSE | `respondingTimeouts.readTimeout: 0`, `writeTimeout: 0` | En v3 `readTimeout` vale 60 s por defecto y cortaría una partida; `writeTimeout` distinto de 0 cortaría el stream SSE |
 | Conexiones inactivas | `idleTimeout: 180s` | Valor por defecto; solo afecta keep-alive entre peticiones, no a un WebSocket abierto |
@@ -184,7 +184,8 @@ Compose lee `.env` (junto a `docker-compose.yml`) y reemplaza las `${...}`. `.en
 | `POSTGRES_PASSWORD` | postgres, lobby-manager | hex aleatorio | Solo se aplica con volumen vacío (§7.2) |
 | `JWT_SECRET` | lobby-manager (firma), game-logic (verifica) | hex aleatorio | Debe ser el mismo en ambos |
 | `SERVICE_SECRET` | lobby-manager, game-logic | hex aleatorio | Header `X-Service-Token` del REST interno, en ambas direcciones |
-| `ALLOWED_ORIGINS` | game-logic | `http://localhost` | `Origin` aceptado en el upgrade WebSocket |
+| `ALLOWED_ORIGINS` | game-logic | `https://localhost` | `Origin` aceptado en el upgrade WebSocket. Para la LAN: `https://localhost,https://<IP>` |
+| `HSTS_MAX_AGE` | traefik | `300` | `max-age` de HSTS en segundos. Corto en local porque HSTS aplica a todos los puertos de `localhost`; en producción, `31536000` |
 
 Las variables obligatorias se escriben como `${VAR:?mensaje}`: si faltan, Compose no arranca y muestra el mensaje, en lugar de arrancar con un valor vacío.
 
@@ -212,7 +213,8 @@ Regla: quien añada una variable a `.env` actualiza también `.env.example`.
 
 - Docker Desktop con Docker Compose en Windows o macOS; Docker Engine y el complemento Docker Compose en Linux.
 - Una conexión a Internet durante la primera construcción para descargar las imágenes y dependencias que no estén en caché. La mesa también carga p5.js desde un CDN, por lo que necesita Internet al abrirse.
-- El puerto 80 disponible en la máquina.
+- Los puertos 80 y 443 disponibles en la máquina.
+- `openssl` para generar el certificado (en Windows, Git Bash lo incluye).
 
 En Windows o macOS, iniciar Docker Desktop y esperar a que indique que Docker está activo. En Linux, comprobar que el servicio de Docker esté iniciado.
 
@@ -248,9 +250,17 @@ docker compose ps
 
 `up` crea e inicia todos los servicios del archivo Compose; `-d` los deja ejecutándose en segundo plano; `--build` construye las imágenes del proyecto; `--wait` espera a que los servicios estén en estado `running` o `healthy`. En `docker compose ps`, los servicios con healthcheck deben aparecer como `healthy`.
 
-Abrir `http://localhost` en el navegador. La dirección redirige al menú de ingreso. Para una partida se necesitan cuatro jugadores, cada uno en una pestaña o navegador distinto y con un nombre diferente.
+Antes del primer `up` hay que generar el certificado del gateway (sin él Traefik no arranca). Desde Git Bash, macOS o Linux:
 
-Para jugar desde otro equipo de la misma red, abrir `http://<IP-de-la-máquina-que-ejecuta-Docker>` en lugar de `localhost`. Permitir el puerto 80 en el firewall de esa máquina si es necesario.
+```bash
+./scripts/gen-certs.sh --trust
+```
+
+`--trust` instala la CA local como confiable para el usuario actual, así el navegador no muestra advertencias. Detalles en [p3/esc1.md §10](p3/esc1.md#10-cómo-usarlo-equipo).
+
+Abrir `https://localhost` en el navegador (`http://localhost` redirige ahí). La dirección lleva al menú de ingreso. Para una partida se necesitan cuatro jugadores, cada uno en una pestaña o navegador distinto y con un nombre diferente.
+
+Para jugar desde otro equipo de la misma red: generar el certificado con la IP (`./scripts/gen-certs.sh <IP>`), agregar `https://<IP>` a `ALLOWED_ORIGINS`, importar `api-gateway/ca/bololo-dev-ca.crt` como autoridad raíz en el otro equipo y abrir `https://<IP-de-la-máquina-que-ejecuta-Docker>`. Permitir los puertos 80 y 443 en el firewall de esa máquina si es necesario.
 
 Para detener los servicios sin borrar los datos:
 
@@ -315,7 +325,7 @@ El script detecta si `game-logic` es el servicio real consultando `GET http://ga
 
 Resultado el 12 de octubre de 2026 sobre `main` (`d026fb8`), con `game-logic` como relleno: **44 OK, 0 fallas, 3 omitidas**.
 
-Variables opcionales: `BASE_URL` (por defecto `http://localhost`), `WAIT_TIMEOUT` (300 s) y `P5_PATH` (`/libraries/p5.min.js`; cambia cuando se separen los frontends).
+Variables opcionales: `BASE_URL` (por defecto `https://localhost`), `CA_CERT` (`api-gateway/ca/bololo-dev-ca.crt`, con la que se valida el certificado), `WAIT_TIMEOUT` (300 s) y `P5_PATH` (`/libraries/p5.min.js`; cambia cuando se separen los frontends). Desde el escenario 1 el script también comprueba el canal seguro: redirección de 80 a 443, HSTS, TLS 1.3 y HTTP/2, rechazo de TLS 1.0/1.1 y de suites débiles ([p3/esc1.md](p3/esc1.md)).
 
 ## 12. Pendientes para los otros componentes
 
@@ -368,7 +378,7 @@ Lo que el despliegue necesita de cada equipo para reemplazar los rellenos. Cuand
 
 | Tema | Diseño (§9) | Implementado | Motivo |
 |---|---|---|---|
-| Protocolo | HTTPS/WSS, puertos 80 y 443 | Solo HTTP en 80 | Demo local; los certificados autofirmados generan avisos en el navegador. En producción se añadiría TLS en Traefik |
+| Protocolo | HTTPS/WSS, puertos 80 y 443 | HTTPS/WSS en 443; 80 solo redirige (desde el escenario 1, noviembre 2026) | Certificado de una CA local con restricción de nombres, confiada en cada equipo, para evitar los avisos de un autofirmado. Ver [p3/esc1.md](p3/esc1.md) |
 | Ruta del lobby | `/api/lobbies` | `/api/` | Permite más rutas del lobby sin cambiar el gateway |
 | Versiones | `traefik:v3.x`, `node:22-alpine`, `postgres:16`, `redis:7` | `v3.7.14`, `22.14.0-alpine`, `16.15-alpine`, `7.4.11-alpine` | Tags exactos verificados en Docker Hub para que la demo no cambie sola |
 | Configuración de Redis | `appendonly`, `appendfsync everysec`, `requirepass` | Igual, como argumentos de `redis-server` | Un `redis.conf` no puede leer variables de entorno |

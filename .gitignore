@@ -1,1 +1,10 @@
 .env
+
+# Escenario 1 (Secure Channel): CA local, certificados y claves los genera
+# scripts/gen-certs.sh en cada máquina. Nunca se versionan.
+api-gateway/ca/
+api-gateway/certs/*
+!api-gateway/certs/README.md
+# Capturas de tráfico: la del "antes" contiene contraseñas y JWT en claro.
+*.pcap
+*.pcapng

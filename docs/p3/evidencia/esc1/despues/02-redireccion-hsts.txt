@@ -1,0 +1,23 @@
+$ curl -sI http://localhost/
+HTTP/1.1 308 Permanent Redirect
+Location: https://localhost/
+Date: Sun, 15 Nov 2026 00:36:44 GMT
+Content-Length: 18
+
+
+$ curl -sI http://localhost/ws/games/g_x?token=abc | tr -d '\r' | grep -iE '^(HTTP|location)'
+HTTP/1.1 308 Permanent Redirect
+Location: https://localhost/ws/games/g_x?token=abc
+
+$ curl -s -X POST -H 'Content-Type: application/json' -d '{"nickname":"Evidencia"}' -w '\n[HTTP %{http_code}, Location: %{redirect_url}]\n' http://localhost/api/session
+Permanent Redirect
+[HTTP 308, Location: https://localhost/api/session]
+
+$ curl -sI --cacert api-gateway/ca/bololo-dev-ca.crt --ssl-revoke-best-effort https://localhost/menu/ | tr -d '\r' | grep -iE '^(HTTP|content-type|strict-transport-security)'
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Strict-Transport-Security: max-age=300
+
+$ curl -s --cacert api-gateway/ca/bololo-dev-ca.crt --ssl-revoke-best-effort -o /dev/null -w 'HTTP/%{http_version}, ssl_verify_result=%{ssl_verify_result} (0 = certificado valido)\n' https://localhost/menu/
+HTTP/1.1, ssl_verify_result=0 (0 = certificado valido)
+
