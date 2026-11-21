@@ -1,0 +1,7 @@
+Latencia por el gateway: https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=1 (N=200)
+  cliente                      curl 8.5.0 (x86_64-pc-linux-gnu) libcurl/8.5.0 OpenSSL/3.0.13
+  protocolo negociado          HTTP/2
+  conexión nueva, TCP          mediana   0.29 ms   p95   0.62 ms   min   0.17 ms   max   0.72 ms
+  conexión nueva, TCP + TLS    mediana   9.96 ms   p95  22.20 ms   min   5.82 ms   max  30.43 ms
+  conexión nueva, total        mediana  20.06 ms   p95  35.75 ms   min  13.14 ms   max  58.66 ms
+  conexión reutilizada, total  mediana   7.95 ms   p95  13.60 ms   min   5.18 ms   max  17.82 ms

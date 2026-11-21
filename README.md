@@ -9,7 +9,8 @@ El modo se elige al crear la sala. Cada componente de la vista C&C tiene su prop
 
 ```mermaid
 flowchart TB
-  C[navegador<br/>menú y mesas p5.js] -- "HTTPS / REST / SSE / WSS" --> G[api-gateway<br/>Traefik]
+  C[navegador<br/>menú y mesas p5.js] -- "HTTPS / REST / SSE / WSS" --> RP[reverse-proxy<br/>Nginx]
+  RP -- "HTTP, WebSocket (lista de rutas)" --> G[api-gateway<br/>Traefik]
   G -- "HTML con SSR" --> P[presentation-ssr<br/>Node.js]
   P -- "ranking (REST interno)" --> RS
   G -- "REST, SSE" --> L[lobby-manager<br/>FastAPI]
@@ -19,7 +20,7 @@ flowchart TB
   G -- "REST /api/ratings/" --> RS[ratings-service<br/>FastAPI]
   B -- "REST, SSE" --> L
   B -- WebSocket --> GL
-  A -- "REST interno" --> L
+  B -- "REST: sesión de bot" --> A
   L -- "REST interno: crear partida" --> GL
   GL -- "publica game.ended" --> MQ{{RabbitMQ}}
   L -- "consume game.ended, publica game.finished" --> MQ
@@ -40,7 +41,8 @@ ArchSoft-Group1F/
 │   ├── lobby/           pantalla de ingreso y salas (elige el modo)
 │   ├── game/            mesa del modo clásico (/ingame/)
 │   └── chameleon/       mesa básica del modo camaleón (/chameleon/)
-├── api-gateway/         Traefik: único punto de entrada, HTTPS en :443
+├── reverse-proxy/       Nginx: único punto de entrada, HTTPS en :443 y lista de rutas
+├── api-gateway/         Traefik: enruta hacia los servicios, sin puertos publicados
 ├── auth-service/        Cuentas y credenciales en Java + Spring Boot
 ├── lobby-manager/       Gestión de sesiones y salas en FastAPI + PostgreSQL
 ├── game-logic/          Lógica de la partida, servicio Go y persistencia Redis
@@ -68,4 +70,5 @@ Convenciones:
 | [`lobby-manager/`](lobby-manager) | Verifica las sesiones de Auth, jugadores, salas y tokens de partida | Ver [lobby-manager/README.md](lobby-manager/README.md) |
 | [`bot-service/`](bot-service) | Llenar sala con bots que juegan la partida completa | Ver [bot-service/README.md](bot-service/README.md) y [docs/bot-service.md](docs/bot-service.md) |
 | [`ratings-service/`](ratings-service) | Ranking Elo por modo, alimentado por RabbitMQ | Ver [ratings-service/README.md](ratings-service/README.md) y [docs/ratings-service.md](docs/ratings-service.md) |
-| [`api-gateway/`](api-gateway) | Traefik: enrutamiento por ruta, TLS 1.2/1.3 con HSTS en :443, :80 solo redirige ([escenario 1](docs/p3/esc1.md)) | Ver su README |
+| [`reverse-proxy/`](reverse-proxy) | Nginx: único punto de entrada; TLS 1.2/1.3 con HSTS en :443, :80 solo redirige ([escenario 1](docs/p3/esc1.md)); solo deja pasar las rutas públicas ([escenario 2](docs/p3/esc2.md)) | Ver su README |
+| [`api-gateway/`](api-gateway) | Traefik: enrutamiento por ruta hacia los servicios; sin puertos publicados, solo lo alcanza el proxy | Ver su README |

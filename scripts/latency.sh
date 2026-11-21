@@ -7,6 +7,8 @@
 
 set -uo pipefail
 export MSYS_NO_PATHCONV=1
+# awk y printf leen y escriben decimales con punto aunque el sistema esté en español.
+export LC_ALL=C
 ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$ROOT" || exit 1
 
@@ -25,7 +27,7 @@ curl() {
 CURL=(curl -s --max-time 5)
 [[ "$BASE_URL" == https://* ]] && CURL+=(--cacert "$CA_CERT" --ssl-revoke-best-effort)
 # Opciones extra de curl, separadas por espacios. Ejemplo, desde un contenedor de la
-# red public: EXTRA_CURL_OPTS="--connect-to localhost:443:traefik:443"
+# red public: EXTRA_CURL_OPTS="--connect-to localhost:443:reverse-proxy:443"
 # shellcheck disable=SC2206
 [[ -n "${EXTRA_CURL_OPTS:-}" ]] && CURL+=($EXTRA_CURL_OPTS)
 

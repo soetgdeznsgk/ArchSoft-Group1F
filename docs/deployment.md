@@ -58,7 +58,10 @@ flowchart TB
 
     subgraph HOST["Host Docker - docker compose (proyecto bololo)"]
         subgraph PUB["red: public"]
-            TR["traefik<br/>traefik:v3.7.14<br/>publica :443 (HTTPS) y :80 (solo redirige)<br/>también en internal"]
+            RP["reverse-proxy<br/>nginx:1.30.5-alpine<br/>publica :443 (HTTPS) y :80 (solo redirige)<br/>también en edge"]
+        end
+        subgraph EDGE["red: edge (internal: true, solo proxy y gateway)"]
+            TR["traefik<br/>traefik:v3.7.14<br/>:8000 sin publicar<br/>también en internal"]
         end
         subgraph INT["red: internal (internal: true, sin salida ni puertos publicados)"]
             FE["frontend<br/>Node.js SSR + assets<br/>:3000"]
@@ -69,7 +72,8 @@ flowchart TB
         end
     end
 
-    U -->|"HTTPS / WSS :443"| TR
+    U -->|"HTTPS / WSS :443"| RP
+    RP -->|"HTTP / WS :8000, solo rutas públicas"| TR
     TR -->|"/"| FE
     TR -->|"/api/ (REST + SSE)"| LM
     TR -->|"/ws/games/ (WebSocket)"| GL
@@ -82,7 +86,8 @@ flowchart TB
 
 | Servicio | Imagen | Redes | Puertos | Volúmenes | Espera a (healthy) | Healthcheck |
 |---|---|---|---|---|---|---|
-| `traefik` | `traefik:v3.7.14` | public, internal | 80 publicado | socket de Docker (ro), `traefik.yml` (ro) | ninguno | `traefik healthcheck --ping` |
+| `reverse-proxy` | `nginx:1.30.5-alpine` | public, edge | 80 y 443 publicados | configuración de `reverse-proxy/` (ro), `api-gateway/certs` (ro), disco de solo lectura | `traefik` | `wget --spider http://127.0.0.1:8080/healthz` |
+| `traefik` | `traefik:v3.7.14` | edge, internal | 8000, sin publicar | socket de Docker (ro), `traefik.yml` (ro) | ninguno | `traefik healthcheck --ping` |
 | `frontend` | build de `presentation-ssr/` (Node.js 22 Alpine) | internal | 3000 | ninguno | ninguno | `wget --spider http://127.0.0.1:3000/healthz` |
 | `lobby-manager` | relleno `traefik/whoami:v1.12.0` | internal | 8000 | ninguno | `postgres` | pendiente (§12.2) |
 | `game-logic` | relleno `traefik/whoami:v1.12.0` | internal | 8080 (8081 cuando exista) | ninguno | `redis` | pendiente (§12.1) |
@@ -93,8 +98,9 @@ Todos los servicios usan `restart: unless-stopped`.
 
 ## 3. Redes y puertos
 
-- `public`: solo Traefik. Es el único contenedor con `ports:` y el único punto de entrada desde fuera.
-- `internal`: todos los servicios, incluido Traefik. Tiene `internal: true`, así que Docker le quita la salida a internet y nada en ella se puede publicar en el host.
+- `public`: solo el proxy inverso (`reverse-proxy`). Es el único contenedor con `ports:` y el único punto de entrada desde fuera ([escenario 2](p3/esc2.md)).
+- `edge`: solo el proxy (`10.250.0.2`) y Traefik (`10.250.0.3`), con `internal: true`. Por aquí pasa el conector C21; el proxy no alcanza nada más.
+- `internal`: todos los servicios, incluido Traefik, pero no el proxy. Tiene `internal: true`, así que Docker le quita la salida a internet y nada en ella se puede publicar en el host.
 - Dentro de `internal`, los servicios se encuentran por nombre: `postgres:5432`, `redis:6379`, `game-logic:8081`, `lobby-manager:8000`.
 - Traefik tiene `providers.docker.network: bololo_internal`. Como está en dos redes, sin esto podría intentar llegar a un servicio por la red equivocada y responder `504`.
 
@@ -102,7 +108,7 @@ Puertos que **no** se publican ni se enrutan: `8081` de Go, `/internal/*`, `5432
 
 ## 4. Contrato de rutas
 
-Las rutas públicas las define el gateway. Todo entra por el puerto 443 (HTTPS); el 80 solo redirige a `https://` con la misma ruta ([escenario 1](p3/esc1.md)).
+Una ruta es pública solo si está en la lista del proxy inverso ([`reverse-proxy/README.md`](../reverse-proxy/README.md)) **y** tiene un router en Traefik, que decide a qué servicio va. Todo entra por el puerto 443 (HTTPS) del proxy; el 80 solo redirige a `https://` con la misma ruta ([escenario 1](p3/esc1.md)). Cualquier otra ruta recibe `404` en el proxy sin llegar al gateway ([escenario 2](p3/esc2.md)).
 
 | Ruta pública | Destino | Router Traefik | Implementa |
 |---|---|---|---|
@@ -124,7 +130,7 @@ Archivos: [`api-gateway/traefik.yml`](../api-gateway/traefik.yml) (configuració
 
 | Aspecto | Configuración | Por qué |
 |---|---|---|
-| Entrada | `entryPoints.websecure` en `:443` (TLS 1.2/1.3, HSTS) y `entryPoints.web` en `:80`, que solo redirige | Secure Channel ([escenario 1](p3/esc1.md)). Certificado y política TLS en `api-gateway/dynamic/secure-channel.yml` |
+| Entrada | Un solo `entryPoints.web` en `:8000`, sin publicar, que solo recibe al proxy por la red `edge`. Confía en `X-Forwarded-*` solo desde `10.250.0.2` | Desde el escenario 2, TLS, HSTS y la redirección del 80 están en el proxy inverso ([escenario 1](p3/esc1.md), [escenario 2](p3/esc2.md)) |
 | Descubrimiento | Provider Docker con `exposedByDefault: false` | Solo se publica lo que tenga `traefik.enable=true`; las bases nunca quedan expuestas por accidente |
 | WebSocket y SSE | `respondingTimeouts.readTimeout: 0`, `writeTimeout: 0` | En v3 `readTimeout` vale 60 s por defecto y cortaría una partida; `writeTimeout` distinto de 0 cortaría el stream SSE |
 | Conexiones inactivas | `idleTimeout: 180s` | Valor por defecto; solo afecta keep-alive entre peticiones, no a un WebSocket abierto |
@@ -184,7 +190,7 @@ Compose lee `.env` (junto a `docker-compose.yml`) y reemplaza las `${...}`. `.en
 | `POSTGRES_PASSWORD` | postgres, lobby-manager | hex aleatorio | Solo se aplica con volumen vacío (§7.2) |
 | `SERVICE_SECRET` | lobby-manager, game-logic | hex aleatorio | Header `X-Service-Token` del REST interno (lobby → game) |
 | `ALLOWED_ORIGINS` | game-logic | `https://localhost` | `Origin` aceptado en el upgrade WebSocket. Para la LAN: `https://localhost,https://<IP>` |
-| `HSTS_MAX_AGE` | traefik | `300` | `max-age` de HSTS en segundos. Corto en local porque HSTS aplica a todos los puertos de `localhost`; en producción, `31536000` |
+| `HSTS_MAX_AGE` | reverse-proxy | `300` | `max-age` de HSTS en segundos. Corto en local porque HSTS aplica a todos los puertos de `localhost`; en producción, `31536000` |
 
 Las variables obligatorias se escriben como `${VAR:?mensaje}`: si faltan, Compose no arranca y muestra el mensaje, en lugar de arrancar con un valor vacío.
 
@@ -194,6 +200,7 @@ Regla: quien añada una variable a `.env` actualiza también `.env.example`.
 
 | Servicio | Comando | Intervalo | Timeout | Reintentos | `start_period` |
 |---|---|---|---|---|---|
+| `reverse-proxy` | `wget -q --spider http://127.0.0.1:8080/healthz` | 10 s | 3 s | 5 | 10 s |
 | `traefik` | `traefik healthcheck --ping` | 10 s | 3 s | 5 | 10 s |
 | `frontend` | `wget -q --spider http://127.0.0.1/healthz` | 10 s | 3 s | 5 | 10 s |
 | `postgres` | `pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}` | 10 s | 3 s | 5 | 20 s |
@@ -249,7 +256,7 @@ docker compose ps
 
 `up` crea e inicia todos los servicios del archivo Compose; `-d` los deja ejecutándose en segundo plano; `--build` construye las imágenes del proyecto; `--wait` espera a que los servicios estén en estado `running` o `healthy`. En `docker compose ps`, los servicios con healthcheck deben aparecer como `healthy`.
 
-Antes del primer `up` hay que generar el certificado del gateway (sin él Traefik no arranca) y las claves con que se firman los JWT (sin ellas Compose no arranca). Desde Git Bash, macOS o Linux:
+Antes del primer `up` hay que generar el certificado del borde (sin él el proxy inverso no arranca) y las claves con que se firman los JWT (sin ellas Compose no arranca). Desde Git Bash, macOS o Linux:
 
 ```bash
 ./scripts/gen-certs.sh --trust
@@ -309,15 +316,16 @@ Pruebas manuales hechas el 11 de octubre de 2026 sobre la rama `feature/devops`:
 
 ### 11.1 Prueba de extremo a extremo (`scripts/e2e.sh`)
 
-El script levanta el stack con `docker compose up --build --wait` y comprueba el despliegue completo a través de Traefik. Termina con código 0 solo si no hay fallas, así que sirve también en CI.
+El script levanta el stack con `docker compose up --build --wait` y comprueba el despliegue completo a través del proxy inverso y Traefik. Termina con código 0 solo si no hay fallas, así que sirve también en CI.
 
 | Sección | Qué comprueba |
 |---|---|
 | Requisitos | `docker`, `curl`, `openssl`; `.env` existe y tiene las mismas claves que `.env.example` |
-| Arranque | Todos los servicios con healthcheck en `healthy`; solo `traefik` publica puertos |
+| Arranque | Todos los servicios con healthcheck en `healthy`; solo `reverse-proxy` publica puertos |
+| Reverse Proxy | Rutas fuera de la lista y `../` codificado → `404` del proxy; cuerpo de 100 KB → `413`; `Server: nginx` sin versión; ninguna respuesta nombra a Traefik; redirecciones del lobby a `https://`; Traefik sin puertos ni red `public`; el proxy llega al gateway pero no resuelve servicios ni bases, no monta el socket de Docker ni las claves, y corre con disco de solo lectura |
 | Presentación | `GET /` → `302 /menu/`; `/menu/` y `/ingame/` → `200`; `/internal/games` → `404`; p5.js con gzip |
 | Lobby manager | 4 sesiones (`201`), `401` sin sesión, crear sala, `409` al iniciar con 1 jugador, 3 ingresos por código, `409` al quinto, SSE con `text/event-stream`, sin compresión y con el evento `lobby` |
-| API Gateway | `/ws/games/` llega a `game-logic`; un token en `?token=` no aparece en los logs de Traefik ni del lobby |
+| API Gateway | `/ws/games/` llega a `game-logic`; un token en `?token=` no aparece en los logs del proxy, de Traefik ni del lobby |
 | Inicio de la partida | Con Go real: `200`, `gameId` y Go conoce la partida. Con el relleno: `502`, la sala sigue en `WAITING` y se borra al salir los 4 |
 | WebSocket (solo Go real) | `101` con token válido; `401` con token inválido o con el de sesión; el token no queda en los logs |
 | Fin de la partida (solo Go real) | Simulación hasta el final, sala `CLOSED`, resultado una sola vez en PostgreSQL, partida fuera de `games:active` |

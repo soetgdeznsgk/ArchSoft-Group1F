@@ -1,51 +1,25 @@
-# Traefik - configuracion estatica
-# Las rutas van como labels en docker-compose.yml.
-# TLS (certificado, versiones, suites) y HSTS van en dynamic/secure-channel.yml.
-
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
 
 entryPoints:
-  # Escenario 1 (Secure Channel): :80 no sirve contenido. Toda peticion recibe
-  # una redireccion permanente a https:// con la misma ruta (301 para GET, 308
-  # para el resto, que conserva metodo y cuerpo) sin llegar a ningun servicio.
-  # Usa los timeouts por defecto (finitos): aqui no hay SSE ni WebSocket.
   web:
-    address: ":80"
-    http:
-      redirections:
-        entryPoint:
-          to: websecure
-          scheme: https
-          permanent: true
-
-  websecure:
-    address: ":443"
-    # Un router sin "entrypoints" queda solo en HTTPS, nunca en :80.
+    address: ":8000"
     asDefault: true
+    forwardedHeaders:
+      trustedIPs:
+        - "10.250.0.2/32"
     transport:
       respondingTimeouts:
-        # En v3 readTimeout vale 60 s por defecto y cortaria una partida;
-        # un writeTimeout distinto de 0 cortaria el stream SSE.
         readTimeout: 0
         writeTimeout: 0
         idleTimeout: 180s
-    http:
-      # TLS para todo router de este entrypoint, aunque olvide tls=true.
-      tls: {}
-      middlewares:
-        - hsts@file
 
 providers:
   docker:
     exposedByDefault: false
     network: bololo-integrado_internal
-  file:
-    directory: /etc/traefik/dynamic
-    watch: true
 
-# endpoint /ping para el healthcheck (entrypoint interno "traefik", :8080, no publicado)
 ping: {}
 
 log:

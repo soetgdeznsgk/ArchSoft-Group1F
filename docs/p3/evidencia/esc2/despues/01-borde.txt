@@ -1,0 +1,27 @@
+# Contenedor expuesto a Internet: reverse-proxy
+
+$ docker ps --filter label=com.docker.compose.project=bololo-integrado --format '{{.Label "com.docker.compose.service"}}  {{.Ports}}' | grep -- '->'
+reverse-proxy  0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp
+
+$ docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' $CID
+bololo-integrado_edge bololo-integrado_public 
+
+$ docker inspect -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}' $CID
+./api-gateway/certs -> /certs
+./reverse-proxy/nginx.conf -> /etc/nginx/nginx.conf
+./reverse-proxy/proxy-headers.conf -> /etc/nginx/snippets/proxy-headers.conf
+./reverse-proxy/templates -> /etc/nginx/templates
+
+
+$ docker inspect -f 'ReadonlyRootfs={{.HostConfig.ReadonlyRootfs}} CapDrop={{.HostConfig.CapDrop}} SecurityOpt={{.HostConfig.SecurityOpt}}' $CID
+ReadonlyRootfs=true CapDrop=[ALL] SecurityOpt=[no-new-privileges:true]
+
+$ docker exec $CID wget -q -T 3 -O- http://lobby-manager:8000/healthz
+wget: bad address 'lobby-manager:8000'
+
+$ docker exec $CID wget -q -T 3 -O- http://auth:8080/healthz
+wget: bad address 'auth:8080'
+
+$ docker exec $CID wget -q -T 3 -O /dev/null http://postgres:5432/
+wget: bad address 'postgres:5432'
+

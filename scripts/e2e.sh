@@ -150,9 +150,9 @@ fi
 ok ".env existe"
 if [[ "$BASE_URL" == https://* ]]; then
   if [[ -s "$CA_CERT" && -s api-gateway/certs/bololo.crt && -s api-gateway/certs/bololo.key ]]; then
-    ok "certificado del gateway y CA local generados"
+    ok "certificado del proxy y CA local generados"
   else
-    fail "certificado del gateway y CA local generados" "ejecuta ./scripts/gen-certs.sh"
+    fail "certificado del proxy y CA local generados" "ejecuta ./scripts/gen-certs.sh"
     exit 1
   fi
 fi
@@ -185,13 +185,13 @@ for svc in $(docker compose ps --services); do
   esac
 done
 published=$(docker compose ps --format '{{.Service}} {{.Ports}}' | grep -- '->' | cut -d' ' -f1 | sort -u | tr '\n' ' ')
-check "solo traefik publica puertos" "traefik " "$published"
+check "solo reverse-proxy publica puertos" "reverse-proxy " "$published"
 
 section "Canal seguro (TLS, escenario 1)"
 if [[ "$BASE_URL" != https://* ]]; then
   skip "canal seguro" "BASE_URL no es https"
 else
-  check "traefik publica el 443" ".*:443" "$(docker compose port traefik 443 2>/dev/null)"
+  check "reverse-proxy publica el 443" ".*:443" "$(docker compose port reverse-proxy 443 2>/dev/null)"
   check "GET por http:// redirige a https" "301|308" "$(http_code "$HTTP_URL/menu/")"
   check "la redirección conserva ruta y query" "$BASE_URL/api/lobbies\?x=1" "$(header_of location "$HTTP_URL/api/lobbies?x=1")"
   res=$(curl -s --max-time 5 -X POST -H 'Content-Type: application/json' -d '{"nickname":"EnClaro"}' -w '\n%{http_code}' "$HTTP_URL/auth/guest")
@@ -210,9 +210,51 @@ else
   tls_rejected "TLS 1.1 rechazado" -tls1_1 -cipher 'DEFAULT:@SECLEVEL=0'
   tls_rejected "suite sin ECDHE (AES128-SHA) rechazada" -tls1_2 -cipher 'AES128-SHA:@SECLEVEL=0'
   tls_rejected "suite CBC (ECDHE-ECDSA-AES128-SHA) rechazada" -tls1_2 -cipher 'ECDHE-ECDSA-AES128-SHA:@SECLEVEL=0'
-  check "traefik solo monta el certificado, no la CA" "README.md bololo.crt bololo.key " \
-    "$(docker compose exec -T traefik ls /certs 2>/dev/null | tr -d '\r' | LC_ALL=C sort | tr '\n' ' ')"
+  check "reverse-proxy solo monta el certificado, no la CA" "README.md bololo.crt bololo.key " \
+    "$(docker compose exec -T reverse-proxy ls /certs 2>/dev/null | tr -d '\r' | LC_ALL=C sort | tr '\n' ' ')"
 fi
+
+section "Reverse Proxy (escenario 2)"
+# El 404 propio del proxy lleva este cuerpo; si la petición llegara al gateway, respondería otro.
+PROXY_404='\{"error":"not_found"\}'
+mounts_of() { docker inspect -f '{{range .Mounts}}{{.Source}}->{{.Destination}} {{end}}' "$(docker compose ps -q "$1")"; }
+networks_of() { docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$(docker compose ps -q "$1")"; }
+for path in /internal/games /dashboard/ /apiloquesea /ws/otra /metrics /healthz; do
+  res=$(curl -s --max-time 5 -w '\n%{http_code}' "$BASE_URL$path")
+  check "ruta no publicada $path: 404 del proxy" "404 $PROXY_404" "$(status_of "$res") $(body_of "$res")"
+done
+res=$(curl -s --max-time 5 --path-as-is -w '\n%{http_code}' "$BASE_URL/api/../internal/games")
+check "/api/../internal no escapa de la lista" "404 $PROXY_404" "$(status_of "$res") $(body_of "$res")"
+res=$(curl -s --max-time 5 --path-as-is -w '\n%{http_code}' "$BASE_URL/api/%2e%2e/internal/games")
+check "/api/%2e%2e/internal no escapa de la lista" "404 $PROXY_404" "$(status_of "$res") $(body_of "$res")"
+check "/menu redirige a /menu/" "301 $BASE_URL/menu/" \
+  "$(curl -s -o /dev/null --max-time 5 -w '%{http_code} %{redirect_url}' "$BASE_URL/menu")"
+check "cuerpo de 100 KB rechazado en el borde" "413" \
+  "$(head -c 102400 /dev/zero | tr '\0' a | curl -s -o /dev/null --max-time 5 -w '%{http_code}' \
+      -H 'Content-Type: application/json' --data-binary @- "$BASE_URL/auth/login")"
+check "Server sin version ni nombre del gateway" "nginx" "$(header_of server "$BASE_URL/menu/")"
+check "Server de los servicios oculto (antes: uvicorn)" "nginx" "$(header_of server "$BASE_URL/api/no-existe")"
+for page in /menu/ /api/no-existe /internal/games; do
+  check "nosniff en $page" "nosniff" "$(header_of x-content-type-options "$BASE_URL$page")"
+  check "X-Frame-Options DENY en $page" "DENY" "$(header_of x-frame-options "$BASE_URL$page")"
+  check "Referrer-Policy no-referrer en $page" "no-referrer" "$(header_of referrer-policy "$BASE_URL$page")"
+done
+check "ninguna respuesta nombra a Traefik" "0" \
+  "$(curl -s -i --max-time 5 "$BASE_URL/api/no-existe" "$BASE_URL/dashboard/" "$BASE_URL/menu/" | grep -ci traefik)"
+check "el lobby redirige a https (X-Forwarded-Proto del proxy)" "$BASE_URL/api/lobbies" \
+  "$(curl -s -o /dev/null --max-time 5 -w '%{redirect_url}' "$BASE_URL/api/lobbies/")"
+check "traefik no publica puertos" "" "$(docker compose port traefik 8000 2>/dev/null)"
+check "traefik no esta en la red public" "0" "$(networks_of traefik | grep -c public)"
+check "el proxy llega al gateway" "200" \
+  "$(docker compose exec -T reverse-proxy wget -q -T 3 -S -O /dev/null http://traefik:8000/menu/ 2>&1 | awk '/HTTP\//{print $2; exit}')"
+check "el proxy no ve los servicios" ".*bad address.*" \
+  "$(docker compose exec -T reverse-proxy wget -q -T 3 -O /dev/null http://lobby-manager:8000/healthz 2>&1 | tr -d '\r')"
+check "el proxy no ve las bases de datos" ".*bad address.*" \
+  "$(docker compose exec -T reverse-proxy wget -q -T 3 -O /dev/null http://postgres:5432/ 2>&1 | tr -d '\r')"
+check "el proxy no monta el socket de Docker" "0" "$(mounts_of reverse-proxy | grep -c docker.sock)"
+check "el proxy corre con disco de solo lectura" "true" \
+  "$(docker inspect -f '{{.HostConfig.ReadonlyRootfs}}' "$(docker compose ps -q reverse-proxy)")"
+check "el proxy no tiene las claves de los JWT" "0" "$(mounts_of reverse-proxy | grep -c secrets)"
 
 GO_REAL=false
 [[ "$(internal GET /healthz)" == *'"status":"ok"'* ]] && GO_REAL=true
@@ -275,6 +317,7 @@ http_code "$BASE_URL/ws/games/prueba?token=$secret" >/dev/null
 http_code "$HTTP_URL/ws/games/prueba?token=$secret" >/dev/null
 http_code "$BASE_URL/api/lobbies/$LOBBY_ID/events?token=$secret" >/dev/null
 sleep 1
+check "tokens ausentes en logs de reverse-proxy" "0" "$(docker compose logs reverse-proxy 2>&1 | grep -c "$secret")"
 check "tokens ausentes en logs de traefik" "0" "$(docker compose logs traefik 2>&1 | grep -c "$secret")"
 check "tokens ausentes en logs del lobby" "0" "$(docker compose logs lobby-manager 2>&1 | grep -c "$secret")"
 
@@ -310,6 +353,7 @@ else
   check "token invalido rechazado" "401" "$(ws "$GAME_ID" "invalido")"
   check "token de sesion rechazado" "401" "$(ws "$GAME_ID" "${TOKENS[0]}")"
   sleep 1
+  check "token de partida ausente en logs de reverse-proxy" "0" "$(docker compose logs reverse-proxy 2>&1 | grep -c "$GAME_TOKEN")"
   check "token de partida ausente en logs de traefik" "0" "$(docker compose logs traefik 2>&1 | grep -c "$GAME_TOKEN")"
 
   section "Fin de la partida (Game Logic -> RabbitMQ -> Lobby)"

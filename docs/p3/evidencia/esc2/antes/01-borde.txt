@@ -1,0 +1,25 @@
+# Contenedor expuesto a Internet: traefik
+
+$ docker ps --filter label=com.docker.compose.project=bololo-integrado --format '{{.Label "com.docker.compose.service"}}  {{.Ports}}' | grep -- '->'
+traefik  0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp
+
+$ docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' $CID
+bololo-integrado_internal bololo-integrado_public 
+
+$ docker inspect -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}' $CID
+./api-gateway/dynamic -> /etc/traefik/dynamic
+./api-gateway/certs -> /certs
+/var/run/docker.sock -> /var/run/docker.sock
+./api-gateway/traefik.yml -> /etc/traefik/traefik.yml
+
+
+$ docker inspect -f 'ReadonlyRootfs={{.HostConfig.ReadonlyRootfs}} CapDrop={{.HostConfig.CapDrop}} SecurityOpt={{.HostConfig.SecurityOpt}}' $CID
+ReadonlyRootfs=false CapDrop=[] SecurityOpt=[]
+
+$ docker exec $CID wget -q -T 3 -O- http://lobby-manager:8000/healthz
+{"status":"ok","postgres":"ok"}
+$ docker exec $CID wget -q -T 3 -O- http://auth:8080/healthz
+{"status":"ok"}
+$ docker exec $CID wget -q -T 3 -O /dev/null http://postgres:5432/
+wget: error getting response: Invalid argument
+
