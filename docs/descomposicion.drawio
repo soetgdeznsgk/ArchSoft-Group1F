@@ -1,0 +1,336 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="descomposicion" name="Vista de descomposición">
+    <mxGraphModel dx="1640" dy="980" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1660" pageHeight="980" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Raíz -->
+        <mxCell id="root" value="Bololó" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="750" y="20" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Módulos -->
+        <mxCell id="m_auth" value="BL_auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="30" y="110" width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m_lobby" value="BL_lobby" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="210" y="110" width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m_game" value="BL_game" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="570" y="110" width="160" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m_bots" value="BL_bots" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="930" y="110" width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m_ratings" value="BL_ratings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="110" width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m_ui" value="BL_ui" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="110" width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m_gateway" value="BL_gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1470" y="110" width="140" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Submódulos de BL_game -->
+        <mxCell id="s_classic" value="BL_classic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="390" y="185" width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="s_chameleon" value="BL_chameleon" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="570" y="185" width="140" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="s_match" value="BL_match" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="750" y="185" width="140" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_auth -->
+        <mxCell id="f_auth_1" value="Crear sesión de invitado con un nickname" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="185" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_auth_2" value="Registrar cuenta con usuario y contraseña" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="255" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_auth_3" value="Iniciar sesión con una cuenta" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="325" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_auth_4" value="Cambiar la contraseña de la cuenta" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="395" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_auth_5" value="Bloquear la cuenta tras 5 intentos fallidos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="465" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_auth_6" value="Emitir el token de sesión firmado (RS256)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="535" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_lobby -->
+        <mxCell id="f_lobby_1" value="Registrar al jugador a partir de su sesión" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="185" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_lobby_2" value="Crear sala eligiendo el modo (Clásico o Camaleón)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="255" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_lobby_3" value="Listar las salas disponibles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="325" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_lobby_4" value="Entrar a una sala con su código" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="395" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_lobby_5" value="Salir de la sala" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="465" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_lobby_6" value="Actualizar la sala de espera en tiempo real (SSE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="535" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_lobby_7" value="Iniciar la partida y emitir un token por jugador" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="605" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_lobby_8" value="Registrar el resultado una sola vez y cerrar la sala" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="675" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_lobby_9" value="Cerrar las salas cuya partida no reportó resultado" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="240" y="745" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_classic -->
+        <mxCell id="f_classic_1" value="Repartir las cartas de cada una de las 5 rondas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="260" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_classic_2" value="Tomar carta del mazo oculto o del descarte" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="330" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_classic_3" value="Botar una carta" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="400" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_classic_4" value="Robar la carta descartada fuera de turno" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="470" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_classic_5" value="Bajar las jugadas de la ronda (tríos y cuartetos)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="540" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_classic_6" value="Depositar cartas en los bancos de la mesa" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="610" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_classic_7" value="Controlar el turno de 30 s con intercambio automático" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="680" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_classic_8" value="Calcular los puntos y el ganador de la partida" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="750" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_chameleon -->
+        <mxCell id="f_cham_1" value="Tirar cartas en posiciones aleatorias de la mesa" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="260" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_cham_2" value="Tomar una carta de la mesa (gana el primero)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="330" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_cham_3" value="Penalizar un color repetido (pierde ambas cartas)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="400" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_cham_4" value="Penalizar la carta camaleón (pierde toda la mano)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="470" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_cham_5" value="Terminar al reunir los 8 colores o al acabarse el tiempo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="540" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_match -->
+        <mxCell id="f_match_1" value="Validar el token de partida al abrir el WebSocket" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="780" y="260" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_match_2" value="Enviar a cada jugador solo su vista (Limited View)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="780" y="330" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_match_3" value="Difundir los eventos públicos de la partida" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="780" y="400" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_match_4" value="Guardar y restaurar las partidas activas (Redis)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="780" y="470" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_match_5" value="Publicar el resultado (game.ended) al terminar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="780" y="540" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_bots -->
+        <mxCell id="f_bots_1" value="Llenar una sala con bots" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="960" y="185" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_bots_2" value="Quitar los bots de una sala" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="960" y="255" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_bots_3" value="Consultar los bots de una sala" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="960" y="325" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_bots_4" value="Jugar la partida completa como un jugador más" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="960" y="395" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_bots_5" value="Decidir la jugada a partir de la vista recibida" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="960" y="465" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_ratings -->
+        <mxCell id="f_rat_1" value="Recibir las partidas terminadas (game.finished)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="185" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_rat_2" value="Calcular el puntaje Elo por modo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="255" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_rat_3" value="Procesar cada partida una sola vez" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="325" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_rat_4" value="Consultar el ranking por modo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="395" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_rat_5" value="Consultar el puntaje de un jugador" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="465" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_rat_6" value="Consultar el historial de puntaje de un jugador" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="535" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_ui -->
+        <mxCell id="f_ui_1" value="Mostrar el menú con el ranking renderizado en el servidor (SSR)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="185" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_ui_2" value="Mostrar la pantalla de ingreso y salas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="255" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_ui_3" value="Mostrar la mesa del modo clásico" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="325" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_ui_4" value="Mostrar la mesa del modo camaleón" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="395" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Funcionalidades: BL_gateway -->
+        <mxCell id="f_gw_1" value="Enrutar cada petición al servicio según su ruta" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="185" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_gw_2" value="Cifrar el canal con TLS 1.2/1.3 y HSTS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="255" width="135" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="f_gw_3" value="Redirigir HTTP a HTTPS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="325" width="135" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Relaciones "es parte de": raíz - módulos -->
+        <mxCell id="e_r_auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="root" target="m_auth"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_r_lobby" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="root" target="m_lobby"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_r_game" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="root" target="m_game"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_r_bots" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="root" target="m_bots"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_r_ratings" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="root" target="m_ratings"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_r_ui" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="root" target="m_ui"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_r_gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="root" target="m_gateway"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- BL_game - submódulos -->
+        <mxCell id="e_g_classic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m_game" target="s_classic"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_g_chameleon" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m_game" target="s_chameleon"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_g_match" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m_game" target="s_match"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Módulo / submódulo - funcionalidades -->
+        <mxCell id="e_auth_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_auth" target="f_auth_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_auth_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_auth" target="f_auth_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_auth_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_auth" target="f_auth_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_auth_4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_auth" target="f_auth_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_auth_5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_auth" target="f_auth_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_auth_6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_auth" target="f_auth_6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_lobby_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_lobby_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_lobby_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_lobby_4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_lobby_5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_lobby_6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_lobby_7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_lobby_8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_lobby_9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_lobby" target="f_lobby_9"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_classic_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_classic" target="f_classic_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_classic_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_classic" target="f_classic_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_classic_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_classic" target="f_classic_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_classic_4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_classic" target="f_classic_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_classic_5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_classic" target="f_classic_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_classic_6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_classic" target="f_classic_6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_classic_7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_classic" target="f_classic_7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_classic_8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_classic" target="f_classic_8"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_cham_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_chameleon" target="f_cham_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_cham_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_chameleon" target="f_cham_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_cham_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_chameleon" target="f_cham_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_cham_4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_chameleon" target="f_cham_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_cham_5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_chameleon" target="f_cham_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_match_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_match" target="f_match_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_match_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_match" target="f_match_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_match_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_match" target="f_match_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_match_4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_match" target="f_match_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_match_5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="s_match" target="f_match_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_bots_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_bots" target="f_bots_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_bots_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_bots" target="f_bots_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_bots_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_bots" target="f_bots_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_bots_4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_bots" target="f_bots_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_bots_5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_bots" target="f_bots_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_rat_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ratings" target="f_rat_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_rat_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ratings" target="f_rat_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_rat_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ratings" target="f_rat_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_rat_4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ratings" target="f_rat_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_rat_5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ratings" target="f_rat_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_rat_6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ratings" target="f_rat_6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_ui_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ui" target="f_ui_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_ui_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ui" target="f_ui_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_ui_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ui" target="f_ui_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_ui_4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_ui" target="f_ui_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_gw_1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_gateway" target="f_gw_1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_gw_2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_gateway" target="f_gw_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_gw_3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;exitX=0.1;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="m_gateway" target="f_gw_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Convención -->
+        <mxCell id="leg_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="560" y="840" width="540" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_title" value="Convención" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="575" y="845" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_root" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="580" y="875" width="60" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_root_t" value="Raíz" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="648" y="876" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_mod" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="740" y="875" width="60" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_mod_t" value="Módulo" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="808" y="876" width="70" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_sub" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="900" y="875" width="60" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_sub_t" value="Submódulo" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="968" y="876" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_fn" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="580" y="917" width="60" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_fn_t" value="Funcionalidad" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="648" y="918" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_line" style="endArrow=none;html=1;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="745" y="940" as="sourcePoint" />
+            <mxPoint x="790" y="915" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg_line_t" value="Es parte de" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="798" y="918" width="90" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

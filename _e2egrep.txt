@@ -1,0 +1,17 @@
+159: if ls secrets/jwt/{session,game}-{private,public}.pem >/dev/null 2>&1; then
+160: ok "claves de los JWT generadas"
+162: fail "claves de los JWT generadas" "ejecuta ./scripts/gen-jwt-keys.sh"
+236: check "GET /internal/games no enrutado" "404" "$(http_code "$BASE_URL/internal/games")"
+269: check "/ws/games/ llega a game-logic (sin token: 401)" "401" "$(http_code "$BASE_URL/ws/games/prueba")"
+271: check "/ws/games/ llega al relleno de game-logic" "200" "$(http_code "$BASE_URL/ws/games/prueba")"
+274: http_code "$BASE_URL/ws/games/prueba?token=$secret" >/dev/null
+275: http_code "$HTTP_URL/ws/games/prueba?token=$secret" >/dev/null
+297: check "Game Logic conoce la partida" ".*\"status\":\"(WAITING|PLAYING)\".*" "$(internal GET "/internal/games/$GAME_ID")"
+304: -H "Origin: ${3:-$BASE_URL}" "$BASE_URL/ws/games/$1?token=$2"
+309: check "upgrade con token valido" "101" "$(ws "$GAME_ID" "$GAME_TOKEN")"
+316: sim=$(internal POST "/internal/games/$GAME_ID/simulate")
+357: check "Game Logic crea la partida camaleon" ".*\"mode\":\"CHAMELEON\".*\"status\":\"WAITING\".*" "$(internal GET "/internal/games/$CH_GAME")"
+360: check "WebSocket camaleon por el gateway" "101" "$(ws "$CH_GAME" "$CH_GAME_TOKEN")"
+425: check "el ganador sube a 1016" "1016" "$rating"
+431: check "el historial guarda el cambio" ".*\"ratingBefore\":1000,\"ratingAfter\":1016.*" "$(body_of "$(api GET "/ratings/players/$ACCOUNT_A/history")")"
+440: section "Claves de los JWT y topologia del broker (decisiones 5 y 6)"

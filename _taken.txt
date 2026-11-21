@@ -1,0 +1,39 @@
+﻿
+  chameleon.go:254:// vez, la recibe el primero que procesa el árbitro; el otro recibe
+  chameleon.go:255:// card_not_available.
+> chameleon.go:256:func (m *Match) Take(playerID string, cardID int) ([]Event, error) {
+  chameleon.go:257:	m.mu.Lock()
+  chameleon.go:258:	defer m.mu.Unlock()
+  chameleon.go:259:	i, ok := m.seat[playerID]
+  chameleon.go:260:	if !ok {
+  chameleon.go:261:		return nil, ErrUnknownPlayer
+  chameleon.go:262:	}
+  chameleon.go:285:		lost := p.hand
+  chameleon.go:286:		p.hand = nil
+> chameleon.go:287:		m.emit(Event{Type: EvChameleonTaken, Player: p.id, Card: &taken, Lost: lost})
+  chameleon.go:288:	case p.indexOfColor(taken.Color) >= 0:
+  chameleon.go:289:		k := p.indexOfColor(taken.Color)
+  chameleon.go:290:		lost := []Card{p.hand[k], taken.Card}
+  chameleon.go:291:		p.hand = slices.Delete(p.hand, k, k+1)
+> chameleon.go:292:		m.emit(Event{Type: EvColorRepeated, Player: p.id, Card: &taken, Lost: lost})
+  chameleon.go:293:	default:
+  chameleon.go:294:		p.hand = append(p.hand, taken.Card)
+> chameleon.go:295:		m.emit(Event{Type: EvCardTaken, Player: p.id, Card: &taken})
+  chameleon.go:296:		if len(p.hand) == NumColors {
+  chameleon.go:297:			m.endGame(EndAllColors)
+  chameleon.go:298:		}
+  chameleon.go:299:	}
+  chameleon.go:300:	return m.flush(), nil
+  chameleon.go:301:}
+  chameleon.go:302:
+  chameleon.go:303:// Apply despacha una acción serializada por la capa de red.
+> chameleon.go:304:func (m *Match) Apply(a Action) ([]Event, error) {
+  chameleon.go:305:	switch a.Type {
+  chameleon.go:306:	case ActTake:
+  chameleon.go:307:		return m.Take(a.Player, a.Card)
+  chameleon.go:308:	}
+  chameleon.go:309:	return nil, ErrInvalidAction
+  chameleon.go:310:}
+
+
+
