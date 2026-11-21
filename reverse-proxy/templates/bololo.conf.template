@@ -1,0 +1,95 @@
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+upstream gateway {
+    zone gateway 64k;
+    server traefik:8000 resolve;
+    keepalive 16;
+}
+
+server {
+    listen 80 reuseport default_server;
+    server_name _;
+
+    location / {
+        if ($request_method !~ ^(GET|HEAD)$) {
+            return 308 https://$host$request_uri;
+        }
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl reuseport default_server;
+    http2 on;
+    server_name _;
+
+    ssl_certificate /certs/bololo.crt;
+    ssl_certificate_key /certs/bololo.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:TLS:10m;
+    ssl_session_timeout 1h;
+    ssl_session_tickets off;
+
+    add_header Strict-Transport-Security "max-age=${HSTS_MAX_AGE}" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "no-referrer" always;
+
+    proxy_http_version 1.1;
+    proxy_hide_header X-Powered-By;
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header X-Frame-Options;
+    proxy_hide_header Referrer-Policy;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
+
+    location = / {
+        include /etc/nginx/snippets/proxy-headers.conf;
+        proxy_set_header Connection "";
+        proxy_pass http://gateway;
+    }
+
+    location ~ ^/(menu|ingame|chameleon)$ {
+        return 301 /$1/;
+    }
+
+    location ~ ^/(menu|ingame|chameleon|libraries|auth)/ {
+        include /etc/nginx/snippets/proxy-headers.conf;
+        proxy_set_header Connection "";
+        proxy_pass http://gateway;
+    }
+
+    location /api/ {
+        include /etc/nginx/snippets/proxy-headers.conf;
+        proxy_set_header Connection "";
+        proxy_read_timeout 75s;
+        proxy_pass http://gateway;
+    }
+
+    location /ws/games/ {
+        include /etc/nginx/snippets/proxy-headers.conf;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_send_timeout 75s;
+        proxy_read_timeout 75s;
+        proxy_pass http://gateway;
+    }
+
+    location / {
+        default_type application/json;
+        return 404 '{"error":"not_found"}\n';
+    }
+}
+
+server {
+    listen 127.0.0.1:8080;
+    access_log off;
+
+    location = /healthz {
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+}

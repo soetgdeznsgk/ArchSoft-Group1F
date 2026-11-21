@@ -46,8 +46,8 @@ run() {
 }
 
 # Latencia con dos clientes:
-#   A. curl + OpenSSL en un contenedor de la red public, directo a traefik. Aísla el costo
-#      del gateway y negocia HTTP/2 como un navegador.
+#   A. curl + OpenSSL en un contenedor de la red public, directo al proxy inverso. Aísla el costo
+#      del borde (proxy inverso y gateway) y negocia HTTP/2 como un navegador.
 #   B. curl del host por el puerto publicado. En Windows es curl con Schannel, que suma
 #      su propio costo de cliente (verificación con --cacert, tickets de TLS 1.3).
 latency() {
@@ -57,9 +57,9 @@ latency() {
     printf 'FROM alpine:3.20.3\nRUN apk add --no-cache bash curl\n' | docker build -q -t bololo-bench:curl - >/dev/null
   fi
   {
-    echo "# A. Cliente Linux (curl + OpenSSL) en la red public, directo a traefik"
+    echo "# A. Cliente Linux (curl + OpenSSL) en la red public, directo al proxy inverso"
     docker run --rm --network bololo-integrado_public -v "$dir:/w" -w /w \
-      -e EXTRA_CURL_OPTS="--connect-to localhost:443:traefik:443 --connect-to localhost:80:traefik:80" \
+      -e EXTRA_CURL_OPTS="--connect-to localhost:443:reverse-proxy:443 --connect-to localhost:80:reverse-proxy:80" \
       bololo-bench:curl bash scripts/latency.sh "$base" 200 </dev/null
     echo
     echo "# B. Cliente del host por el puerto publicado"

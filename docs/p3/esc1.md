@@ -9,6 +9,8 @@
 | Responsable | ______________________ |
 | Evidencia | [`docs/p3/evidencia/esc1/`](evidencia/esc1/) |
 
+> **Actualización (escenario 2).** Desde [`feature/p3-esc2`](esc2.md), la terminación TLS ya no está en Traefik sino en el proxy inverso (`reverse-proxy`, Nginx), que pasa a ser el único punto de entrada. La política no cambia: TLS 1.2/1.3 con ECDHE + AEAD, HTTP/2, HSTS con `HSTS_MAX_AGE`, el 80 solo redirige (`301`/`308`) y sin certificado no arranca. La configuración pasó de `api-gateway/dynamic/secure-channel.yml` (eliminado) a [`reverse-proxy/templates/bololo.conf.template`](../../reverse-proxy/templates/bololo.conf.template); el certificado sigue en `api-gateway/certs/`. Las comprobaciones TLS de `scripts/e2e.sh` siguen pasando sin cambios, y `sniff-channel.sh` y `esc1-evidence.sh` ahora miden en `reverse-proxy`. Este documento y su evidencia describen el estado del escenario 1, cuando el borde era Traefik.
+
 ## Contenido
 
 1. [Estado antes del cambio](#1-estado-antes-del-cambio)
@@ -84,12 +86,12 @@ Riesgo antes del cambio: T1–T4 se pueden ejecutar hoy con herramientas gratuit
 |---|---|
 | **Fuente** | Atacante en la misma red Wi-Fi o LAN que un jugador, con un capturador de tráfico (Wireshark, tcpdump) o en posición de MITM activo (ARP spoofing, punto de acceso falso) |
 | **Estímulo** | Captura el tráfico entre el navegador y Bololó para leer contraseñas, JWT y manos; o intenta modificarlo o degradarlo (mantener al jugador en HTTP, negociar TLS viejo, presentar un certificado falso) |
-| **Artefacto** | Canal navegador ↔ API Gateway (conectores C1 REST + SSE y C2 WebSocket de la vista C&C): `/auth/*`, `/api/*`, `/api/lobbies/{id}/events?token=`, `/ws/games/{id}?token=` y las páginas `/menu/`, `/ingame/` y `/chameleon/` |
+| **Artefacto** | Canal navegador ↔ API Gateway (conectores C1 `bololo_lobby_fe` → `bololo_gat`, REST y SSE, y C3 `bololo_game_fe` → `bololo_gat`, WebSocket, de la vista C&C): `/auth/*`, `/api/*`, `/api/lobbies/{id}/events?token=`, `/ws/games/{id}?token=` y las páginas `/menu/`, `/ingame/` y `/chameleon/` |
 | **Entorno** | Operación normal: jugadores en una red compartida no confiable, con salas y partidas en curso |
 | **Respuesta** | Todo el tráfico de la aplicación viaja cifrado y autenticado con TLS 1.2 o 1.3 (ECDHE + AEAD). El puerto 80 no sirve contenido: responde una redirección `308` a `https://`. El navegador recuerda usar solo HTTPS (HSTS). Se rechazan TLS 1.0, TLS 1.1 y las suites sin secreto hacia adelante o en modo CBC. El navegador valida el certificado sin advertencias. El WebSocket solo acepta orígenes `https://`. Sin certificado, el gateway no arranca |
 | **Medida** | En la captura del tramo navegador ↔ gateway, el número de veces que aparecen la contraseña y los 3 JWT baja de 1 / 4 / 2 / 2 a **0 / 0 / 0 / 0**, y las peticiones legibles con credenciales bajan de 8 de 8 a **0**. Las 5 negociaciones débiles (TLS 1.0, TLS 1.1 y 3 suites débiles) son rechazadas. Las 18 comprobaciones nuevas de `scripts/e2e.sh` pasan. El sobrecosto de latencia queda medido |
 | **Táctica** | Resistir ataques: cifrar datos; autenticar actores (certificado X.509 del servidor); limitar la exposición (HTTP plano y TLS viejo deshabilitados) |
-| **Patrón** | Secure Channel con terminación TLS en el Reverse Proxy (Traefik), más HSTS |
+| **Patrón** | Secure Channel con terminación TLS en el único punto de entrada, que en este escenario es el API Gateway (Traefik), más HSTS. Traefik no es un Reverse Proxy en esta arquitectura: ese patrón lo implementa Nginx en el [escenario 2](esc2.md), que hereda esta misma política TLS |
 | **Implementación** | Entrypoint `websecure` (:443) con TLS 1.2/1.3, ECDHE + AEAD y HTTP/2. `:80` solo redirige. HSTS en todas las respuestas HTTPS. Certificado ECDSA P-256 firmado por una CA local con restricción de nombres. Traefik no arranca sin certificado. Los 6 routers pasan a `websecure`. `ALLOWED_ORIGINS=https://localhost`. Detalle en §5 |
 | **Evidencia** | Captura con `tcpdump`: secretos legibles 1 / 4 / 2 / 2 → 0 / 0 / 0 / 0. `openssl s_client`: TLS 1.3 y certificado válido; TLS 1.0, TLS 1.1 y 3 suites débiles rechazadas. `curl`: `301`/`308` a `https://` y HSTS. `scripts/e2e.sh`: 96 → 114 OK, sin fallas nuevas. Detalle en §7 |
 | **Compromisos** | Se gana confidencialidad, integridad, autenticación del servidor y HTTP/2. Cuesta unos 7 ms de *handshake* por conexión nueva y unos 0,2 ms por petición en una conexión abierta; además, generar y confiar el certificado en cada equipo y renovarlo cada 397 días. El tramo interno sigue en HTTP. Detalle en §8 |
@@ -210,18 +212,21 @@ Aviso para quien mantiene las vistas. Este escenario no edita `docs/deployment-v
 
 **Vista C&C**
 
-- **C1** (navegador → `bololo_gat`): de "HTTP/1.1 REST + SSE" a **"HTTPS (TLS 1.2/1.3, HTTP/2) REST + SSE"**.
-- **C2** (navegador → `bololo_gat`): de "WebSocket" a **"WSS (WebSocket sobre TLS)"**.
-- `bololo_gat` suma dos responsabilidades: **terminación TLS** y **HSTS**. Los conectores internos C3–C8 no cambian (HTTP en la red `internal`).
+La etiqueta de cada conector lleva solo el protocolo.
+
+- **C1** (`bololo_lobby_fe` → `bololo_gat`): de "REST, SSE" a **"REST, SSE + TLS"**.
+- **C3** (`bololo_game_fe` → `bololo_gat`): de "WebSocket" a **"WebSocket + TLS"**.
+- `bololo_gat` suma dos responsabilidades: **terminación TLS** y **HSTS**. Los conectores del gateway hacia adentro (C2 y C4–C8) no cambian: HTTP en la red `internal`.
+- Desde el [escenario 2](esc2.md), C1 y C3 terminan en `bololo_reverse_proxy` y no en `bololo_gat`.
 
 **Vista de despliegue** (`docs/deployment-view.md`)
 
 | Sección | Cambio |
 |---|---|
-| §1, diagrama | Zona `PUB`: "only published port: host 80" → "published ports: 443 (HTTPS) and 80 (redirect only)". Nodo `traefik`: `:80` → `:443 · :80→443`. C1 y C2: `HTTP/1.1 :80` → `HTTPS :443` y `WSS :443` |
+| §1, diagrama | Zona `PUB`: "only published port: host 80" → "published ports: 443 (HTTPS) and 80 (redirect only)". Nodo `traefik`: `:80` → `:443 · :80→443`. C1 y C3: `HTTP/1.1 :80` → `HTTPS :443` y `WSS :443` |
 | §2.1, red `public` y tabla de contenedores | `traefik`: puertos `80 (redirect)`, `443 (websecure)`, `8080 (ping)`; montajes nuevos `api-gateway/dynamic/` y `api-gateway/certs/` (ro) |
 | §2.1, artefactos nuevos | «artifact» `bololo.crt` + `bololo.key`, desplegado en `traefik`. «artifact» `bololo-dev-ca.crt`, instalado como raíz confiable en el navegador del jugador |
-| §4, catálogo de conectores | Columna Seguridad de C1 y C2: "No TLS" → "TLS 1.2+ (ECDHE + AEAD), HSTS; el `?token=` viaja cifrado dentro del túnel". C8: `Origin` contra `ALLOWED_ORIGINS=https://localhost` |
+| §4, catálogo de conectores | Columna Seguridad de C1 y C3: "No TLS" → "TLS 1.2+ (ECDHE + AEAD), HSTS; el `?token=` viaja cifrado dentro del túnel". C8: `Origin` contra `ALLOWED_ORIGINS=https://localhost` |
 | §6, puertos | Nueva fila `443/tcp`: host `0.0.0.0:443` → `traefik:443`, alcanzable desde la zona de usuario. Fila `80/tcp`: "solo redirige a 443" |
 | §8, variabilidad | La línea de TLS queda resuelta. Agregar `HSTS_MAX_AGE` y los hosts extra de `gen-certs.sh` |
 | §10, hallazgos | El hallazgo 5 ("No TLS") queda resuelto |
@@ -293,7 +298,7 @@ Medido con [`scripts/latency.sh`](../../scripts/latency.sh): 200 peticiones `GET
 | Tramo interno en claro (T13) | traefik → servicios y servicios → PostgreSQL, Redis y RabbitMQ van sin TLS dentro de la red `internal` | Escenario 3 (Network Segmentation). Después: `sslmode=verify-full` en PostgreSQL, `amqps://` en RabbitMQ, TLS en Redis o mTLS entre servicios |
 | Restricción de nombres de la CA | Verificada con OpenSSL. Que cada navegador la aplique a una raíz instalada a mano depende de su verificador | Tratar igual la clave de la CA como secreta: permisos 600, fuera de Git y fuera del contenedor |
 | `FORWARDED_ALLOW_IPS: "*"` | Un contenedor comprometido de la red `internal` podría falsear `X-Forwarded-For` hacia `lobby-manager` y `ratings-service` | Limitarlo a la IP de Traefik cuando el escenario 3 fije las subredes |
-| Avisos de Traefik al arrancar (`aliasHeadersStrategy`, caracteres codificados en la ruta) y el socket de Docker | Ya existían; no son del canal | Escenario 2 (Reverse Proxy endurecido) |
+| Avisos de Traefik al arrancar (`aliasHeadersStrategy`, caracteres codificados en la ruta) y el socket de Docker | Ya existían; no son del canal | Escenario 2: Reverse Proxy (Nginx) delante de Traefik, que deja de estar expuesto |
 | Certificado público | La CA local sirve para `localhost` y la LAN | En producción, `certificatesResolvers` con ACME (Let's Encrypt): cambia `api-gateway/dynamic/` y se agrega `tls.certresolver` a los routers |
 
 ## 10. Cómo usarlo (equipo)
