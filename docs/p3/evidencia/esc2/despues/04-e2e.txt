@@ -1,0 +1,191 @@
+
+== Requisitos
+  OK     docker instalado
+  OK     curl instalado
+  OK     openssl instalado
+  OK     .env existe
+  OK     certificado del proxy y CA local generados
+  OK     claves de los JWT generadas
+  OK     .env y .env.example tienen las mismas claves
+
+== Arranque
+  OK     docker compose up --wait
+  OK     auth healthy
+  OK     auth-postgres healthy
+  OK     bot-service healthy
+  OK     frontend healthy
+  OK     game-logic healthy
+  OK     lobby-manager healthy
+  OK     postgres healthy
+  OK     rabbitmq healthy
+  OK     ratings-postgres healthy
+  OK     ratings-service healthy
+  OK     redis healthy
+  OK     reverse-proxy healthy
+  OK     traefik healthy
+  OK     solo reverse-proxy publica puertos
+
+== Canal seguro (TLS, escenario 1)
+  OK     reverse-proxy publica el 443
+  OK     GET por http:// redirige a https
+  OK     la redirección conserva ruta y query
+  OK     POST por http:// no llega al servicio
+  OK     POST por http:// no entrega token
+  OK     cabecera HSTS en https
+  OK     sin HSTS en http (el navegador la ignoraría)
+  OK     certificado válido para localhost (CA local)
+  OK     TLS 1.3 negociado
+  OK     HTTP/2 negociado por ALPN
+  OK     TLS 1.2 con ECDHE + AES-GCM aceptado
+  OK     TLS 1.0 rechazado
+  OK     TLS 1.1 rechazado
+  OK     suite sin ECDHE (AES128-SHA) rechazada
+  OK     suite CBC (ECDHE-ECDSA-AES128-SHA) rechazada
+  OK     reverse-proxy solo monta el certificado, no la CA
+
+== Reverse Proxy (escenario 2)
+  OK     ruta no publicada /internal/games: 404 del proxy
+  OK     ruta no publicada /dashboard/: 404 del proxy
+  OK     ruta no publicada /apiloquesea: 404 del proxy
+  OK     ruta no publicada /ws/otra: 404 del proxy
+  OK     ruta no publicada /metrics: 404 del proxy
+  OK     ruta no publicada /healthz: 404 del proxy
+  OK     /api/../internal no escapa de la lista
+  OK     /api/%2e%2e/internal no escapa de la lista
+  OK     /menu redirige a /menu/
+  OK     cuerpo de 100 KB rechazado en el borde
+  OK     Server sin version ni nombre del gateway
+  OK     Server de los servicios oculto (antes: uvicorn)
+  OK     nosniff en /menu/
+  OK     X-Frame-Options DENY en /menu/
+  OK     Referrer-Policy no-referrer en /menu/
+  OK     nosniff en /api/no-existe
+  OK     X-Frame-Options DENY en /api/no-existe
+  OK     Referrer-Policy no-referrer en /api/no-existe
+  OK     nosniff en /internal/games
+  OK     X-Frame-Options DENY en /internal/games
+  OK     Referrer-Policy no-referrer en /internal/games
+  OK     ninguna respuesta nombra a Traefik
+  OK     el lobby redirige a https (X-Forwarded-Proto del proxy)
+  OK     traefik no publica puertos
+  OK     traefik no esta en la red public
+  OK     el proxy llega al gateway
+  OK     el proxy no ve los servicios
+  OK     el proxy no ve las bases de datos
+  OK     el proxy no monta el socket de Docker
+  OK     el proxy corre con disco de solo lectura
+  OK     el proxy no tiene las claves de los JWT
+  game-logic: servicio real
+
+== Presentacion
+  OK     GET / redirige
+  OK     Location relativa a /menu/
+  OK     GET /menu/
+  OK     el menu llega con datos renderizados en el servidor (SSR)
+  OK     el menu incluye la tabla del ranking
+  OK     GET /ingame/
+  OK     GET /chameleon/ (modo camaleon)
+  OK     GET /chameleon/chameleon.js
+  OK     GET /internal/games no enrutado
+  OK     p5.js servido con gzip
+
+== Lobby manager (REST y SSE)
+  OK     POST /auth/guest Ana
+  OK     POST /auth/guest Beto
+  OK     POST /auth/guest Caro
+  OK     POST /auth/guest Dani
+  OK     el Lobby ya no emite sesiones
+  OK     GET /api/session crea al jugador del invitado
+  OK     GET /api/lobbies sin sesion
+  OK     GET /api/lobbies con sesion
+  OK     POST /api/lobbies crea la sala
+  OK     POST /start con 1 jugador
+  OK     jugador 2 entra con el codigo
+  OK     jugador 3 entra con el codigo
+  OK     jugador 4 entra con el codigo
+  OK     quinto jugador rechazado (sala llena)
+  OK     SSE Content-Type
+  OK     SSE sin compresion
+  OK     SSE entrega el estado de la sala
+
+== API Gateway
+  OK     /ws/games/ llega a game-logic (sin token: 401)
+  OK     tokens ausentes en logs de reverse-proxy
+  OK     tokens ausentes en logs de traefik
+  OK     tokens ausentes en logs del lobby
+
+== Inicio de la partida (Lobby -> Game Logic)
+  OK     POST /start
+  OK     la partida tiene gameId
+  OK     Game Logic conoce la partida
+
+== Game logic (WebSocket)
+  OK     upgrade desde una pagina http:// rechazado
+  OK     upgrade con token valido
+  OK     token invalido rechazado
+  OK     token de sesion rechazado
+  OK     token de partida ausente en logs de reverse-proxy
+  OK     token de partida ausente en logs de traefik
+
+== Fin de la partida (Game Logic -> RabbitMQ -> Lobby)
+  OMITE  fin de la partida y resultado (simulacion no disponible (DEMO_MODE))
+
+== Modo camaleon (2 a 4 jugadores)
+  OK     POST /api/lobbies con mode CHAMELEON
+  OK     la sala informa su modo
+  OK     modo desconocido rechazado
+  OK     camaleon no inicia con 1 jugador
+  OK     segundo jugador entra con el codigo
+  OK     POST /start con 2 jugadores
+  OK     el acceso a la partida trae el modo
+  OK     Game Logic crea la partida camaleon
+  OK     Redis guarda el modo de la partida
+  OK     WebSocket camaleon por el gateway
+
+== Auth (Java, Spring Security y su propia base)
+  OK     POST /auth/register
+  OK     usuario repetido rechazado
+  OK     POST /auth/login
+  OK     login con contrasena incorrecta
+  OK     GET /auth/me con sesion de cuenta
+  OK     /auth/me identifica la cuenta
+  OK     GET /auth/me sin token
+  OK     GET /auth/me con sesion de invitado
+  OK     la sesion de cuenta sirve en el lobby
+  OK     bloqueo tras 5 intentos fallidos
+  OK     contrasena guardada con BCrypt
+
+== Resultado y ratings (Game Logic -> RabbitMQ -> Lobby -> RabbitMQ -> Ratings)
+  OK     GET /api/ratings/leaderboard
+  OK     modo desconocido en el ranking
+  OK     ruta desconocida en ratings
+  OK     partida entre dos cuentas iniciada
+  OK     Go publica game.ended en RabbitMQ
+  OK     el Lobby consume game.ended y registra el resultado
+  OK     la sala se cierra
+  OK     el ganador sube a 1016
+  OK     el perdedor baja a 984
+  OK     un game.ended repetido no registra otra vez
+  OK     el reintento no suma dos veces
+  OK     el historial guarda el cambio
+  OK     cola de ratings durable y vacia
+  OK     sin mensajes muertos
+  OK     cola de resultados del lobby durable y vacia
+  OK     sin resultados muertos en el lobby
+  OK     Go no conoce la URL del Lobby
+
+== Claves de los JWT y topologia del broker (decisiones 5 y 6)
+  OK     auth solo recibe las claves de sesion
+  OK     lobby-manager no recibe la clave privada de sesiones
+  OK     game-logic solo recibe la clave publica de partidas
+  OK     el broker declara las colas de sus consumidores
+
+== Datos
+  OK     redis exige contrasena
+  OK     redis AOF activo
+  OK     redis appendfsync
+  OK     postgres acepta la contrasena de .env
+  OK     postgres rechaza otra contrasena
+
+== Resumen
+  156 OK, 0 fallas, 1 omitidas

@@ -1,0 +1,34 @@
+$ curl -s -i $TLS --max-time 5 "$BASE/internal/games" | grep -iE '^(HTTP/|server:)|not_found|page not found|Not Found|detail'
+HTTP/2 404 
+Not Found
+
+$ curl -s -i $TLS --max-time 5 "$BASE/dashboard/" | grep -iE '^(HTTP/|server:)|not_found|page not found|Not Found|detail'
+HTTP/2 404 
+Not Found
+
+$ curl -s -i $TLS --max-time 5 "$BASE/api/rawdata" | grep -iE '^(HTTP/|server:)|not_found|page not found|Not Found|detail'
+HTTP/2 404 
+server: uvicorn
+{"detail":"Not Found"}
+
+$ curl -s -i $TLS --max-time 5 "$BASE/metrics" | grep -iE '^(HTTP/|server:)|not_found|page not found|Not Found|detail'
+HTTP/2 404 
+Not Found
+
+$ curl -s -i $TLS --max-time 5 "$BASE/apiloquesea" | grep -iE '^(HTTP/|server:)|not_found|page not found|Not Found|detail'
+HTTP/2 404 
+Not Found
+
+$ curl -s -i $TLS --max-time 5 --path-as-is "$BASE/api/../internal/games" | grep -iE '^(HTTP/|server:)|not_found|page not found|Not Found|detail'
+HTTP/2 404 
+Not Found
+
+$ head -c 102400 /dev/zero | tr '\0' a | curl -s -o /dev/null $TLS --max-time 5 -w '%{http_code}\n' -H 'Content-Type: application/json' --data-binary @- $BASE/auth/login
+400
+
+$ curl -s -I $TLS --max-time 5 $BASE/menu/ | grep -iE '^(server|x-powered-by|strict-transport-security):'
+strict-transport-security: max-age=300
+
+$ curl -s -i $TLS --max-time 5 $BASE/api/no-existe $BASE/dashboard/ $BASE/menu/ | grep -ci traefik
+0
+

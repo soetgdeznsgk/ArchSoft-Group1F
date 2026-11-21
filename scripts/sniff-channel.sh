@@ -2,8 +2,8 @@
 # Escenario 1 (Secure Channel): simula a un atacante que escucha la red entre el
 # navegador y Bololó (por ejemplo, alguien conectado a la misma Wi-Fi).
 #
-# Captura con tcpdump el tráfico de los puertos 80 y 443 del contenedor traefik,
-# es decir, el tramo navegador <-> gateway. Mientras captura, hace el recorrido de
+# Captura con tcpdump el tráfico de los puertos 80 y 443 del contenedor reverse-proxy,
+# es decir, el tramo navegador <-> borde. Mientras captura, hace el recorrido de
 # un jugador: primera visita escrita como http://, registro con contraseña, sesión
 # de invitado, sala de espera por SSE (?token=) y WebSocket de la partida (?token=).
 # Al final cuenta cuántas veces aparecen en claro la contraseña y los tokens.
@@ -64,9 +64,9 @@ post() {
 cleanup() { docker rm -f "$SNIFFER" >/dev/null 2>&1; }
 trap cleanup EXIT
 
-traefik_id=$(docker compose ps -q traefik)
-if [[ -z "$traefik_id" ]]; then
-  echo "traefik no está corriendo: docker compose up -d --wait" >&2
+proxy_id=$(docker compose ps -q reverse-proxy)
+if [[ -z "$proxy_id" ]]; then
+  echo "reverse-proxy no está corriendo: docker compose up -d --wait" >&2
   exit 1
 fi
 
@@ -75,11 +75,11 @@ if ! docker image inspect "$SNIFFER_IMAGE" >/dev/null 2>&1; then
   printf 'FROM alpine:3.20.3\nRUN apk add --no-cache tcpdump\n' | docker build -q -t "$SNIFFER_IMAGE" - >/dev/null || exit 1
 fi
 
-# El sniffer comparte la interfaz de red de traefik: ve exactamente lo que ve
-# alguien en el camino entre el navegador y el gateway. Solo puertos 80 y 443,
-# así que el tramo interno traefik -> servicios (3000, 8000, 8080...) no entra.
+# El sniffer comparte la interfaz de red de reverse-proxy: ve exactamente lo que ve
+# alguien en el camino entre el navegador y el borde. Solo puertos 80 y 443,
+# así que el tramo interno reverse-proxy -> traefik (puerto 8000) no entra.
 cleanup
-docker run -d --name "$SNIFFER" --network "container:$traefik_id" --cap-add NET_RAW --cap-add NET_ADMIN \
+docker run -d --name "$SNIFFER" --network "container:$proxy_id" --cap-add NET_RAW --cap-add NET_ADMIN \
   "$SNIFFER_IMAGE" sh -c "tcpdump -i any -nn -U -s0 -w /tmp/captura.pcap 'tcp port 80 or tcp port 443' & sleep 600" >/dev/null || exit 1
 for _ in $(seq 1 20); do
   docker logs "$SNIFFER" 2>&1 | grep -q 'listening on' && break
@@ -144,7 +144,7 @@ row() {
   printf '  %s%*s%s\n' "$label" "$pad" "" "$2"
 }
 
-printf '\nCaptura del tramo navegador <-> gateway (traefik, puertos 80 y 443)\n'
+printf '\nCaptura del tramo navegador <-> borde (reverse-proxy, puertos 80 y 443)\n'
 row "BASE_URL" "$BASE_URL"
 row "primera visita a http://$HOST/" "$first"
 row "upgrade del WebSocket" "$ws_code"

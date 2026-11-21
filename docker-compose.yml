@@ -1,36 +1,65 @@
 name: bololo-integrado
 
 services:
+  reverse-proxy:
+    image: nginx:1.30.5-alpine
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 16384
+        hard: 16384
+    environment:
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-300}
+      NGINX_ENVSUBST_FILTER: ^HSTS_MAX_AGE
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./reverse-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./reverse-proxy/proxy-headers.conf:/etc/nginx/snippets/proxy-headers.conf:ro
+      - ./reverse-proxy/templates:/etc/nginx/templates:ro
+      - ./api-gateway/certs:/certs:ro
+    tmpfs:
+      - /etc/nginx/conf.d
+      - /var/cache/nginx
+      - /run
+      - /tmp
+    networks:
+      edge:
+        ipv4_address: 10.250.0.2
+      public:
+    depends_on:
+      traefik:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+      start_interval: 2s
+
   traefik:
     image: traefik:v3.7.14
     restart: unless-stopped
-    # Escenario 1 (Secure Channel): sin certificado no arranca (falla cerrado).
-    # Si arrancara, serviría su certificado autofirmado de ejemplo y el navegador
-    # mostraría una advertencia que se aprende a aceptar, igual que la de un atacante.
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        if [ ! -s /certs/bololo.crt ] || [ ! -s /certs/bololo.key ]; then
-          echo "ERROR: falta el certificado TLS en api-gateway/certs/. Ejecuta ./scripts/gen-certs.sh" >&2
-          exit 1
-        fi
-        exec traefik
-    environment:
-      # max-age de HSTS (dynamic/secure-channel.yml). Producción: 31536000.
-      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-300}
-    ports:
-      - "80:80"   # solo redirige a HTTPS
-      - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./api-gateway/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./api-gateway/dynamic:/etc/traefik/dynamic:ro
-      # Solo el certificado y su clave. La CA local (api-gateway/ca/) no se monta.
-      - ./api-gateway/certs:/certs:ro
     networks:
-      - public
-      - internal
+      edge:
+        ipv4_address: 10.250.0.3
+      internal:
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s
@@ -51,8 +80,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls=true"
+      - "traefik.http.routers.web.entrypoints=web"
       - "traefik.http.routers.web.priority=1"
       - "traefik.http.services.web.loadbalancer.server.port=3000"
     healthcheck:
@@ -80,8 +108,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth/`)"
-      - "traefik.http.routers.auth.entrypoints=websecure"
-      - "traefik.http.routers.auth.tls=true"
+      - "traefik.http.routers.auth.entrypoints=web"
       - "traefik.http.routers.auth.priority=10"
       - "traefik.http.services.auth.loadbalancer.server.port=8080"
     depends_on:
@@ -117,8 +144,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.lobby.rule=PathPrefix(`/api/`)"
-      - "traefik.http.routers.lobby.entrypoints=websecure"
-      - "traefik.http.routers.lobby.tls=true"
+      - "traefik.http.routers.lobby.entrypoints=web"
       - "traefik.http.services.lobby.loadbalancer.server.port=8000"
     depends_on:
       postgres:
@@ -173,8 +199,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.game-ws.rule=PathPrefix(`/ws/games/`)"
-      - "traefik.http.routers.game-ws.entrypoints=websecure"
-      - "traefik.http.routers.game-ws.tls=true"
+      - "traefik.http.routers.game-ws.entrypoints=web"
       - "traefik.http.services.game-ws.loadbalancer.server.port=8081"
     depends_on:
       redis:
@@ -206,8 +231,7 @@ services:
       - "traefik.enable=true"
       # Más específica que /api/ (lobby-manager): la prioridad la hace ganar.
       - "traefik.http.routers.bots.rule=PathPrefix(`/api/bots/`)"
-      - "traefik.http.routers.bots.entrypoints=websecure"
-      - "traefik.http.routers.bots.tls=true"
+      - "traefik.http.routers.bots.entrypoints=web"
       - "traefik.http.routers.bots.priority=30"
       - "traefik.http.services.bots.loadbalancer.server.port=8090"
     depends_on:
@@ -241,8 +265,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ratings.rule=PathPrefix(`/api/ratings/`)"
-      - "traefik.http.routers.ratings.entrypoints=websecure"
-      - "traefik.http.routers.ratings.tls=true"
+      - "traefik.http.routers.ratings.entrypoints=web"
       - "traefik.http.routers.ratings.priority=30"
       - "traefik.http.services.ratings.loadbalancer.server.port=8000"
     depends_on:
@@ -353,6 +376,11 @@ services:
 
 networks:
   public:
+  edge:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.250.0.0/28
   internal:
     internal: true
 

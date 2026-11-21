@@ -18,7 +18,7 @@
 #   --new-ca  Crea una CA nueva aunque ya exista (hay que volver a confiarla en cada equipo).
 # Variables: CERT_DAYS (397), CA_DAYS (825).
 #
-# Tras renovar el certificado: docker compose restart traefik.
+# Tras renovar el certificado: docker compose restart reverse-proxy.
 # Requiere openssl (Git Bash lo incluye en Windows).
 
 set -euo pipefail
@@ -194,4 +194,4 @@ else
   echo "Para que el navegador no advierta, confía en la CA una vez: ./scripts/gen-certs.sh --trust"
   echo "(o importa $CA_CRT como autoridad raíz en el navegador del otro equipo)."
 fi
-echo "Si el stack ya estaba arriba: docker compose restart traefik"
+echo "Si el stack ya estaba arriba: docker compose restart reverse-proxy"
