@@ -17,6 +17,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Aztec";
+  src: url("assets/Aztec.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -444,7 +452,7 @@ canvas {
 
 .lobby-panel-title {
   color: #e2b85d !important;
-  font-family: Georgia, "Times New Roman", serif !important;
+  font-family: "Aztec", Georgia, "Times New Roman", serif !important;
   font-size: 28px;
   line-height: 1;
   letter-spacing: 0.04em;
