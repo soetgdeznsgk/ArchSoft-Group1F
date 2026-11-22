@@ -9,7 +9,11 @@ const port = Number.parseInt(process.env.PORT || "3000", 10);
 const publicRoot = path.join(__dirname, "public");
 const viewsRoot = path.join(__dirname, "views");
 
-const server = createServer(async (request, response) => {
+function createPresentationServer({ publicRootOverride, viewsRootOverride } = {}) {
+  const publicDir = publicRootOverride || publicRoot;
+  const viewsDir = viewsRootOverride || viewsRoot;
+
+  return createServer(async (request, response) => {
   const url = new URL(request.url || "/", "http://localhost");
 
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -33,7 +37,7 @@ const server = createServer(async (request, response) => {
   const page = routePage(url.pathname);
   if (page) {
     try {
-      const html = await renderPage(page, viewsRoot);
+      const html = await renderPage(page, viewsDir);
       response.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-cache",
@@ -48,14 +52,20 @@ const server = createServer(async (request, response) => {
   }
 
   const served = await serveStatic(
-    url.pathname, publicRoot, response, request.method, request.headers["accept-encoding"] || ""
+    url.pathname, publicDir, response, request.method, request.headers["accept-encoding"] || ""
   );
   if (!served) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Not Found");
   }
-});
+  });
+}
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(`SSR presentation listening on ${port}`);
-});
+if (require.main === module) {
+  const server = createPresentationServer();
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`SSR presentation listening on ${port}`);
+  });
+}
+
+module.exports = { createPresentationServer };
