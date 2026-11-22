@@ -1,0 +1,2 @@
+modo,tasa,rep,objetivo,confirmados,fallidos_pub,procesados,tardios,no_procesados,dlq,error_pct,tasa_real,proc_s,p50_s,p95_s,p99_s,max_s,backlog_max,drenado_s,cpu_max_ratings,cpu_max_pg,cpu_max_rabbit,mem_max_rabbit_mib,reinicios
+capacidad,1000,1,10000,10000,0,10000,6483,0,0,64.830,1000.0,59.2,82.30,151.34,157.45,158.88,9429,173.1,76.8,43.2,143.8,113.9,0

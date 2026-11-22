@@ -1,0 +1,3 @@
+modo,tasa,rep,objetivo,confirmados,fallidos_pub,procesados,tardios,no_procesados,dlq,error_pct,tasa_real,proc_s,p50_s,p95_s,p99_s,max_s,backlog_max,drenado_s,cpu_max_ratings,cpu_max_pg,cpu_max_rabbit,mem_max_rabbit_mib,reinicios
+confirma105,105,1,6300,6300,0,6300,459,0,0,7.286,105.0,51.1,41.61,61.14,62.92,63.35,3733,126.8,76.7,34.4,157.6,77.6,0
+confirma105,105,2,6300,6300,0,6300,0,0,0,0.000,105.0,53.5,39.49,55.39,57.38,57.78,3743,122.8,75.6,38.3,78.7,90.9,0

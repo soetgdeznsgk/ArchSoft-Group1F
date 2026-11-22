@@ -1,0 +1,149 @@
+time="2026-11-22T12:25:12-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:12-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:12-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:12-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:12-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:13-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:14-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:14-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:14-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:14-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:14-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:14-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:15-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:15-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:15-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:15-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:15-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:15-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:15-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:16-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:16-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:16-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:16-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:16-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:16-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:16-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:17-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:17-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:17-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:17-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:17-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:19-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:20-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:20-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:22-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:23-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:23-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:23-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:24-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:24-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:24-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:24-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:24-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:24-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:24-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:33-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:34-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:34-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T12:25:35-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=17
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=1m0s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=0.28%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=6037
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 16658  191.313759/s
+    checks_succeeded...: 99.02% 16496 out of 16658
+    checks_failed......: 0.97%  162 out of 16658
+
+    ✗ status 200
+      ↳  99% — ✓ 8248 / ✗ 81
+    ✗ trae la lista players
+      ↳  99% — ✓ 8248 / ✗ 81
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 81     0.930269/s
+      { fase:sostenida }...........: 17     0.195242/s
+
+    HTTP
+    http_req_duration..............: avg=16.53s min=68.72ms med=14.91s max=1m0s   p(90)=33.95s p(95)=36.15s p(99)=57.96s
+      { expected_response:true }...: avg=16.1s  min=68.72ms med=14.81s max=58.56s p(90)=33.26s p(95)=35.6s  p(99)=49.13s
+      { fase:sostenida }...........: avg=13.86s min=68.72ms med=14.16s max=1m0s   p(90)=31.45s p(95)=34s    p(99)=47.68s
+    http_req_failed................: 0.97%  81 out of 8329
+      { fase:sostenida }...........: 0.28%  17 out of 6037
+    http_reqs......................: 8329   95.656879/s
+      { fase:sostenida }...........: 6037   69.333723/s
+
+    EXECUTION
+    iteration_duration.............: avg=17.55s min=1.07s   med=15.92s max=1m1s   p(90)=34.98s p(95)=37.19s p(99)=59.01s
+    iterations.....................: 8329   95.656879/s
+    vus............................: 6      min=5          max=2000
+    vus_max........................: 2000   min=2000       max=2000
+
+    NETWORK
+    data_received..................: 23 MB  267 kB/s
+    data_sent......................: 4.0 MB 45 kB/s
+
+
+

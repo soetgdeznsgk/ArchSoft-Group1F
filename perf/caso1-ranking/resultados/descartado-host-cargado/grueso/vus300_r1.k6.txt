@@ -1,0 +1,68 @@
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=1035
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=15.76s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=15.68%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=6599
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 16170  212.733467/s
+    checks_succeeded...: 87.19% 14100 out of 16170
+    checks_failed......: 12.80% 2070 out of 16170
+
+    ✗ status 200
+      ↳  87% — ✓ 7050 / ✗ 1035
+    ✗ trae la lista players
+      ↳  87% — ✓ 7050 / ✗ 1035
+
+    CUSTOM
+    errores_4xx....................: 1035   13.616521/s
+      { fase:sostenida }...........: 1035   13.616521/s
+    errores_5xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+
+    HTTP
+    http_req_duration..............: avg=1.52s min=7.01ms med=772.44ms max=15.76s p(90)=3.88s p(95)=5.63s p(99)=9.29s 
+      { expected_response:true }...: avg=1.66s min=8.73ms med=878.31ms max=15.76s p(90)=4.04s p(95)=6.15s p(99)=9.53s 
+      { fase:sostenida }...........: avg=1.71s min=7.01ms med=892.07ms max=15.76s p(90)=4.13s p(95)=6.3s  p(99)=9.56s 
+    http_req_failed................: 12.80% 1035 out of 8085
+      { fase:sostenida }...........: 15.68% 1035 out of 6599
+    http_reqs......................: 8085   106.366733/s
+      { fase:sostenida }...........: 6599   86.81683/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.52s min=1s     med=1.77s    max=16.76s p(90)=4.88s p(95)=6.64s p(99)=10.29s
+    iterations.....................: 8085   106.366733/s
+    vus............................: 72     min=16           max=300
+    vus_max........................: 300    min=300          max=300
+
+    NETWORK
+    data_received..................: 17 MB  223 kB/s
+    data_sent......................: 940 kB 12 kB/s
+
+
+

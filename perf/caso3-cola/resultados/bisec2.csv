@@ -1,0 +1,2 @@
+modo,tasa,rep,objetivo,confirmados,fallidos_pub,procesados,tardios,no_procesados,dlq,error_pct,tasa_real,proc_s,p50_s,p95_s,p99_s,max_s,backlog_max,drenado_s,cpu_max_ratings,cpu_max_pg,cpu_max_rabbit,mem_max_rabbit_mib,reinicios
+bisec2,112,1,6720,6720,0,6720,1024,0,0,15.238,112.0,52.4,43.92,65.01,67.66,68.15,4121,134.9,70.1,38.6,150.0,124.9,0
