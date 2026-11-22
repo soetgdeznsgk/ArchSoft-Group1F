@@ -9,7 +9,11 @@ let errorGroup;
 let logoHoverAudio;
 let logoHoverAudioTimeout;
 let soundToggle;
-let soundEnabled = localStorage.getItem("bololo.sound-enabled") !== "True";
+const savedSoundEnabled = localStorage.getItem("bololo.sound-enabled");
+let soundEnabled =
+    savedSoundEnabled === null
+        ? true
+        : savedSoundEnabled.toLowerCase() !== "false";
 const activeAudios = new Set();
 
 function setup() {
@@ -280,8 +284,6 @@ async function beginSession(data, options = {}) {
 }
 
 async function playWelcomeSound() {
-  if (!soundEnabled) return;
-
   const welcomeAudio = registerAudio(new Audio("assets/welcome.mp3"));
   welcomeAudio.preload = "auto";
 
