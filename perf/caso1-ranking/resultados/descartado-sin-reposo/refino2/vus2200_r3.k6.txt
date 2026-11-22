@@ -1,0 +1,75 @@
+time="2026-11-22T13:19:53-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:19:56-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:19:56-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:20:00-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:20:05-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:20:06-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:20:10-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=1
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=1m0s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=11293
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 27042  326.801631/s
+    checks_succeeded...: 99.94% 27028 out of 27042
+    checks_failed......: 0.05%  14 out of 27042
+
+    ✗ status 200
+      ↳  99% — ✓ 13514 / ✗ 7
+    ✗ trae la lista players
+      ↳  99% — ✓ 13514 / ✗ 7
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 7      0.084595/s
+      { fase:sostenida }...........: 1      0.012085/s
+
+    HTTP
+    http_req_duration..............: avg=10.62s min=40.54ms med=9.67s  max=1m0s   p(90)=22.43s p(95)=30.41s p(99)=41.97s
+      { expected_response:true }...: avg=10.59s min=40.54ms med=9.67s  max=59.77s p(90)=22.37s p(95)=30.36s p(99)=41.86s
+      { fase:sostenida }...........: avg=9.23s  min=40.54ms med=9.28s  max=1m0s   p(90)=20.79s p(95)=29.45s p(99)=40.04s
+    http_req_failed................: 0.05%  7 out of 13521
+      { fase:sostenida }...........: 0.00%  1 out of 11293
+    http_reqs......................: 13521  163.400815/s
+      { fase:sostenida }...........: 11293  136.475513/s
+
+    EXECUTION
+    iteration_duration.............: avg=11.63s min=1.04s   med=10.67s max=1m1s   p(90)=23.44s p(95)=31.41s p(99)=42.98s
+    iterations.....................: 13521  163.400815/s
+    vus............................: 172    min=31         max=2200
+    vus_max........................: 2200   min=2200       max=2200
+
+    NETWORK
+    data_received..................: 36 MB  432 kB/s
+    data_sent......................: 4.6 MB 55 kB/s
+
+
+

@@ -1,0 +1,66 @@
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=19.1s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=17474
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 42588   554.488272/s
+    checks_succeeded...: 100.00% 42588 out of 42588
+    checks_failed......: 0.00%   0 out of 42588
+
+    ✓ status 200
+    ✓ trae la lista players
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+
+    HTTP
+    http_req_duration..............: avg=1.41s min=5.39ms  med=1.26s max=19.1s  p(90)=3.71s p(95)=4.85s p(99)=7.7s 
+      { expected_response:true }...: avg=1.41s min=5.39ms  med=1.26s max=19.1s  p(90)=3.71s p(95)=4.85s p(99)=7.7s 
+      { fase:sostenida }...........: avg=1.53s min=30.58ms med=1.31s max=19.1s  p(90)=4.03s p(95)=5.28s p(99)=8.16s
+    http_req_failed................: 0.00%  0 out of 21294
+      { fase:sostenida }...........: 0.00%  0 out of 17474
+    http_reqs......................: 21294  277.244136/s
+      { fase:sostenida }...........: 17474  227.508408/s
+
+    EXECUTION
+    iteration_duration.............: avg=2.41s min=1s      med=2.26s max=20.11s p(90)=4.71s p(95)=5.86s p(99)=8.7s 
+    iterations.....................: 21294  277.244136/s
+    vus............................: 42     min=36         max=750
+    vus_max........................: 750    min=750        max=750
+
+    NETWORK
+    data_received..................: 50 MB  654 kB/s
+    data_sent......................: 2.5 MB 32 kB/s
+
+
+

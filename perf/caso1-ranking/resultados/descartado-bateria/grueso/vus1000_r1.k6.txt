@@ -1,0 +1,69 @@
+time="2026-11-22T12:21:42-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=46.68s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=7933
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 20142  251.788415/s
+    checks_succeeded...: 99.99% 20140 out of 20142
+    checks_failed......: 0.00%  2 out of 20142
+
+    ✗ status 200
+      ↳  99% — ✓ 10070 / ✗ 1
+    ✗ trae la lista players
+      ↳  99% — ✓ 10070 / ✗ 1
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 1      0.012501/s
+      { fase:sostenida }...........: 0      0/s
+
+    HTTP
+    http_req_duration..............: avg=5.93s min=11.28ms med=5.1s  max=1m0s   p(90)=13.75s p(95)=18.02s p(99)=28.81s
+      { expected_response:true }...: avg=5.92s min=11.28ms med=5.1s  max=57.63s p(90)=13.75s p(95)=18.02s p(99)=28.8s 
+      { fase:sostenida }...........: avg=5.54s min=58.14ms med=5.15s max=46.68s p(90)=12.37s p(95)=17.45s p(99)=27.09s
+    http_req_failed................: 0.00%  1 out of 10071
+      { fase:sostenida }...........: 0.00%  0 out of 7933
+    http_reqs......................: 10071  125.894208/s
+      { fase:sostenida }...........: 7933   99.167784/s
+
+    EXECUTION
+    iteration_duration.............: avg=6.93s min=1.01s   med=6.1s  max=1m1s   p(90)=14.76s p(95)=19.02s p(99)=29.81s
+    iterations.....................: 10071  125.894208/s
+    vus............................: 68     min=32         max=1000
+    vus_max........................: 1000   min=1000       max=1000
+
+    NETWORK
+    data_received..................: 25 MB  315 kB/s
+    data_sent......................: 2.3 MB 29 kB/s
+
+
+

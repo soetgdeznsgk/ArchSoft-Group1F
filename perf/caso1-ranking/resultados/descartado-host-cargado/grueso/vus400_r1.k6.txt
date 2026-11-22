@@ -1,0 +1,66 @@
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=24.64s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=5586
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 13966   176.301402/s
+    checks_succeeded...: 100.00% 13966 out of 13966
+    checks_failed......: 0.00%   0 out of 13966
+
+    ✓ status 200
+    ✓ trae la lista players
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+
+    HTTP
+    http_req_duration..............: avg=2.99s min=10.72ms med=2.49s max=24.64s p(90)=7s p(95)=9.28s  p(99)=13.11s
+      { expected_response:true }...: avg=2.99s min=10.72ms med=2.49s max=24.64s p(90)=7s p(95)=9.28s  p(99)=13.11s
+      { fase:sostenida }...........: avg=3.08s min=79.12ms med=2.83s max=24.64s p(90)=7s p(95)=9.22s  p(99)=13.3s 
+    http_req_failed................: 0.00%  0 out of 6983
+      { fase:sostenida }...........: 0.00%  0 out of 5586
+    http_reqs......................: 6983   88.150701/s
+      { fase:sostenida }...........: 5586   70.515511/s
+
+    EXECUTION
+    iteration_duration.............: avg=3.99s min=1.01s   med=3.49s max=25.64s p(90)=8s p(95)=10.29s p(99)=14.11s
+    iterations.....................: 6983   88.150701/s
+    vus............................: 53     min=16        max=400
+    vus_max........................: 400    min=400       max=400
+
+    NETWORK
+    data_received..................: 17 MB  212 kB/s
+    data_sent......................: 1.1 MB 14 kB/s
+
+
+

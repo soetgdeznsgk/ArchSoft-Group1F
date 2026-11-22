@@ -1,0 +1,30 @@
+--- 12:51:32
+bololo-integrado-bot-service-1 cpu=0.22% mem=9.309MiB / 1.357GiB
+bololo-integrado-game-logic-1 cpu=0.09% mem=2.281MiB / 1.357GiB
+bololo-integrado-reverse-proxy-1 cpu=33.34% mem=19.4MiB / 1.357GiB
+bololo-integrado-ratings-service-1 cpu=76.80% mem=95.65MiB / 1.357GiB
+bololo-integrado-auth-1 cpu=0.56% mem=27.41MiB / 1.357GiB
+bololo-integrado-lobby-manager-1 cpu=0.58% mem=9.516MiB / 1.357GiB
+bololo-integrado-ratings-postgres-1 cpu=16.33% mem=13.79MiB / 1.357GiB
+bololo-integrado-auth-postgres-1 cpu=0.00% mem=7.734MiB / 1.357GiB
+bololo-integrado-postgres-1 cpu=0.09% mem=10.05MiB / 1.357GiB
+bololo-integrado-rabbitmq-1 cpu=0.69% mem=26.53MiB / 1.357GiB
+bololo-integrado-redis-1 cpu=0.66% mem=3.676MiB / 1.357GiB
+bololo-integrado-traefik-1 cpu=44.03% mem=288.9MiB / 1.357GiB
+bololo-integrado-frontend-1 cpu=0.00% mem=3.977MiB / 1.357GiB
+component-3 cpu=0.00% mem=0B / 0B
+--- 12:51:45
+bololo-integrado-bot-service-1 cpu=0.48% mem=8.516MiB / 1.357GiB
+bololo-integrado-game-logic-1 cpu=0.11% mem=6.645MiB / 1.357GiB
+bololo-integrado-reverse-proxy-1 cpu=0.00% mem=13.11MiB / 1.357GiB
+bololo-integrado-ratings-service-1 cpu=23.99% mem=83.71MiB / 1.357GiB
+bololo-integrado-auth-1 cpu=0.72% mem=42.69MiB / 1.357GiB
+bololo-integrado-lobby-manager-1 cpu=0.31% mem=9.07MiB / 1.357GiB
+bololo-integrado-ratings-postgres-1 cpu=4.06% mem=13.22MiB / 1.357GiB
+bololo-integrado-auth-postgres-1 cpu=0.00% mem=9.055MiB / 1.357GiB
+bololo-integrado-postgres-1 cpu=0.00% mem=4.371MiB / 1.357GiB
+bololo-integrado-rabbitmq-1 cpu=1.41% mem=29.84MiB / 1.357GiB
+bololo-integrado-redis-1 cpu=0.79% mem=3.66MiB / 1.357GiB
+bololo-integrado-traefik-1 cpu=88.75% mem=325.8MiB / 1.357GiB
+bololo-integrado-frontend-1 cpu=0.00% mem=3.422MiB / 1.357GiB
+component-3 cpu=34.38% mem=26.4MiB / 1.357GiB

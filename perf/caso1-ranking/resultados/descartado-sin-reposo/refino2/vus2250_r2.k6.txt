@@ -1,0 +1,81 @@
+time="2026-11-22T13:24:04-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:05-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:06-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:06-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:06-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:06-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:06-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:07-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:10-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:10-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:18-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:19-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+time="2026-11-22T13:24:20-05:00" level=warning msg="Request Failed" error="Get \"https://localhost/api/ratings/leaderboard?mode=CLASSIC&limit=20\": request timeout"
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=3
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=1m0s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=0.02%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=11123
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 27268  330.162817/s
+    checks_succeeded...: 99.90% 27242 out of 27268
+    checks_failed......: 0.09%  26 out of 27268
+
+    ✗ status 200
+      ↳  99% — ✓ 13621 / ✗ 13
+    ✗ trae la lista players
+      ↳  99% — ✓ 13621 / ✗ 13
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 13     0.157405/s
+      { fase:sostenida }...........: 3      0.036324/s
+
+    HTTP
+    http_req_duration..............: avg=10.72s min=42.55ms med=10.28s max=1m0s   p(90)=22.69s p(95)=30.44s p(99)=42.45s
+      { expected_response:true }...: avg=10.68s min=42.55ms med=10.28s max=59.84s p(90)=22.65s p(95)=30.4s  p(99)=41.48s
+      { fase:sostenida }...........: avg=9.26s  min=42.55ms med=9.73s  max=1m0s   p(90)=20.96s p(95)=22.91s p(99)=38.81s
+    http_req_failed................: 0.09%  13 out of 13634
+      { fase:sostenida }...........: 0.02%  3 out of 11123
+    http_reqs......................: 13634  165.081409/s
+      { fase:sostenida }...........: 11123  134.678048/s
+
+    EXECUTION
+    iteration_duration.............: avg=11.73s min=1.04s   med=11.28s max=1m1s   p(90)=23.72s p(95)=31.44s p(99)=43.45s
+    iterations.....................: 13634  165.081409/s
+    vus............................: 87     min=39          max=2250
+    vus_max........................: 2250   min=2250        max=2250
+
+    NETWORK
+    data_received..................: 36 MB  437 kB/s
+    data_sent......................: 4.7 MB 57 kB/s
+
+
+
