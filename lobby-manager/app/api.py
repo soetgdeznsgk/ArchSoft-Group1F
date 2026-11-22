@@ -18,6 +18,7 @@ from . import errors, security
 from .events import format_sse
 from .modes import DEFAULT_MODE
 from .schemas import (
+    ChangeLobbyModeIn,
     CreateLobbyIn,
     ErrorOut,
     JoinByCodeIn,
@@ -127,6 +128,17 @@ async def leave_lobby(lobby_id: str, player: CurrentPlayer, service: Service) ->
     """Sale de la sala antes de que inicie la partida. La sala se elimina si queda vacía."""
     await service.leave_lobby(player.id, lobby_id)
     return Response(status_code=204)
+
+
+@public.post("/lobbies/{lobby_id}/mode", tags=["salas"], responses=_error(401, 403, 404, 409))
+async def change_lobby_mode(
+    lobby_id: str,
+    body: ChangeLobbyModeIn,
+    player: CurrentPlayer,
+    service: Service,
+) -> Lobby:
+    """Cambia el modo de una sala antes de iniciarla. Solo puede hacerlo el anfitrión."""
+    return await service.change_lobby_mode(player.id, lobby_id, body.mode)
 
 
 @public.post("/lobbies/{lobby_id}/start", tags=["salas"], responses=_error(401, 403, 404, 409, 502))

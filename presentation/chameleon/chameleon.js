@@ -9,15 +9,15 @@
 import { GameSocket } from "/ingame/client/ingame/game-socket.js";
 
 const COLORS = {
-  red: { name: "Rojo", hex: "#e53935" },
-  orange: { name: "Naranja", hex: "#fb8c00" },
-  yellow: { name: "Amarillo", hex: "#fdd835" },
-  green: { name: "Verde", hex: "#43a047" },
-  cyan: { name: "Cian", hex: "#00acc1" },
-  blue: { name: "Azul", hex: "#1e88e5" },
-  purple: { name: "Morado", hex: "#8e24aa" },
-  pink: { name: "Rosa", hex: "#ec407a" },
-  chameleon: { name: "Camaleón", hex: "#263238" },
+  red: { name: "Rojo", hex: "#e53935", image: "/chameleon/assets/rojo.png" },
+  orange: { name: "Naranja", hex: "#fb8c00", image: "/chameleon/assets/naranja.png" },
+  yellow: { name: "Amarillo", hex: "#fdd835", image: "/chameleon/assets/amarillo.png" },
+  green: { name: "Verde", hex: "#43a047", image: "/chameleon/assets/verde.png" },
+  cyan: { name: "Cian", hex: "#00acc1", image: "/chameleon/assets/cian.png" },
+  blue: { name: "Azul", hex: "#1e88e5", image: "/chameleon/assets/azul.png" },
+  purple: { name: "Morado", hex: "#8e24aa", image: "/chameleon/assets/morado.png" },
+  pink: { name: "Rosa", hex: "#ec407a", image: "/chameleon/assets/rosa.png" },
+  chameleon: { name: "Camaleón", hex: "#263238", image: "/chameleon/assets/camaleon.png" },
 };
 // Vida máxima de una carta en el servidor (chameleon.DefaultCardLifetimeMax). La barra
 // arranca más corta cuanto menos le queda a la carta.
@@ -29,6 +29,7 @@ const $ = (id) => document.getElementById(id);
 
 let socket = null;
 let remainingMs = 0;
+let initialRemainingMs = 0;
 let viewAt = 0;
 let you = access?.me?.id;
 
@@ -59,7 +60,10 @@ function renderBoard(view) {
     button.style.setProperty("--card", color.hex);
     button.disabled = !view.can_take;
     button.setAttribute("aria-label", `Tomar carta ${color.name}`);
-    button.innerHTML = `<span class="label">${color.name}</span><span class="life"></span>`;
+    button.innerHTML = `
+      ${color.image ? `<img class="card-image" src="${color.image}" alt="" draggable="false">` : ""}
+      <span class="label">${color.name}</span>
+      <span class="life"></span>`;
     button.addEventListener("click", () => send({ type: "take", card: card.id }));
     board.append(button);
     // Barra de vida: animación CSS que se vacía en el tiempo que le queda a la carta.
@@ -74,6 +78,10 @@ function renderPlayers(view) {
   list.replaceChildren();
   for (const p of view.players) {
     const owned = new Set(p.cards.map((c) => c.color));
+    const missing = view.colors.filter((c) => !owned.has(c));
+    const missingItems = missing
+      .map((c) => `<span class="missing-item"><i style="--missing:${COLORS[c].hex}"></i>${colorName(c)}</span>`)
+      .join("");
     const item = document.createElement("li");
     item.className = "player" + (p.id === view.you ? " me" : "") + (p.connected ? "" : " offline");
     const slots = view.colors
@@ -84,10 +92,15 @@ function renderPlayers(view) {
       .join("");
     item.innerHTML = `
       <div class="player-head">
+        <span class="avatar">${(names[p.id] || "?").charAt(0).toUpperCase()}</span>
         <span class="name"></span>
-        <span class="count">${p.colors}/8${p.connected ? "" : " · desconectado"}</span>
+        <span class="count">${p.colors}<small>/8</small></span>
       </div>
-      <div class="slots" aria-label="${p.colors} de 8 colores: ${[...owned].map(colorName).join(", ") || "ninguno"}">${slots}</div>`;
+      <div class="slots" aria-label="${p.colors} de 8 colores: ${[...owned].map(colorName).join(", ") || "ninguno"}">${slots}</div>
+      <div class="missing">
+        <strong>LES FALTAN · ${missing.length}</strong>
+        <div class="missing-list">${missingItems || "<span class=\"missing-complete\">Todos los colores</span>"}</div>
+      </div>`;
     item.querySelector(".name").textContent = nameOf(p.id); // textContent: el nombre lo escribe el jugador
     list.append(item);
   }
@@ -113,6 +126,7 @@ function renderFinal(final) {
 
 function applyView(view) {
   you = view.you;
+  if (remainingMs === 0 || view.remaining_ms > remainingMs) initialRemainingMs = view.remaining_ms;
   remainingMs = view.remaining_ms;
   viewAt = performance.now();
   renderBoard(view);
@@ -165,9 +179,16 @@ function send(action) {
 }
 
 function tickTimer() {
+  const timer = $("timer");
+  const progress = $("timer-progress");
+  if (!timer) return;
   const left = Math.max(0, remainingMs - (performance.now() - viewAt));
   const s = Math.ceil(left / 1000);
-  $("timer").textContent = viewAt ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "--:--";
+  timer.textContent = viewAt ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "--:--";
+  if (progress) {
+    const percent = initialRemainingMs > 0 ? Math.max(0, Math.min(100, (left / initialRemainingMs) * 100)) : 100;
+    progress.style.width = `${percent}%`;
+  }
 }
 
 if (!access || (access.mode && access.mode !== "CHAMELEON")) {

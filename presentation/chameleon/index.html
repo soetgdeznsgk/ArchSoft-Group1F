@@ -10,28 +10,31 @@
   </head>
   <body>
     <header class="topbar">
-      <h1>Camaleón</h1>
-      <p class="hint">Toca las cartas para tomarlas. Reúne los 8 colores sin repetir. Un color repetido te quita ambas cartas; el camaleón, todas.</p>
+      <div class="brand">
+        <h1>Camaleón</h1>
+        <p class="hint">Reúne los 8 colores sin repetir.</p>
+      </div>
       <div class="status">
-        <span id="connection">Conectando…</span>
-        <span>Tiempo: <strong id="timer">--:--</strong></span>
+        <span id="connection" class="connection">● Conectando…</span>
+        <span class="help" title="Toca una carta para tomarla">?</span>
+        <div class="timer-box">
+          <span>TIEMPO</span>
+          <strong id="timer">--:--</strong>
+          <div class="timer-track"><div id="timer-progress" class="timer-progress"></div></div>
+        </div>
       </div>
     </header>
 
     <main class="layout">
       <section class="board-wrap" aria-label="Mesa">
         <div id="board" class="board" role="group" aria-label="Cartas en la mesa"></div>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
       </section>
-
-      <aside class="side">
-        <h2>Jugadores</h2>
+      <section class="players-section" aria-label="Jugadores">
+        <h2>JUGADORES</h2>
         <ul id="players" class="players"></ul>
-        <h2>Jugadas</h2>
-        <ol id="log" class="log" aria-live="polite"></ol>
-      </aside>
+      </section>
     </main>
-
-    <p id="message" class="message" role="status" aria-live="polite"></p>
 
     <dialog id="final" class="final">
       <h2 id="final-title">Fin de la partida</h2>

@@ -36,6 +36,12 @@ def already_in_lobby() -> ApiError:
     return ApiError(409, "already_in_lobby", "Ya estás en otra sala. Sal de ella antes de entrar a una nueva.")
 
 
+def only_host_can_change_mode() -> ApiError:
+    return ApiError(403, "only_host_can_change_mode", "Solo el anfitrión puede cambiar el modo de la sala.")
+
+
+
+
 def not_in_lobby() -> ApiError:
     return ApiError(403, "not_in_lobby", "No perteneces a esta sala.")
 

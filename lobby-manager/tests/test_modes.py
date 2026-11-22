@@ -37,6 +37,42 @@ async def test_modo_desconocido_se_rechaza(ctx):
     assert (await ctx.client.get("/api/lobbies", headers=ana.headers)).json() == []
 
 
+async def test_el_anfitrion_puede_cambiar_el_modo_de_la_sala(ctx):
+    lobby, users = await ctx.lobby_with(1, mode="CLASSIC")
+    r = await ctx.client.post(
+        f"/api/lobbies/{lobby['id']}/mode",
+        headers=users[0].headers,
+        json={"mode": "CHAMELEON"},
+    )
+    assert r.status_code == 200
+    assert r.json()["mode"] == "CHAMELEON"
+    assert r.json()["minPlayers"] == 2
+    assert r.json()["maxPlayers"] == 4
+
+
+async def test_solo_el_anfitrion_puede_cambiar_el_modo(ctx):
+    lobby, users = await ctx.lobby_with(2, mode="CLASSIC")
+    r = await ctx.client.post(
+        f"/api/lobbies/{lobby['id']}/mode",
+        headers=users[1].headers,
+        json={"mode": "CHAMELEON"},
+    )
+    assert (r.status_code, r.json()["code"]) == (403, "only_host_can_change_mode")
+
+
+async def test_se_puede_cambiar_a_clasico_antes_de_llegar_a_cuatro_jugadores(ctx):
+    lobby, users = await ctx.lobby_with(2, mode="CHAMELEON")
+    r = await ctx.client.post(
+        f"/api/lobbies/{lobby['id']}/mode",
+        headers=users[0].headers,
+        json={"mode": "CLASSIC"},
+    )
+    assert r.status_code == 200
+    assert r.json()["mode"] == "CLASSIC"
+    assert r.json()["minPlayers"] == 4
+    assert r.json()["maxPlayers"] == 4
+
+
 async def test_camaleon_no_inicia_con_un_solo_jugador(ctx):
     lobby, users = await ctx.lobby_with(1, mode="CHAMELEON")
     r = await ctx.client.post(f"/api/lobbies/{lobby['id']}/start", headers=users[0].headers)
