@@ -1085,3 +1085,4 @@ The design runs on one instance, but the seams for scaling out are already in pl
 | Concurrency handled safely | §6 |
 | C&C view | §2 |
 | Deployment view | §9 |
+

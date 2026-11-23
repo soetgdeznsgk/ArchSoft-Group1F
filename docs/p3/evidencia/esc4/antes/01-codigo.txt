@@ -1,0 +1,18 @@
+﻿$ sed -n "/type PlayerSummary/,/^}/p" game-logic/internal/game/view.go
+type PlayerSummary struct {
+	ID          PlayerID `json:"id"`
+	Seat        int      `json:"seat"`
+	CardCount   int      `json:"card_count"`
+	LaidDown    bool     `json:"laid_down"`
+	Connected   bool     `json:"connected"`
+	IsTurn      bool     `json:"is_turn"`
+	TotalPoints int      `json:"total_points"`
+	RoundsWon   int      `json:"rounds_won"`
+}
+
+$ grep -n "verifyGameToken|slices.Contains|StatusForbidden|StatusUnauthorized|Apply(c.player" game-logic/internal/server/websocket.go
+33: gameID, playerID, err := verifyGameToken(token, a.cfg.GamePublicKey)
+35: writeError(w, http.StatusUnauthorized, "invalid game token")
+45: if !slices.Contains(instance.engine.Players(), playerID) {
+46: writeError(w, http.StatusForbidden, "player is not in this game")
+136: out, err := instance.engine.Apply(c.player, message)

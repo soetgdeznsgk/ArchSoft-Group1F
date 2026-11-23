@@ -1,0 +1,25 @@
+$ docker run --rm --network bololo-integrado_public -e GATEWAY_HOST=reverse-proxy -e PYTHONIOENCODING=utf-8 -v "${PWD}:/work" -w /work python:3.12-slim sh -c "pip install -q websockets==15.0.1 && python game-logic/scripts/limited_view_demo.py"
+
+Demo Limited View contra https://localhost (gateway: reverse-proxy)
+
+== A. CLASSIC con 4 clientes WebSocket
+  partida g_0497ae98f295; cada jugador tiene su propio token de partida
+  OK     1. cada cliente recibe la vista de su propio jugador ("you" = id del token)
+  OK     2. cada vista trae solo la mano propia; de los demás, solo card_count
+     Ana ve 3 cartas suyas y de Beto solo "card_count": 3
+  OK     3. Ana manda "draw" diciendo ser el jugador en turno: rechazado
+
+== B. CHAMELEON con 2 clientes WebSocket
+  partida g_18dc97242c1f
+  OK     4. cada cliente recibe su propia vista ("you" = id del token)
+     en este modo las manos de todos son públicas por diseño (ver docs/LIMITED_VIEW.md)
+  OK     5. Eva manda "take" diciendo ser Fede: la carta queda a nombre de Eva
+
+== C. Handshake del WebSocket
+  OK     6a. token real de la partida camaleón usado en la partida clásica: 401
+  OK     6b. token de sesión (no de partida): 401
+  OK     6c. token con firma inválida: 401
+     token expirado y jugador fuera del roster: ver las pruebas de Go (el Lobby no emite esos tokens)
+
+== Resumen
+  8 OK, 0 fallas
