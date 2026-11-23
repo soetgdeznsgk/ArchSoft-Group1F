@@ -1,0 +1,7 @@
+# Inundación de la API: lotes de 500 GET al leaderboard (50 en paralelo, HTTP/2) durante 20 s, desde la red public.
+# ratings-service es el cuello de botella medido en el Lab 6.
+
+$ $ATTACKER bash -c <inundación de 20 s>
+  200: 10000 respuestas
+  total: 10000 en ~20 s (500 peticiones/s)
+

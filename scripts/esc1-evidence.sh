@@ -53,9 +53,7 @@ run() {
 latency() {
   local base=$1 out=$2 dir
   dir=$(pwd -W 2>/dev/null || pwd)
-  if ! docker image inspect bololo-bench:curl >/dev/null 2>&1; then
-    printf 'FROM alpine:3.20.3\nRUN apk add --no-cache bash curl\n' | docker build -q -t bololo-bench:curl - >/dev/null
-  fi
+  bash scripts/bench-image.sh
   {
     echo "# A. Cliente Linux (curl + OpenSSL) en la red public, directo al proxy inverso"
     docker run --rm --network bololo-integrado_public -v "$dir:/w" -w /w \

@@ -406,10 +406,20 @@ async function joinLobby(request) {
 
 function openLobbyEvents(lobbyId) {
   if (lobbyEvents) lobbyEvents.close();
-  lobbyEvents = new EventSource(`/api/lobbies/${lobbyId}/events?token=${encodeURIComponent(session.token)}`);
-  lobbyEvents.addEventListener("lobby", (e) => renderLobby(JSON.parse(e.data)));
-  lobbyEvents.addEventListener("game_starting", (e) => goToGame(JSON.parse(e.data)));
-  lobbyEvents.addEventListener("lobby_closed", () => showStatus("La sala se cerró."));
+  const source = new EventSource(`/api/lobbies/${lobbyId}/events?token=${encodeURIComponent(session.token)}`);
+  lobbyEvents = source;
+  source.addEventListener("lobby", (e) => renderLobby(JSON.parse(e.data)));
+  source.addEventListener("game_starting", (e) => goToGame(JSON.parse(e.data)));
+  source.addEventListener("lobby_closed", () => {
+    source.close();
+    showStatus("La sala se cerró.");
+  });
+  // EventSource no reintenta tras una respuesta HTTP de error (por ejemplo, el 429 del límite de tasa).
+  source.onerror = () => {
+    if (source.readyState === EventSource.CLOSED) {
+      setTimeout(() => lobbyEvents === source && openLobbyEvents(lobbyId), 10000);
+    }
+  };
 }
 
 function renderLobby(lobby) {
