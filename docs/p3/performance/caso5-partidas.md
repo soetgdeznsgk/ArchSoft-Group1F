@@ -54,3 +54,11 @@ La preparación subió de aproximadamente 384–393 ms para una partida a 2268 m
 El límite reglamentario de 10 partidas no fue estable: solo 5 de las 10 terminaron dentro del timeout de 660 s. La creación fue exitosa, pero el desempeño de las partidas terminó degradado.
 
 Esta es una sola corrida por nivel. Las repeticiones de 8 y 10 partidas son necesarias antes de definir una rodilla estadística.
+
+## 7. Gráficas
+
+![Finalización por partida](../../../perf/caso5-partidas/img/caso5-finalizacion.png)
+
+![Duración de las partidas](../../../perf/caso5-partidas/img/caso5-duracion.png)
+
+![Preparación y HTTP](../../../perf/caso5-partidas/img/caso5-preparacion.png)
