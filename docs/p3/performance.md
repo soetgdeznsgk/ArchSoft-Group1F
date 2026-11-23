@@ -36,13 +36,15 @@ Se midieron tres funcionalidades por separado, para que cada curva tenga un solo
 | 2 | Cargar el menú (`GET /menu/`, SSR) | proxy → gateway → `frontend` → `ratings-service` → PostgreSQL | Usuarios concurrentes | Igual que el caso 1. Un menú sin ranking **no** es error, se cuenta aparte como "degradado" |
 | 3 | Procesar el resultado de una partida | RabbitMQ → consumidor de `ratings-service` → PostgreSQL | Partidas terminadas por segundo | Resultado perdido, descartado o que tarda más de 60 s en llegar al ranking |
 | 4 | Operaciones de autenticación | proxy → gateway → `auth-service` → PostgreSQL / claves RSA | Usuarios concurrentes | Timeout, estado inesperado o token inválido |
+| 5 | Varias partidas simultáneas | Auth → Lobby → Bot Service → Game Logic → Redis → RabbitMQ → Ratings | 1–10 partidas clásicas | Timeout o resultado no terminado |
 
-El flujo completo de una partida (sesión, sala, bots, WebSocket) no se estresó porque el lobby admite **como máximo 10 salas activas** (`max_lobbies = 10`, regla del reglamento). Con 40 jugadores el flujo rechaza por regla de negocio, no por falta de capacidad (ver §6).
+El límite de partidas simultáneas se mide en el caso 5 con hasta 10 salas activas (`max_lobbies = 10`) y 40 jugadores.
 
 ### 2.2 Cada corrida
 
 - **Casos 1 y 2:** rampa de 15 s hasta N usuarios y 60 s sostenidos. Las métricas se toman solo de la fase sostenida. Cada usuario hace una petición, la valida y espera 1 s (`sleep(1)`), así que la carga ideal es N peticiones/s.
 - **Caso 3:** publicación a una tasa constante durante 60 s. El retraso de cada partida se mide en la base de datos, como `processed_at − finished_at`.
+- **Caso 5:** creación simultánea de salas clásicas con tres bots por sala y WebSockets reales. El timeout fue de 660 s por partida.
 - **En paralelo:** CPU y memoria por contenedor (`docker stats`), estado de salud de los servicios y códigos de estado del log de Nginx.
 - **Entre corridas:** se espera a que los servicios vuelvan a reposo (CPU < 5 % y sanos). Sin esa espera, una corrida arrancaba con la cola de la anterior y colapsaba, y se descartó un refinamiento completo por eso.
 
