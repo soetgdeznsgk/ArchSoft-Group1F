@@ -1,0 +1,1 @@
+﻿cells=129 BL=0 gw=0 badEdges=0 modules=auth,lobby,game,bots,ratings,ui,classic,chameleon,match

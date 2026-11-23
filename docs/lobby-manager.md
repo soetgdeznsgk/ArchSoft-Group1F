@@ -9,6 +9,7 @@
 
 Este documento es lo que necesitan los demás componentes para hablar con el Lobby Manager. El detalle interno está en [lobby-manager/README.md](../lobby-manager/README.md) y la especificación campo por campo en [lobby-manager/docs/openapi.json](../lobby-manager/docs/openapi.json) (o en vivo en `/api/docs`).
 
+
 ## Contenido
 
 1. [Recorrido completo](#1-recorrido-completo)

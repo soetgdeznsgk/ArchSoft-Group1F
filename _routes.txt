@@ -1,0 +1,7 @@
+﻿api.py: @public.get("/leaderboard", tags=["ranking"])
+api.py: @public.get("/players/{account_id}", tags=["ranking"])
+api.py: @public.get("/players/{account_id}/history", tags=["ranking"])
+router.ex: get "/healthz" do
+router.ex: post "/api/bots/lobbies/:lobby_id/fill" do
+router.ex: delete "/api/bots/lobbies/:lobby_id" do
+router.ex: get "/api/bots/lobbies/:lobby_id" do

@@ -1,0 +1,35 @@
+﻿== view.go struct ==
+// PlayerSummary es la información pública de un jugador (RF-33, RF-34).
+type PlayerSummary struct {
+CardCount   int      `json:"card_count"`
+Hand             []Card          `json:"hand"`
+DiscardCount     int             `json:"discard_count"`
+Players          []PlayerSummary `json:"players"`
+func (g *Game) ViewFor(p PlayerID) (PlayerView, error) {
+Hand:         slices.Clone(me.hand),
+DiscardCount: len(g.discard),
+Players:      make([]PlayerSummary, len(g.players)),
+if v.Hand == nil {
+v.Hand = []Card{}
+v.Players[k] = PlayerSummary{
+ID: pl.id, Seat: k, CardCount: len(pl.hand), LaidDown: pl.laidDown,
+== websocket identity ==
+gameID, playerID, err := verifyGameToken(token, a.cfg.GamePublicKey)
+writeError(w, http.StatusUnauthorized, "invalid game token")
+if !slices.Contains(instance.engine.Players(), playerID) {
+writeError(w, http.StatusForbidden, "player is not in this game")
+a.logger.Debug("websocket reader ended", "game_id", instance.id, "player_id", c.player, "error", err)
+out, err := instance.engine.Apply(c.player, message)
+== limited_view_test ==
+func TestWebSocketRejectsTokensFromAnotherGameAndRoster(t *testing.T) {
+func TestChameleonActionUsesTokenIdentityNotMessage(t *testing.T) {
+func TestChameleonViewIsPublicByDesign(t *testing.T) {
+== game view test ==
+func TestViewFor(t *testing.T) {
+func TestViewHidesOtherPlayersCards(t *testing.T) {
+func TestViewBanksAreCopiesAndDepositFlag(t *testing.T) {
+func TestViewBeforeStartAndAfterEnd(t *testing.T) {
+func TestApplyDispatch(t *testing.T) {
+func TestEventJSON(t *testing.T) {
+func TestConcurrentStealOnlyOneWins(t *testing.T) {
+func TestMatchWrappers(t *testing.T) {

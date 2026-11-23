@@ -17,12 +17,41 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Aztec";
+  src: url("assets/Aztec.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #7c8f42 #0a1d2c;
+}
+
+body { min-height: 0; }
+
+canvas {
+  position: fixed !important;
+  inset: 0;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar { width: 12px; }
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track { background: #0a1d2c; }
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background: #6f843e;
+  border: 3px solid #0a1d2c;
+  border-radius: 999px;
 }
 
 canvas {
@@ -32,6 +61,64 @@ canvas {
   background:
     linear-gradient(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.18)),
     url("assets/fondo.jpg") center center / cover no-repeat;
+}
+
+.sound-toggle {
+  position: fixed;
+  top: clamp(16px, 3vh, 32px);
+  right: clamp(16px, 3vw, 40px);
+  left: auto;
+  z-index: 30;
+  width: clamp(48px, 6vw, 68px);
+  height: clamp(48px, 6vw, 68px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform-origin: center;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.sound-toggle::before,
+.sound-toggle::after {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  content: "";
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.sound-toggle::before {
+  background-image: url("assets/volumen.png");
+  opacity: 1;
+}
+
+.sound-toggle::after {
+  background-image: url("assets/mute.png");
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.sound-toggle.is-muted::before {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.sound-toggle.is-muted::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.sound-toggle:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 8px rgba(255, 215, 64, 0.8));
+}
+
+.sound-toggle:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 4px;
 }
 
 .menu-container {
@@ -313,6 +400,236 @@ canvas {
   color: var(--logo-yellow);
 }
 
+.menu-container.lobby-preview {
+  width: min(632px, calc(100vw - 48px));
+  max-width: 632px;
+  height: min(418px, calc(100vh - 160px));
+  max-height: min(418px, calc(100vh - 160px));
+  box-sizing: border-box;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  top: 50%;
+  gap: 0;
+  padding: 34px 38px 30px;
+  border: 3px solid #8da05b;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 72% 20%, rgba(99, 126, 78, 0.20), transparent 32%),
+    linear-gradient(145deg, rgba(15, 49, 54, 0.99), rgba(9, 38, 43, 0.99));
+  box-shadow:
+    inset 0 0 0 5px #10282b,
+    0 18px 36px rgba(0, 0, 0, 0.42);
+}
+
+.menu-container.lobby-preview::-webkit-scrollbar { width: 10px; }
+.menu-container.lobby-preview::-webkit-scrollbar-track { background: transparent; }
+.menu-container.lobby-preview::-webkit-scrollbar-thumb {
+  background: #6f843e;
+  border: 3px solid #101d2d;
+  border-radius: 999px;
+}
+
+.lobby-user {
+  position: fixed;
+  top: 24px;
+  right: 138px;
+  z-index: 31;
+  height: 48px;
+  min-width: 140px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(221, 188, 95, 0.75);
+  border-radius: 999px;
+  background: rgba(20, 48, 68, 0.92);
+  color: #f4d98a !important;
+  font-family: "Rubik", serif !important;
+  font-size: 14px;
+  white-space: nowrap;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
+}
+
+.lobby-panel-title {
+  color: #e2b85d !important;
+  font-family: "Aztec", Georgia, "Times New Roman", serif !important;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-shadow: 0 3px 0 #704717;
+}
+
+.lobby-title-separator {
+  width: 220px;
+  height: 18px;
+  margin: 12px 0 18px;
+  background:
+    linear-gradient(135deg, transparent 42%, #b9943f 43% 57%, transparent 58%) 0 0 / 22px 18px;
+  clip-path: polygon(0 55%, 8% 55%, 12% 35%, 17% 75%, 22% 45%, 28% 45%, 33% 70%, 38% 30%, 43% 70%, 49% 45%, 55% 45%, 60% 70%, 66% 30%, 71% 70%, 77% 45%, 83% 45%, 88% 70%, 94% 35%, 100% 55%, 100% 100%, 0 100%);
+  background-color: #b9943f;
+  opacity: 0.9;
+}
+
+.lobby-mode-native { display: none !important; }
+
+.lobby-mode-section,
+.lobby-actions {
+  width: 100%;
+}
+
+.lobby-field-heading {
+  display: block;
+  margin: 0 0 8px;
+  color: #c89c43 !important;
+  font-family: "Trebuchet MS", sans-serif !important;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-align: left !important;
+}
+
+.lobby-mode-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.lobby-mode-card {
+  height: 72px;
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  border: 2px solid #526a7c;
+  border-radius: 13px;
+  background: #1a2d43;
+  color: #edf3ef;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.lobby-mode-card strong {
+  font-family: "Rubik", serif;
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.lobby-mode-card span {
+  margin-top: 5px;
+  color: #9bb1b7;
+  font-size: 11px;
+}
+
+.lobby-mode-card.selected {
+  border-color: #dcc76f;
+  background: linear-gradient(145deg, #263a4a, #1b3040);
+  box-shadow: inset 0 0 0 2px rgba(232, 204, 108, 0.16), 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.lobby-mode-card:hover { transform: translateY(-1px); }
+.lobby-mode-card:disabled {
+  cursor: default;
+  opacity: 0.68;
+  transform: none;
+}
+
+.lobby-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.lobby-action-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.lobby-create-button,
+.lobby-join-button,
+.lobby-code-input {
+  width: 100%;
+  height: 74px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  font-family: "Rubik", serif;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.lobby-create-button {
+  border: 0;
+  background: linear-gradient(135deg, #dfb83d, #f3b027);
+  color: #201707;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+}
+
+.lobby-code-input {
+  height: 54px;
+  margin-bottom: 10px;
+  padding: 0 14px;
+  border: 2px solid #d1d4d1;
+  background: #f4f4f0;
+  color: #263746;
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+
+.lobby-code-input::placeholder { color: #75818a; font-size: 13px; }
+
+.lobby-join-button {
+  height: 54px;
+  border: 2px solid #c4a34a;
+  background: transparent;
+  color: #d6b458;
+  cursor: pointer;
+}
+
+.lobby-ranking-button {
+  position: fixed;
+  left: 50%;
+  top: auto;
+  bottom: 12px;
+  z-index: 40;
+  width: 180px;
+  height: 68px;
+  margin: 0;
+  transform: translateX(-50%);
+  background-size: contain;
+}
+
+.lobby-ranking-button:hover {
+  transform: translateX(-50%) scale(1.06);
+}
+
+.lobby-ranking-panel {
+  position: fixed;
+  left: 50%;
+  top: auto;
+  bottom: 86px;
+  z-index: 39;
+  width: min(520px, calc(100vw - 48px));
+  transform: translateX(-50%);
+  max-height: min(280px, 38vh);
+  border: 2px solid #c4a34a;
+  background: rgba(8, 26, 42, 0.97);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.48);
+}
+
+.lobby-preview #lobby-seats,
+.lobby-preview #menu-status {
+  max-width: 100%;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
 @media (max-width: 600px) {
   .menu-container {
     width: calc(100% - 24px);
@@ -352,6 +669,40 @@ canvas {
     left: 4px;
     bottom: 4px;
     width: min(540px, calc(100vw - 8px), 78vh);
+  }
+}
+
+@media (max-width: 700px) {
+  .menu-container.lobby-preview {
+    width: calc(100vw - 24px);
+    height: calc(100vh - 150px);
+    max-height: calc(100vh - 150px);
+    padding: 24px 18px 20px;
+  }
+  .lobby-panel-title { font-size: 21px; }
+  .lobby-mode-cards,
+  .lobby-actions { grid-template-columns: 1fr; gap: 10px; }
+  .lobby-mode-cards { margin-bottom: 14px; }
+  .lobby-create-button,
+  .lobby-code-input,
+  .lobby-join-button { height: 52px; }
+  .lobby-user {
+    top: 10px;
+    right: 86px;
+    min-width: 120px;
+    height: 48px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .lobby-ranking-button {
+    width: 180px;
+    height: 82px;
+    top: auto;
+    bottom: 8px;
+  }
+  .lobby-ranking-panel {
+    top: auto;
+    bottom: 95px;
   }
 }
 

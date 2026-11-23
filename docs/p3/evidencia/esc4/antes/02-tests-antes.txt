@@ -1,0 +1,3 @@
+$ go test -run TestViewFor ./internal/game/
+
+ok  	github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/game	0.006s

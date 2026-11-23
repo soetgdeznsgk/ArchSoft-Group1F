@@ -66,6 +66,35 @@ func TestViewFor(t *testing.T) {
 	expectCode(t, err, CodeUnknownPlayer)
 }
 
+// Escenario 4 (Limited View): el resumen público de los demás jugadores no
+// expone sus cartas. PlayerSummary solo lleva CardCount, nunca la mano.
+// Refuerza a TestViewFor con una aserción directa sobre cada rival.
+func TestViewHidesOtherPlayersCards(t *testing.T) {
+	g, _ := rig(t, stealTable())
+	for _, p := range []PlayerID{"ana", "beto", "caro", "dani"} {
+		v, err := g.ViewFor(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// La mano propia sí viaja; la de los demás, solo como conteo.
+		for _, s := range v.Players {
+			if s.ID != p && s.CardCount < 0 {
+				t.Fatalf("conteo inválido para %s", s.ID)
+			}
+		}
+		raw, err := json.Marshal(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// PlayerSummary no tiene campo de cartas; el único arreglo de cartas
+		// serializado debe ser la mano propia ("hand"). Que no aparezca la
+		// clave de cartas de un resumen ("cards") confirma que no se filtra.
+		if strings.Contains(string(raw), `"cards"`) {
+			t.Fatalf("la vista de %s serializó cartas de un resumen ajeno: %s", p, raw)
+		}
+	}
+}
+
 func TestViewBanksAreCopiesAndDepositFlag(t *testing.T) {
 	g, _ := rig(t, table{turn: 0, hands: [4][]Card{{nc(1, 0), nc(1, 1), nc(1, 2), nc(2, 0)}, {nc(3, 0)}, {nc(4, 0)}, {nc(5, 0)}}, hidden: []Card{nc(6, 0)}})
 	ok(t)(g.LayDown("ana", [][]CardID{ids(nc(1, 0), nc(1, 1), nc(1, 2))}))

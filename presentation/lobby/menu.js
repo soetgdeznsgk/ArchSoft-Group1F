@@ -8,10 +8,18 @@ let errorCharacter;
 let errorGroup;
 let logoHoverAudio;
 let logoHoverAudioTimeout;
+let soundToggle;
+const savedSoundEnabled = localStorage.getItem("bololo.sound-enabled");
+let soundEnabled =
+    savedSoundEnabled === null
+        ? true
+        : savedSoundEnabled.toLowerCase() !== "false";
+const activeAudios = new Set();
 
 function setup() {
     document.getElementById("ssr-shell")?.remove();
     createCanvas(WINDOW_LENGTH, WINDOW_HEIGHT)
+    createSoundToggle();
     enterMenuState()
 
     errorWindow = createSpan("");
@@ -49,6 +57,42 @@ function drawStart() {
     // DOM nodes handle the draw operation, but for escalability's sake this stays
 }
 
+function createSoundToggle() {
+    soundToggle = createButton("");
+    soundToggle.addClass("sound-toggle");
+    soundToggle.attribute("aria-label", soundEnabled ? "Desactivar sonidos" : "Activar sonidos");
+    soundToggle.attribute("aria-pressed", String(!soundEnabled));
+    soundToggle.parent(document.body);
+    soundToggle.mousePressed(toggleSound);
+    updateSoundToggle();
+}
+
+function updateSoundToggle() {
+    soundToggle?.toggleClass("is-muted", !soundEnabled);
+    soundToggle?.attribute("aria-label", soundEnabled ? "Desactivar sonidos" : "Activar sonidos");
+    soundToggle?.attribute("aria-pressed", String(!soundEnabled));
+}
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem("bololo.sound-enabled", String(soundEnabled));
+
+    if (!soundEnabled) {
+        for (const audio of activeAudios) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    }
+
+    updateSoundToggle();
+}
+
+function registerAudio(audio) {
+    activeAudios.add(audio);
+    audio.addEventListener("ended", () => activeAudios.delete(audio), { once: true });
+    return audio;
+}
+
 // State setup behavior
 async function enterMenuState()
 {
@@ -59,10 +103,11 @@ async function enterMenuState()
 
     const logo = createImg('assets/logo.png', "Logo");
     logo.addClass("logo")
-    logoHoverAudio = new Audio("assets/tribu.mp3");
+    logoHoverAudio = registerAudio(new Audio("assets/tribu.mp3"));
     logoHoverAudio.preload = "auto";
     logoHoverAudio.volume = 0.5;
     logo.elt.addEventListener("mouseenter", () => {
+        if (!soundEnabled) return;
         clearTimeout(logoHoverAudioTimeout);
         logoHoverAudio.pause();
         logoHoverAudio.currentTime = 0;
@@ -158,6 +203,7 @@ let currentLobby = null;
 let rankingPanel = null;
 let rankingButton = null;
 let rankingMessageTimeout = null;
+let lobbyModeSelect = null;
 
 async function api(method, path, body) {
   const headers = { "Content-Type": "application/json" };
@@ -225,7 +271,7 @@ async function beginSession(data, options = {}) {
 }
 
 async function playWelcomeSound() {
-  const welcomeAudio = new Audio("assets/welcome.mp3");
+  const welcomeAudio = registerAudio(new Audio("assets/welcome.mp3"));
   welcomeAudio.preload = "auto";
 
   try {
@@ -251,6 +297,7 @@ function showAuthError(message) {
 function enterLobbyPreview() {
   MENUSTATE = "LOBBY_PREVIEW";
   menuContainer.html("");
+  menuContainer.addClass("lobby-preview");
 
   const previousBackButton = document.querySelector(".back-image-button");
   if (previousBackButton) previousBackButton.remove();
@@ -266,22 +313,75 @@ function enterLobbyPreview() {
   });
 
   const title = createSpan(`Hola, ${session.player.nickname}`);
-  title.addClass("section-label");
+  title.addClass("lobby-user");
+  title.parent(document.body);
   // Modo de juego de la sala que se va a crear (quien se une por código no elige: hereda el de la sala).
-  const modeLabel = createSpan("SELECCIONA EL MODO DE JUEGO");
-  modeLabel.addClass("section-label");
+  const modeLabel = createSpan("ELIGE TU MODO DE JUEGO");
+  modeLabel.addClass("lobby-panel-title");
+  const separator = createDiv("");
+  separator.addClass("lobby-title-separator");
   const mode = createSelect();
   mode.id("lobby-mode");
-  mode.addClass("menu-input");
+  lobbyModeSelect = mode;
+  mode.addClass("lobby-mode-native");
+  mode.hide();
   mode.attribute("aria-label", "Modo de juego");
   for (const [value, label] of Object.entries(MODE_LABELS)) mode.option(label, value);
   mode.selected("CLASSIC");
-  mode.changed(() => {
-    if (rankingPanel && rankingPanel.elt.style.display !== "none") loadRanking(mode.value());
-  });
+
+  const modeSection = createDiv("");
+  modeSection.addClass("lobby-mode-section");
+  const modeHeading = createSpan("MODO");
+  modeHeading.addClass("lobby-field-heading");
+  modeSection.child(modeHeading);
+
+  const modeCards = createDiv("");
+  modeCards.addClass("lobby-mode-cards");
+  const classicCard = createButton(
+    '<strong>Clásico</strong><span>4 jugadores</span>'
+  );
+  classicCard.id("classic-mode-card");
+  classicCard.addClass("lobby-mode-card");
+  classicCard.attribute("type", "button");
+  classicCard.elt.innerHTML = "<strong>Clásico</strong><span>4 jugadores</span>";
+  classicCard.mousePressed(() => selectLobbyMode("CLASSIC"));
+
+  const chameleonCard = createButton(
+    '<strong>Camaleón</strong><span>8 colores, sin repetir</span>'
+  );
+  chameleonCard.id("chameleon-mode-card");
+  chameleonCard.addClass("lobby-mode-card");
+  chameleonCard.attribute("type", "button");
+  chameleonCard.elt.innerHTML = "<strong>Camaleón</strong><span>8 colores, sin repetir</span>";
+  chameleonCard.mousePressed(() => selectLobbyMode("CHAMELEON"));
+  modeCards.child(classicCard);
+  modeCards.child(chameleonCard);
+  modeSection.child(modeCards);
+
+  async function selectLobbyMode(nextMode) {
+    mode.selected(nextMode);
+    updateModeCards(nextMode);
+    if (currentLobby && currentLobby.status === "WAITING") {
+      try {
+        const lobby = await api("POST", `/lobbies/${currentLobby.id}/mode`, { mode: nextMode });
+        currentLobby = lobby;
+        renderLobby(lobby);
+        showStatus(`Modo cambiado a ${MODE_LABELS[lobby.mode]}.`);
+      } catch (err) {
+        mode.selected(currentLobby.mode);
+        updateModeCards(currentLobby.mode);
+        showStatus(err.message);
+      }
+    }
+    if (rankingPanel && rankingPanel.elt.style.display !== "none") loadRanking(nextMode);
+  }
+
+  mode.changed(() => selectLobbyMode(mode.value()));
 
   rankingButton = createButton("Ver rankings");
   rankingButton.addClass("ranking-image-button");
+  rankingButton.addClass("lobby-ranking-button");
+  rankingButton.parent(document.body);
   rankingButton.attribute("aria-label", "Ver rankings");
   rankingButton.mousePressed(() => {
     if (rankingPanel.elt.style.display === "none") {
@@ -293,17 +393,36 @@ function enterLobbyPreview() {
   });
 
   const create = createButton("CRéAR SALA");
-  create.addClass("menu-navigation-button");
+  create.addClass("lobby-create-button");
   create.mousePressed(() => joinLobby(() => api("POST", "/lobbies", { mode: mode.value() })));
 
   const code = createInput("");
   code.attribute("placeholder", "CÓDIGO DE SALA");
-  code.addClass("menu-input");
+  code.addClass("lobby-code-input");
   const join = createButton("UNIRSé");
-  join.addClass("menu-navigation-button");
+  join.addClass("lobby-join-button");
   join.mousePressed(() =>
     joinLobby(() => api("POST", "/lobbies/join", { code: BololoMenuUtils.normalizeRoomCode(code.value()) }))
   );
+
+  const actions = createDiv("");
+  actions.addClass("lobby-actions");
+  const newGame = createDiv("");
+  newGame.addClass("lobby-action-column");
+  const newGameHeading = createSpan("NUEVA PARTIDA");
+  newGameHeading.addClass("lobby-field-heading");
+  newGame.child(newGameHeading);
+  newGame.child(create);
+
+  const joinGroup = createDiv("");
+  joinGroup.addClass("lobby-action-column");
+  const joinHeading = createSpan("TENGO UN CóDIGO");
+  joinHeading.addClass("lobby-field-heading");
+  joinGroup.child(joinHeading);
+  joinGroup.child(code);
+  joinGroup.child(join);
+  actions.child(newGame);
+  actions.child(joinGroup);
 
   const seats = createDiv("");
   seats.id("lobby-seats");
@@ -323,11 +442,14 @@ function enterLobbyPreview() {
 
   rankingPanel = createDiv("");
   rankingPanel.addClass("ranking-panel");
+  rankingPanel.addClass("lobby-ranking-panel");
+  rankingPanel.parent(document.body);
   rankingPanel.hide();
 
-  for (const el of [title, modeLabel, mode, create, code, join, rankingButton, rankingPanel, seats, fillBots, start, status]) {
+  for (const el of [modeLabel, separator, mode, modeSection, actions, seats, fillBots, start, status]) {
     menuContainer.child(el);
   }
+  updateModeCards("CLASSIC");
 }
 
 // Ranking del modo clásico que el servidor SSR ya insertó en el HTML (presentation-ssr/src/views.js).
@@ -404,6 +526,13 @@ async function joinLobby(request) {
   }
 }
 
+function updateModeCards(mode) {
+  const classic = document.getElementById("classic-mode-card");
+  const chameleon = document.getElementById("chameleon-mode-card");
+  if (classic) classic.classList.toggle("selected", mode === "CLASSIC");
+  if (chameleon) chameleon.classList.toggle("selected", mode === "CHAMELEON");
+}
+
 function openLobbyEvents(lobbyId) {
   if (lobbyEvents) lobbyEvents.close();
   const source = new EventSource(`/api/lobbies/${lobbyId}/events?token=${encodeURIComponent(session.token)}`);
@@ -426,6 +555,16 @@ function renderLobby(lobby) {
   currentLobby = lobby;
   const names = lobby.players.map((p) => p.nickname).join(", ");
   const modeLabel = MODE_LABELS[lobby.mode] || lobby.mode || MODE_LABELS.CLASSIC;
+  if (lobbyModeSelect) {
+    lobbyModeSelect.selected(lobby.mode);
+    updateModeCards(lobby.mode);
+    const isHost = lobby.players.length > 0 && lobby.players[0].id === session.player.id;
+    lobbyModeSelect.elt.disabled = lobby.status !== "WAITING" || !isHost;
+    const classicCard = document.getElementById("classic-mode-card");
+    const chameleonCard = document.getElementById("chameleon-mode-card");
+    if (classicCard) classicCard.disabled = lobby.status !== "WAITING" || !isHost;
+    if (chameleonCard) chameleonCard.disabled = lobby.status !== "WAITING" || !isHost;
+  }
   select("#lobby-seats").html(
     `Sala ${lobby.code} · ${modeLabel} · ${lobby.playerCount}/${lobby.maxPlayers}: ${names}`
   );

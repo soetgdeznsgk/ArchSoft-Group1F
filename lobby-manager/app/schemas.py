@@ -44,6 +44,10 @@ class CreateLobbyIn(ApiModel):
     )
 
 
+class ChangeLobbyModeIn(ApiModel):
+    mode: GameMode = Field(description="Nuevo modo de la sala: CLASSIC o CHAMELEON.")
+
+
 class Lobby(ApiModel):
     id: str = Field(examples=["l_0c5d8e1f2a3b"])
     code: str = Field(examples=["K7QM2X"])

@@ -1,0 +1,14 @@
+$ go test -v -run 'TestViewHidesOtherPlayersCards|TestWebSocketRejectsTokensFromAnotherGameAndRoster|TestChameleonActionUsesTokenIdentityNotMessage|TestChameleonViewIsPublicByDesign' ./internal/game/ ./internal/server/
+
+=== RUN   TestViewHidesOtherPlayersCards
+--- PASS: TestViewHidesOtherPlayersCards (0.00s)
+PASS
+ok  	github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/game	0.009s
+=== RUN   TestWebSocketRejectsTokensFromAnotherGameAndRoster
+--- PASS: TestWebSocketRejectsTokensFromAnotherGameAndRoster (0.03s)
+=== RUN   TestChameleonActionUsesTokenIdentityNotMessage
+--- PASS: TestChameleonActionUsesTokenIdentityNotMessage (0.03s)
+=== RUN   TestChameleonViewIsPublicByDesign
+--- PASS: TestChameleonViewIsPublicByDesign (0.00s)
+PASS
+ok  	github.com/soetgdeznsgk/ArchSoft-Group1F/game-logic/internal/server	0.177s

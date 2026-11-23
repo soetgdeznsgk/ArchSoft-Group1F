@@ -180,6 +180,30 @@ class LobbyService:
         self._events.publish(lobby_id, "lobby", lobby_event(lobby))
         return lobby
 
+    async def change_lobby_mode(self, player_id: str, lobby_id: str, mode: str) -> Lobby:
+        async with self._pool.acquire() as conn, conn.transaction():
+            row = await conn.fetchrow(
+                "SELECT status, mode FROM lobbies WHERE id = $1 AND status <> 'CLOSED' FOR UPDATE",
+                lobby_id,
+            )
+            if row is None:
+                raise errors.lobby_not_found()
+            if row["status"] != "WAITING":
+                raise errors.lobby_started()
+
+            members = await conn.fetch(
+                "SELECT player_id, seat FROM lobby_players WHERE lobby_id = $1 ORDER BY seat",
+                lobby_id,
+            )
+            if not members or members[0]["player_id"] != player_id:
+                raise errors.only_host_can_change_mode()
+
+            await conn.execute("UPDATE lobbies SET mode = $2 WHERE id = $1", lobby_id, mode)
+            lobby = await self._read_lobby(conn, lobby_id, viewer=player_id)
+
+        self._events.publish(lobby_id, "lobby", lobby_event(lobby))
+        return lobby
+
     async def leave_lobby(self, player_id: str, lobby_id: str) -> None:
         async with self._pool.acquire() as conn, conn.transaction():
             row = await conn.fetchrow("SELECT status FROM lobbies WHERE id = $1 FOR UPDATE", lobby_id)
