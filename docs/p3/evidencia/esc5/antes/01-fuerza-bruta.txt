@@ -1,0 +1,6 @@
+# Relleno de credenciales: 100 logins seguidos con usuarios distintos, desde la red public.
+# Cada usuario existe una sola vez, así que el bloqueo por cuenta de auth (5 fallos) nunca salta.
+
+$ $ATTACKER bash -c 'for i in $(seq 1 100); do curl -s -o /dev/null $C -w "%{http_code}\n" -X POST https://localhost/auth/login -H "Content-Type: application/json" -d "{\"username\":\"rl_${RANDOM}_$i\",\"password\":\"incorrecta-123\"}"; done | sort | uniq -c'
+    100 401
+

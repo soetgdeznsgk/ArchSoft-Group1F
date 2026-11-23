@@ -507,6 +507,54 @@ check "postgres acepta la contrasena de .env" "1" \
 check "postgres rechaza otra contrasena" ".*password authentication failed.*" \
   "$(docker compose exec -T postgres sh -c 'PGPASSWORD=incorrecta psql -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select 1"' 2>&1 | tr -d '\r' | tail -1)"
 
+section "Rate Limiting (escenario 5)"
+# Va al final: si algo agota un cupo, que no sea antes de las demás pruebas.
+# El atacante corre en un contenedor de la red public, con IP propia (el host le llega al
+# proxy con la IP del gateway de Docker). Así gasta su cupo y no el del host, y e2e.sh se
+# puede repetir enseguida.
+if [[ "$BASE_URL" != https://* ]]; then
+  skip "rate limiting" "BASE_URL no es https"
+else
+  bash scripts/bench-image.sh
+  PUBLIC_NET=$(networks_of reverse-proxy | tr ' ' '\n' | grep '_public$')
+  HOST_DIR=$(pwd -W 2>/dev/null || pwd)
+  attacker() {
+    docker run --rm -i --network "$PUBLIC_NET" -v "$HOST_DIR:/w" -w /w -e BASE_URL \
+      -e "C=--cacert $CA_CERT --connect-to $TLS_NAME:$TLS_PORT:reverse-proxy:443" bololo-bench:curl bash -c "$1" </dev/null
+  }
+  export BASE_URL
+  check "RATE_LIMIT activo en el proxy" "on" "$(docker compose exec -T reverse-proxy printenv RATE_LIMIT | tr -d '\r')"
+  codes=$(attacker 'for i in $(seq 1 40); do curl -s -o /dev/null $C -w "%{http_code}\n" -X POST "$BASE_URL/auth/login" -H "Content-Type: application/json" -d "{\"username\":\"rl_${RANDOM}_$i\",\"password\":\"incorrecta-123\"}"; done')
+  n401=$(grep -c '^401$' <<<"$codes")
+  n429=$(grep -c '^429$' <<<"$codes")
+  check "40 logins con usuarios distintos: todos 401 o 429" "40" "$((n401 + n429))"
+  check "los primeros llegan a auth (401)" "[1-9][0-9]*" "$n401"
+  check "a auth llegan a lo sumo 1 + burst (20) y lo que se recarga" "([1-9]|1[0-9]|2[0-5])" "$n401"
+  check "luego el proxy responde 429" "[1-9][0-9]*" "$n429"
+  res=$(attacker 'curl -s -i $C -X POST "$BASE_URL/auth/login" -H "Content-Type: application/json" -d "{\"username\":\"rl_x\",\"password\":\"x\"}"' | tr -d '\r')
+  check "el 429 es del proxy (rate_limited, no too_many_attempts de auth)" "429 1" \
+    "$(awk '/^HTTP\//{print $2; exit}' <<<"$res") $(grep -c '"error":"rate_limited"' <<<"$res")"
+  check "el 429 trae Retry-After" "10" "$(awk 'tolower($1)=="retry-after:"{print $2}' <<<"$res")"
+  check "el 429 trae las cabeceras seguras" "4" \
+    "$(grep -ciE '^(strict-transport-security|x-content-type-options|x-frame-options|referrer-policy):' <<<"$res")"
+  sleep 1
+  check "el 429 no llega al gateway (upstream_status vacio)" '.*"upstream_status":"".*' \
+    "$(docker compose logs --no-log-prefix reverse-proxy 2>&1 | grep '"status":429' | tail -1)"
+  # limit_conn: 110 SSE abiertos a ~16 por segundo (debajo del limite de tasa de /api/) en una sala propia.
+  RL_LOBBY=$(body_of "$(api POST /lobbies "$extra")" | grep -o '"id":"l_[^"]*"' | cut -d'"' -f4)
+  codes=$(attacker 'for i in $(seq 1 110); do curl -s -N -o /dev/null -w "%{http_code}\n" --max-time 15 $C "$BASE_URL/api/lobbies/'"$RL_LOBBY"'/events?token='"$extra"'" & sleep 0.06; done; wait')
+  api POST "/lobbies/$RL_LOBBY/leave" "$extra" >/dev/null
+  check "110 SSE desde una IP: todos 200 o 429" "110" "$(($(grep -c '^200$' <<<"$codes") + $(grep -c '^429$' <<<"$codes")))"
+  check "limit_conn corta los que pasan de 100 conexiones" "([1-9]|1[0-5])" "$(grep -c '^429$' <<<"$codes")"
+  codes=$(attacker 'args=(); for i in $(seq 1 300); do args+=(-o /dev/null "$BASE_URL/api/ratings/leaderboard?mode=CLASSIC&limit=1&n=$i"); done; curl -s $C --parallel --parallel-max 50 -w "%{http_code}\n" "${args[@]}"')
+  check "inundacion de /api/ (300 en paralelo): el proxy responde 429" "[1-9][0-9]*" "$(grep -c '^429$' <<<"$codes")"
+  check "con el atacante frenado, el host recibe 200 en la API" "200" \
+    "$(http_code "$BASE_URL/api/ratings/leaderboard?mode=CLASSIC&limit=1")"
+  check "con el atacante frenado, el host crea una sesion" "201" "$(status_of "$(guest Despues)")"
+  check "las paginas no tienen limite: el atacante carga /menu/" "200" \
+    "$(attacker 'curl -s -o /dev/null $C -w "%{http_code}" "$BASE_URL/menu/"')"
+fi
+
 section "Resumen"
 printf '  %d OK, %d fallas, %d omitidas\n' "$PASS" "$FAIL" "$SKIP"
 

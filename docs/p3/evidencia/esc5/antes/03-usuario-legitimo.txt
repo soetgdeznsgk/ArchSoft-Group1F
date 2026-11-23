@@ -1,0 +1,13 @@
+# Usuario legítimo (el host): una petición al leaderboard cada 0,1 s durante 20 s.
+
+## A. Sin ataque (línea base)
+  200: 82 respuestas
+  latencia (ms): mediana 39.2 · p95 52.5 · p99 73.4 · max 98.7 (n=82)
+
+## B. Mientras el contenedor atacante inunda la API
+  200: 59 respuestas
+  latencia (ms): mediana 117.8 · p95 210.8 · p99 281.2 · max 604.8 (n=59)
+
+## Lo que recibió el atacante en ese mismo intervalo
+  200: 9000 respuestas
+  total: 9000 en ~20 s (450 peticiones/s)

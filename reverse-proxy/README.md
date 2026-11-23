@@ -7,8 +7,9 @@
 | [`nginx.conf`](nginx.conf) | Configuración global: límites de tamaño y de tiempo, `server_tokens off` y log JSON sin *query string* |
 | [`templates/bololo.conf.template`](templates/bololo.conf.template) | Servidores: redirección del 80, canal seguro en el 443, lista de rutas permitidas y salud interna |
 | [`proxy-headers.conf`](proxy-headers.conf) | Cabeceras que se envían al gateway; se incluye en cada ruta |
+| [`security-headers.conf`](security-headers.conf) | Cabeceras seguras de todas las respuestas; se incluye en el `server` y en el `429` del límite de tasa |
 
-La imagen oficial (`nginx:1.30.5-alpine`) convierte la plantilla en `/etc/nginx/conf.d/bololo.conf` al arrancar. Solo sustituye `HSTS_MAX_AGE` (`NGINX_ENVSUBST_FILTER`); las variables de Nginx, como `$host`, quedan intactas.
+La imagen oficial (`nginx:1.30.5-alpine`) convierte la plantilla en `/etc/nginx/conf.d/bololo.conf` al arrancar. Solo sustituye `HSTS_MAX_AGE` y `RATE_LIMIT` (`NGINX_ENVSUBST_FILTER`); las variables de Nginx, como `$host`, quedan intactas.
 
 ## Rutas permitidas
 
@@ -17,7 +18,8 @@ La imagen oficial (`nginx:1.30.5-alpine`) convierte la plantilla en `/etc/nginx/
 | `/` (exacta) | Gateway → `frontend`, que redirige a `/menu/` |
 | `/menu`, `/ingame`, `/chameleon` | `301` a la misma ruta con barra final |
 | `/menu/`, `/ingame/`, `/chameleon/`, `/libraries/` | Gateway → `frontend` |
-| `/auth/` | Gateway → `auth` |
+| `/auth/login`, `/auth/register`, `/auth/password` | Gateway → `auth`, con el límite de tasa estricto |
+| `/auth/` (resto) | Gateway → `auth` |
 | `/api/` (REST y SSE) | Gateway → `lobby-manager`, `bot-service` o `ratings-service` según el prefijo |
 | `/ws/games/` (WebSocket) | Gateway → `game-logic`. Única ruta que reenvía `Upgrade` |
 | Cualquier otra | `404` con `{"error":"not_found"}`, sin llegar al gateway |
@@ -42,6 +44,28 @@ Agregar una ruta pública exige dos cambios: el label del servicio en `docker-co
 | Recibir cabeceras y cuerpo | 10 s | Corta clientes que envían muy despacio |
 | Respuesta del gateway | 30 s; 75 s en `/api/` y `/ws/games/` | El SSE manda un *ping* cada 15 s y el WebSocket cada 25 s |
 | Conexiones por worker | 4096 (`worker_rlimit_nofile` y `ulimits.nofile` en 16384), con `reuseport` en 80 y 443 | Cada petición en curso ocupa dos conexiones (cliente y gateway). Con 1024, el Lab 6 falló en el proxy con 2000 usuarios; `reuseport` reparte las conexiones parejo entre los workers |
+
+## Límite de tasa por IP (escenario 5)
+
+Ver [`docs/p3/esc5.md`](../docs/p3/esc5.md). Se cuenta por IP del cliente (`$binary_remote_addr`) con `limit_req` (algoritmo *leaky bucket*) y `limit_conn`.
+
+| Zona | Rutas | Tasa | Ráfaga | Para qué |
+|---|---|---|---|---|
+| `auth_cred` | `/auth/login`, `/auth/register`, `/auth/password` | 10 por minuto | 20 | Relleno de credenciales con muchos usuarios. El bloqueo por cuenta de `auth` no lo frena |
+| `auth` | resto de `/auth/` (`guest`, `me`) | 30 por minuto | 30 | Inundación de sesiones de invitado |
+| `api` | `/api/` | 20 por segundo | 40 | Inundación de la API (`ratings-service` es el cuello de botella) |
+| `perip` (`limit_conn`) | `/api/` y `/ws/games/` | 100 conexiones simultáneas | — | SSE y WebSocket cuentan como una sola petición cada uno; esto evita que una IP retenga miles |
+
+- Las páginas y los archivos estáticos (`/menu/`, `/libraries/`…) no tienen límite.
+- `nodelay`: dentro de la ráfaga se atiende sin esperar; lo que la pasa recibe `429` de inmediato.
+- **Respuesta:** `429` con `{"error":"rate_limited","message":"…"}`, `Retry-After: 10` y las cabeceras seguras. No llega al gateway: en el log de acceso aparece con `"upstream_status":""`. El menú muestra el `message`. El código `rate_limited` lo distingue del `429 too_many_attempts` de `auth` (bloqueo de una cuenta).
+- **Desactivarlo para una prueba de carga** (k6 sale de una sola IP):
+  ```bash
+  RATE_LIMIT=off docker compose up -d reverse-proxy   # sin límite
+  docker compose up -d reverse-proxy                  # de vuelta a on
+  ```
+  Con `off` la clave queda vacía y Nginx no cuenta la petición. Recrear el contenedor también reinicia los contadores.
+- **Docker Desktop:** el proxy ve todo lo que llega por el puerto publicado con la IP del gateway de la red `public` (`172.20.0.1`), no con la del navegador. En desarrollo el límite es por máquina; en un host Linux con IP pública es por cliente.
 
 ## Aislamiento
 

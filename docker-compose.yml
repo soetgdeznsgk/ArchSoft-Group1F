@@ -21,13 +21,17 @@ services:
         hard: 16384
     environment:
       HSTS_MAX_AGE: ${HSTS_MAX_AGE:-300}
-      NGINX_ENVSUBST_FILTER: ^HSTS_MAX_AGE
+      # Límite de tasa por IP (escenario 5). off solo para pruebas de carga desde una sola IP:
+      # RATE_LIMIT=off docker compose up -d reverse-proxy
+      RATE_LIMIT: ${RATE_LIMIT:-on}
+      NGINX_ENVSUBST_FILTER: ^(HSTS_MAX_AGE|RATE_LIMIT)$
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./reverse-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./reverse-proxy/proxy-headers.conf:/etc/nginx/snippets/proxy-headers.conf:ro
+      - ./reverse-proxy/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
       - ./reverse-proxy/templates:/etc/nginx/templates:ro
       - ./api-gateway/certs:/certs:ro
     tmpfs:
