@@ -1,0 +1,1 @@
+{"time":"2026-11-23T02:56:38+00:00","client":"172.20.0.1","method":"POST","path":"/auth/register","status":404,"bytes":19,"duration_s":0.000,"upstream_status":"404"}

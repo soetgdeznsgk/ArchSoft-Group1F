@@ -1,0 +1,146 @@
+{
+    "metrics": {
+        "iteration_duration": {
+            "med": 1004.2948,
+            "max": 1101.1048,
+            "p(90)": 1006.62764,
+            "p(95)": 1009.1474,
+            "p(99)": 1018.670788,
+            "avg": 1004.918518514132,
+            "min": 1000.7373
+        },
+        "http_req_connecting": {
+            "max": 47.4285,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0.5468100000000014,
+            "avg": 0.015022176250023084,
+            "min": 0,
+            "med": 0
+        },
+        "vus": {
+            "value": 492,
+            "min": 21,
+            "max": 800
+        },
+        "http_req_sending": {
+            "p(90)": 0.5109,
+            "p(95)": 0.5681099999999999,
+            "p(99)": 1.3945580000000024,
+            "avg": 0.11813127135706276,
+            "min": 0,
+            "med": 0,
+            "max": 88.1318
+        },
+        "http_req_receiving": {
+            "p(99)": 2.012526000000006,
+            "avg": 0.18058301778754635,
+            "min": 0,
+            "med": 0,
+            "max": 36.2672,
+            "p(90)": 0.5866,
+            "p(95)": 0.9994
+        },
+        "http_req_failed": {
+            "passes": 1,
+            "fails": 54138,
+            "value": 0.00001847097286614086
+        },
+        "http_req_blocked": {
+            "avg": 0.11131010916344972,
+            "min": 0,
+            "med": 0,
+            "max": 67.9934,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 5.929876000000013
+        },
+        "iterations": {
+            "rate": 707.6178215761915,
+            "count": 54137
+        },
+        "http_req_duration": {
+            "p(90)": 5.1808,
+            "p(95)": 6.384969999999999,
+            "p(99)": 16.10809200000015,
+            "avg": 4.010981133748262,
+            "min": 0.5055,
+            "med": 3.5721,
+            "max": 233.554
+        },
+        "http_req_waiting": {
+            "med": 3.3404,
+            "max": 233.0101,
+            "p(90)": 4.8442,
+            "p(95)": 5.795609999999997,
+            "p(99)": 14.085712000000033,
+            "avg": 3.7122668446036604,
+            "min": 0
+        },
+        "data_sent": {
+            "count": 3812761,
+            "rate": 49836.11269576559
+        },
+        "http_reqs": {
+            "rate": 707.6439633210823,
+            "count": 54139
+        },
+        "data_received": {
+            "count": 20858160,
+            "rate": 272634.3488055795
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 0.5055,
+            "med": 3.5721,
+            "max": 229.3541,
+            "p(90)": 5.1807300000000005,
+            "p(95)": 6.384219999999996,
+            "p(99)": 16.05198399999985,
+            "avg": 4.0067411725589634
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "p(99)": 4.920498000000007,
+            "avg": 0.09268712757900964,
+            "min": 0,
+            "med": 0,
+            "max": 66.9923,
+            "p(90)": 0
+        },
+        "checks": {
+            "passes": 108274,
+            "fails": 0,
+            "value": 1
+        },
+        "vus_max": {
+            "value": 800,
+            "min": 800,
+            "max": 800
+        }
+    },
+    "setup_data": {
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJuaWNrbmFtZSI6InBlcmYtbWUiLCJzdWIiOiJwXzY1ZmI4NTc3ZDE4MzRjZjRhNWNkYmQ4MGJjZWMyNzAzIiwiYWNjb3VudElkIjoiNjVmYjg1NzctZDE4My00Y2Y0LWE1Y2QtYmQ4MGJjZWMyNzAzIiwiZXhwIjoxNzk1NDQzNTk5LCJpYXQiOjE3OTU0MDAzOTksInNjb3BlIjoic2Vzc2lvbiJ9.ESpYqeEnv56JQpQPrllAX-nWHExT4z7v60tRup01Q-M_xF7MjXjTM2UAk_O2XD-OEH1ACZRv7uy6toEoI32KJDMWouK00IHuQ8bg8Y-IN-j77VgdB-XmdpqQd83x3KTbAqkSPZCL14G8ooLWrsK9qFENzxDgNRLxYbvCtZRMYgtMhgZkR9btc3Y57mg_TjAtY87lxylwIXuBkjQ6Nya0mZ3WyNFeYmJrLRH3JjAU__bqTbZu37xTgLEEwSvai_9itLZxy3IHT-xEnkpRG4XTojUaeHoBx-4h_ABjwOMLnVBnZ9wCzrK1Hcwh0rGsrE3aXR-_g_Yk6ckX5QPdBvy4cQ"
+    },
+    "root_group": {
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "me status 200": {
+                "name": "me status 200",
+                "path": "::me status 200",
+                "id": "f66e4f179f3edcebba3fcf9c8c70e57e",
+                "passes": 54137,
+                "fails": 0
+            },
+            "me trae username": {
+                "name": "me trae username",
+                "path": "::me trae username",
+                "id": "8483119e54bd90ee24b1476af1f16fab",
+                "passes": 54137,
+                "fails": 0
+            }
+        },
+        "name": ""
+    }
+}

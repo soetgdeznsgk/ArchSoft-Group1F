@@ -1,0 +1,2 @@
+ElapsedSeconds=0
+K6ExitCode=107

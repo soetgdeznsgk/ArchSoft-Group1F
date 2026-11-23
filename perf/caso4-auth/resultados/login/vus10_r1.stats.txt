@@ -1,0 +1,55 @@
+--- 2026-11-22T21:03:44.2445063-05:00
+bololo-integrado-auth-1 cpu=21.76% mem=805.8MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.07% mem=38.88MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=3.76% mem=61.68MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=0.24% mem=295.1MiB / 6.72GiB
+--- 2026-11-22T21:03:51.4166690-05:00
+bololo-integrado-auth-1 cpu=91.28% mem=805.5MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.29% mem=38.77MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=0.28% mem=61.54MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=0.69% mem=295.1MiB / 6.72GiB
+--- 2026-11-22T21:03:58.5493471-05:00
+bololo-integrado-auth-1 cpu=214.92% mem=805.5MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.80% mem=38.75MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=0.67% mem=61.29MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=1.39% mem=294.8MiB / 6.72GiB
+--- 2026-11-22T21:04:05.4492186-05:00
+bololo-integrado-auth-1 cpu=184.98% mem=805.5MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.57% mem=38.75MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=0.65% mem=61.57MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=1.20% mem=295.2MiB / 6.72GiB
+--- 2026-11-22T21:04:12.5929574-05:00
+bololo-integrado-auth-1 cpu=180.21% mem=805.6MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=3.26% mem=38.78MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=2.11% mem=61.08MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=1.09% mem=295.6MiB / 6.72GiB
+--- 2026-11-22T21:04:19.7202702-05:00
+bololo-integrado-auth-1 cpu=175.20% mem=805.5MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.55% mem=38.88MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=0.55% mem=61.12MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=1.22% mem=295.7MiB / 6.72GiB
+--- 2026-11-22T21:04:26.8551047-05:00
+bololo-integrado-auth-1 cpu=186.20% mem=805.9MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.60% mem=39.27MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=0.63% mem=61.11MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=1.20% mem=295.3MiB / 6.72GiB
+--- 2026-11-22T21:04:33.4722885-05:00
+bololo-integrado-auth-1 cpu=179.18% mem=806.3MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.68% mem=38.95MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=0.62% mem=61.04MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=9.18% mem=295.7MiB / 6.72GiB
+--- 2026-11-22T21:04:40.6017912-05:00
+bololo-integrado-auth-1 cpu=176.33% mem=806MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.59% mem=39.17MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=0.52% mem=61.1MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=1.17% mem=295.6MiB / 6.72GiB
+--- 2026-11-22T21:04:47.7274010-05:00
+bololo-integrado-auth-1 cpu=177.01% mem=806.1MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=0.63% mem=38.66MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=0.64% mem=60.61MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=1.35% mem=146.2MiB / 6.72GiB
+--- 2026-11-22T21:04:54.4951826-05:00
+bololo-integrado-auth-1 cpu=185.25% mem=806.2MiB / 6.72GiB
+bololo-integrado-reverse-proxy-1 cpu=3.68% mem=38.78MiB / 6.72GiB
+bololo-integrado-auth-postgres-1 cpu=5.17% mem=61.07MiB / 6.72GiB
+bololo-integrado-traefik-1 cpu=1.39% mem=146.5MiB / 6.72GiB

@@ -5,7 +5,7 @@
 | Atributo de calidad | Rendimiento (tiempo de respuesta y throughput) y escalabilidad |
 | Herramienta | k6 v2.3.0 (casos 1 y 2) y un publicador AMQP propio (caso 3) |
 | Criterio de la rodilla | **El nivel de carga más bajo en el que aparece el primer error**, refinado entre el último nivel sin errores y el primero con errores, con 3 corridas en los niveles decisivos |
-| Detalle por caso | [Caso 1 · API del ranking](performance/caso1-ranking.md) · [Caso 2 · Menú SSR](performance/caso2-menu.md) · [Caso 3 · Cola de resultados](performance/caso3-cola.md) |
+| Detalle por caso | [Caso 1 · API del ranking](performance/caso1-ranking.md) · [Caso 2 · Menú SSR](performance/caso2-menu.md) · [Caso 3 · Cola de resultados](performance/caso3-cola.md) · [Caso 4 · Autenticación](performance/caso4-auth.md) |
 | Scripts y datos crudos | [`perf/`](../../perf/) |
 
 **En una frase:** con un tiempo de respuesta p95 por debajo de 250 ms, Bololó atiende ≈ 200 usuarios concurrentes. Los primeros errores aparecen con **950 usuarios en el menú** y **2000 en la API del ranking**. El primer cuello de botella es un servicio de un solo proceso: `ratings-service` y, para el menú, el `frontend`.
@@ -35,6 +35,7 @@ Se midieron tres funcionalidades por separado, para que cada curva tenga un solo
 | 1 | Consultar el ranking (`GET /api/ratings/leaderboard`) | proxy → gateway → `ratings-service` → PostgreSQL | Usuarios concurrentes | Sin respuesta en 60 s, `4xx` o `5xx` |
 | 2 | Cargar el menú (`GET /menu/`, SSR) | proxy → gateway → `frontend` → `ratings-service` → PostgreSQL | Usuarios concurrentes | Igual que el caso 1. Un menú sin ranking **no** es error, se cuenta aparte como "degradado" |
 | 3 | Procesar el resultado de una partida | RabbitMQ → consumidor de `ratings-service` → PostgreSQL | Partidas terminadas por segundo | Resultado perdido, descartado o que tarda más de 60 s en llegar al ranking |
+| 4 | Operaciones de autenticación | proxy → gateway → `auth-service` → PostgreSQL / claves RSA | Usuarios concurrentes | Timeout, estado inesperado o token inválido |
 
 El flujo completo de una partida (sesión, sala, bots, WebSocket) no se estresó porque el lobby admite **como máximo 10 salas activas** (`max_lobbies = 10`, regla del reglamento). Con 40 jugadores el flujo rechaza por regla de negocio, no por falta de capacidad (ver §6).
 

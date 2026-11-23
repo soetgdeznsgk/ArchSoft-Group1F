@@ -12,7 +12,7 @@ from collections import Counter, defaultdict
 CAMPOS = [
     "modo", "vus", "rep", "peticiones", "pet_s", "error_pct", "sin_respuesta", "e4xx", "e5xx", "cuerpo",
     "avg_ms", "med_ms", "p90_ms", "p95_ms", "p99_ms", "max_ms",
-    "cpu_max_ratings", "cpu_max_proxy", "cpu_max_traefik", "cpu_max_pg", "mem_max_proxy_mib",
+    "cpu_max_ratings", "cpu_max_auth", "cpu_max_proxy", "cpu_max_traefik", "cpu_max_pg", "cpu_max_auth_pg", "mem_max_proxy_mib",
     "nginx_estados", "k6_rss_mib", "reinicios", "degradadas", "cpu_max_frontend",
 ]
 
@@ -55,14 +55,26 @@ def main():
     csv_path, modo, vus, rep, segundos, summary, stats, nginx, tiempo = sys.argv[1:10]
     reinicios = os.environ.get("REINICIOS", "")
     m = json.load(open(summary, encoding="utf-8"))["metrics"]
-    dur = metrica(m, "http_req_duration")
+    dur = m.get("http_req_duration", {})
     fallos = metrica(m, "http_req_failed")
-    reqs = metrica(m, "http_reqs").get("count", 0)
+    if "value" in fallos:
+        error_pct = 100 * fallos["value"]
+    else:
+        pass_count = fallos.get("passes", 0)
+        fail_count = fallos.get("fails", 0)
+        total = pass_count + fail_count
+        error_pct = 100 * fail_count / total if total else 0
+    sin_respuesta = metrica(m, "errores_sin_respuesta").get("count", 0)
+    e4xx = metrica(m, "errores_4xx").get("count", 0)
+    e5xx = metrica(m, "errores_5xx").get("count", 0)
+    if not error_pct and (sin_respuesta or e4xx or e5xx):
+        error_pct = 100 * (sin_respuesta + e4xx + e5xx) / max(reqs, 1)
+    reqs = m.get("http_reqs", {}).get("count", 0)
     cpu, mem = cpu_max(stats)
     fila = {
         "modo": modo, "vus": vus, "rep": rep, "peticiones": reqs,
         "pet_s": f"{reqs / float(segundos):.1f}",
-        "error_pct": f"{100 * fallos.get('value', 0):.3f}",
+        "error_pct": f"{error_pct:.3f}",
         "sin_respuesta": metrica(m, "errores_sin_respuesta").get("count", 0),
         "e4xx": metrica(m, "errores_4xx").get("count", 0),
         "e5xx": metrica(m, "errores_5xx").get("count", 0),
@@ -71,9 +83,11 @@ def main():
         "p90_ms": f"{dur.get('p(90)', 0):.1f}", "p95_ms": f"{dur.get('p(95)', 0):.1f}",
         "p99_ms": f"{dur.get('p(99)', 0):.1f}", "max_ms": f"{dur.get('max', 0):.1f}",
         "cpu_max_ratings": f"{cpu.get('ratings-service', 0):.1f}",
+        "cpu_max_auth": f"{cpu.get('auth', 0):.1f}",
         "cpu_max_proxy": f"{cpu.get('reverse-proxy', 0):.1f}",
         "cpu_max_traefik": f"{cpu.get('traefik', 0):.1f}",
         "cpu_max_pg": f"{cpu.get('ratings-postgres', 0):.1f}",
+        "cpu_max_auth_pg": f"{cpu.get('auth-postgres', 0):.1f}",
         "mem_max_proxy_mib": f"{mem.get('reverse-proxy', 0):.1f}",
         "nginx_estados": estados_nginx(nginx),
         "k6_rss_mib": rss_k6(tiempo),
@@ -87,7 +101,7 @@ def main():
         if nuevo:
             w.writeheader()
         w.writerow(fila)
-    print("  " + "  ".join(f"{k}={fila[k]}" for k in ("vus", "rep", "pet_s", "error_pct", "degradadas", "avg_ms", "p95_ms", "cpu_max_ratings", "cpu_max_frontend", "nginx_estados", "k6_rss_mib")))
+    print("  " + "  ".join(f"{k}={fila[k]}" for k in ("vus", "rep", "pet_s", "error_pct", "degradadas", "avg_ms", "p95_ms", "cpu_max_ratings", "cpu_max_auth", "cpu_max_auth_pg", "cpu_max_frontend", "nginx_estados", "k6_rss_mib")))
 
 
 if __name__ == "__main__":

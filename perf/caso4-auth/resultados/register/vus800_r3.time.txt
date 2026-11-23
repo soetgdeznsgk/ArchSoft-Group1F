@@ -1,0 +1,2 @@
+ElapsedSeconds=94
+K6ExitCode=0

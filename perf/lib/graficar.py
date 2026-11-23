@@ -41,7 +41,8 @@ def resumir(filas):
             "pet_s": med("pet_s"), "err": med("error_pct"),
             "cpu_ratings": med("cpu_max_ratings"), "cpu_proxy": med("cpu_max_proxy"),
             "cpu_traefik": med("cpu_max_traefik"), "cpu_pg": med("cpu_max_pg"),
-            "cpu_frontend": med("cpu_max_frontend"), "deg": deg,
+            "cpu_frontend": med("cpu_max_frontend"), "cpu_auth": med("cpu_max_auth"),
+            "cpu_auth_pg": med("cpu_max_auth_pg"), "deg": deg,
         })
     return datos
 
@@ -109,6 +110,10 @@ def main():
     fig, ax = plt.subplots(figsize=(9.5, 5.2))
     series = [("cpu_ratings", AZUL, "ratings-service"), ("cpu_proxy", NARANJA, "reverse-proxy (Nginx)"),
               ("cpu_traefik", MORADO, "traefik"), ("cpu_pg", VERDE, "ratings-postgres")]
+    if any(r["cpu_auth"] for r in d):
+        series.append(("cpu_auth", ROJO, "auth"))
+    if any(r["cpu_auth_pg"] for r in d):
+        series.append(("cpu_auth_pg", MORADO, "auth-postgres"))
     if any(r["cpu_frontend"] for r in d):
         series.insert(0, ("cpu_frontend", ROJO, "frontend (Node SSR)"))
     for k, c, nombre in series:
