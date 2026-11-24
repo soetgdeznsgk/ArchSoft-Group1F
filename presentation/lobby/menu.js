@@ -171,7 +171,7 @@ async function enterMenuState()
 // Username validation
 function validateGuestname(nameToCheck)
 {
-    const nickname = nameToCheck.trim();
+    const nickname = BololoMenuUtils.normalizeGuestName(nameToCheck);
     if (!nickname) {
         showAuthError("Ingresa un nombre válido.");
         return;
@@ -241,26 +241,13 @@ async function connectSession(nickname) {
 }
 
 async function authenticate(action, username, password) {
-  const normalizedUsername = username.trim();
-  if (!/^[A-Za-z0-9_.-]+$/.test(normalizedUsername)) {
-    showAuthError("USERNAMé debe estar escrito usando letras, números, punto, guion o guion bajo.");
-    return;
-  }
-  if (normalizedUsername.length < 3 || normalizedUsername.length > 20) {
-    showAuthError("USERNAMé debe tener entre 3 y 20 carácteres");
-    return
-  }
-  const passwordBytes = new TextEncoder().encode(password).length;
-  if (passwordBytes < 8) {
-    showAuthError("La contraseña debe tener al menos 8 caracteres");
-    return;
-  }
-  if (passwordBytes > 72) {
-    showAuthError("La contraseña es demasiado larga");
+  const validation = BololoMenuUtils.validateCredentials(username, password);
+  if (!validation.ok) {
+    showAuthError(validation.error);
     return;
   }
   try {
-    const data = await authRequest(action, { username: normalizedUsername, password });
+    const data = await authRequest(action, { username: validation.username, password });
     await beginSession(data);
   } catch (err) {
     showAuthError("Servidor :" + err.message);
@@ -415,7 +402,7 @@ function enterLobbyPreview() {
   const join = createButton("UNIRSé");
   join.addClass("lobby-join-button");
   join.mousePressed(() =>
-    joinLobby(() => api("POST", "/lobbies/join", { code: code.value().trim().toUpperCase() }))
+    joinLobby(() => api("POST", "/lobbies/join", { code: BololoMenuUtils.normalizeRoomCode(code.value()) }))
   );
 
   const actions = createDiv("");
@@ -548,10 +535,20 @@ function updateModeCards(mode) {
 
 function openLobbyEvents(lobbyId) {
   if (lobbyEvents) lobbyEvents.close();
-  lobbyEvents = new EventSource(`/api/lobbies/${lobbyId}/events?token=${encodeURIComponent(session.token)}`);
-  lobbyEvents.addEventListener("lobby", (e) => renderLobby(JSON.parse(e.data)));
-  lobbyEvents.addEventListener("game_starting", (e) => goToGame(JSON.parse(e.data)));
-  lobbyEvents.addEventListener("lobby_closed", () => showStatus("La sala se cerró."));
+  const source = new EventSource(`/api/lobbies/${lobbyId}/events?token=${encodeURIComponent(session.token)}`);
+  lobbyEvents = source;
+  source.addEventListener("lobby", (e) => renderLobby(JSON.parse(e.data)));
+  source.addEventListener("game_starting", (e) => goToGame(JSON.parse(e.data)));
+  source.addEventListener("lobby_closed", () => {
+    source.close();
+    showStatus("La sala se cerró.");
+  });
+  // EventSource no reintenta tras una respuesta HTTP de error (por ejemplo, el 429 del límite de tasa).
+  source.onerror = () => {
+    if (source.readyState === EventSource.CLOSED) {
+      setTimeout(() => lobbyEvents === source && openLobbyEvents(lobbyId), 10000);
+    }
+  };
 }
 
 function renderLobby(lobby) {

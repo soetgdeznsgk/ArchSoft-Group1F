@@ -1,0 +1,115 @@
+time="2026-11-22T14:35:35-05:00" level=warning msg="Request Failed" error="stream error: stream ID 15; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:35-05:00" level=warning msg="Request Failed" error="stream error: stream ID 15; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:35-05:00" level=warning msg="Request Failed" error="stream error: stream ID 9; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:35-05:00" level=warning msg="Request Failed" error="stream error: stream ID 21; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 21; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 15; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 13; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 23; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 15; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 19; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 13; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 19; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 13; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 19; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 27; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 19; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 13; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 21; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 13; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 27; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 23; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 11; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 9; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 21; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 19; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 21; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 19; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 15; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 17; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 11; INTERNAL_ERROR; received from peer"
+time="2026-11-22T14:35:36-05:00" level=warning msg="Request Failed" error="stream error: stream ID 19; INTERNAL_ERROR; received from peer"
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=831
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=39
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=50.05s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=10.82%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=8035
+
+    paginas_completas{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    paginas_degradadas{fase:sostenida}
+    ✓ 'count>=0' count=7165
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 10591  100.822164/s
+    checks_succeeded...: 91.64% 9706 out of 10591
+    checks_failed......: 8.35%  885 out of 10591
+
+    ✗ status 200
+      ↳  91% — ✓ 9706 / ✗ 885
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 846    8.053588/s
+      { fase:sostenida }...........: 831    7.910794/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 39     0.371265/s
+      { fase:sostenida }...........: 39     0.371265/s
+    paginas_completas..............: 339    3.227147/s
+      { fase:sostenida }...........: 0      0/s
+    paginas_degradadas.............: 9367   89.170164/s
+      { fase:sostenida }...........: 7165   68.207988/s
+
+    HTTP
+    http_req_duration..............: avg=7.4s  min=11.63ms med=3.35s max=50.05s p(90)=20.38s p(95)=30.03s p(99)=30.21s
+      { expected_response:true }...: avg=5.28s min=11.63ms med=3.09s max=39.43s p(90)=11.38s p(95)=12.19s p(99)=28.3s 
+      { fase:sostenida }...........: avg=8.29s min=1.01s   med=3.85s max=50.05s p(90)=30s    p(95)=30.05s p(99)=30.22s
+    http_req_failed................: 8.35%  885 out of 10591
+      { fase:sostenida }...........: 10.82% 870 out of 8035
+    http_reqs......................: 10591  100.822164/s
+      { fase:sostenida }...........: 8035   76.490047/s
+
+    EXECUTION
+    iteration_duration.............: avg=8.19s min=1.01s   med=4.33s max=50.28s p(90)=15.93s p(95)=31.02s p(99)=31.18s
+    iterations.....................: 10508  100.032037/s
+    vus............................: 402    min=47           max=1200
+    vus_max........................: 1200   min=1200         max=1200
+
+    NETWORK
+    data_received..................: 15 MB  147 kB/s
+    data_sent......................: 2.5 MB 24 kB/s
+
+
+

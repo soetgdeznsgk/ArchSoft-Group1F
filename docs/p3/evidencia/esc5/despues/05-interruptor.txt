@@ -1,0 +1,11 @@
+# Interruptor para las pruebas de carga: RATE_LIMIT=off quita el límite sin tocar la plantilla.
+
+$ RATE_LIMIT=off docker compose up -d --wait reverse-proxy >/dev/null 2>&1; docker compose exec -T reverse-proxy printenv RATE_LIMIT
+off
+
+$ $ATTACKER bash -c 'for i in $(seq 1 40); do curl -s -o /dev/null $C -w "%{http_code}\n" -X POST https://localhost/auth/login -H "Content-Type: application/json" -d "{\"username\":\"rl_off_${RANDOM}_$i\",\"password\":\"incorrecta-123\"}"; done | sort | uniq -c'
+     40 401
+
+$ docker compose up -d --wait reverse-proxy >/dev/null 2>&1; docker compose exec -T reverse-proxy printenv RATE_LIMIT
+on
+

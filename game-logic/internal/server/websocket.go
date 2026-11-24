@@ -177,8 +177,10 @@ func (a *App) publish(instance *gameInstance, out outcome) {
 	if out.empty() {
 		return
 	}
-	if err := a.save(instance); err != nil {
-		a.logger.Error("persist game after state change", "game_id", instance.id, "error", err)
+	if out.gameEnded || instance.engine.Status() != statusFinished {
+		if err := a.save(instance); err != nil {
+			a.logger.Error("persist game after state change", "game_id", instance.id, "error", err)
+		}
 	}
 	instance.mu.Lock()
 	if out.roundEnded && instance.engine.Status() == statusRoundOver {

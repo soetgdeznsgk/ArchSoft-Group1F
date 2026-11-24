@@ -60,4 +60,4 @@ async function renderPage(page, viewsRoot) {
     .replace("<!--ssr:data-->", dataScript({ leaderboard }));
 }
 
-module.exports = { renderPage, rankingHtml, dataScript };
+module.exports = { renderPage, rankingHtml, dataScript, escapeHtml };

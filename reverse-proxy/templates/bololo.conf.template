@@ -1,5 +1,30 @@
 resolver 127.0.0.11 valid=10s ipv6=off;
 
+# Límite de tasa por IP (escenario 5). La clave es la IP del cliente; con RATE_LIMIT=off
+# queda vacía y Nginx no cuenta la petición (para las pruebas de carga con k6 desde una sola IP).
+map "${RATE_LIMIT}" $rl_key {
+    off     "";
+    default $binary_remote_addr;
+}
+
+# Para security-headers.conf, que no pasa por envsubst.
+map "${HSTS_MAX_AGE}" $hsts_max_age {
+    default "${HSTS_MAX_AGE}";
+}
+
+# login, register y password: relleno de credenciales probando muchos usuarios. El bloqueo
+# por cuenta de auth (5 fallos) no lo frena, porque cada usuario tiene sus propios intentos.
+limit_req_zone $rl_key zone=auth_cred:10m rate=10r/m;
+# El resto de /auth/ (guest, me): una sesión de invitado por pestaña.
+limit_req_zone $rl_key zone=auth:10m rate=30r/m;
+# /api/: un jugador hace unas pocas peticiones por acción; el SSE cuenta como una sola.
+limit_req_zone $rl_key zone=api:10m rate=20r/s;
+# SSE y WebSocket son una petición cada uno: este límite evita que una IP retenga miles de streams.
+limit_conn_zone $rl_key zone=perip:10m;
+
+limit_req_status 429;
+limit_conn_status 429;
+
 upstream gateway {
     zone gateway 64k;
     server traefik:8000 resolve;
@@ -32,10 +57,9 @@ server {
     ssl_session_timeout 1h;
     ssl_session_tickets off;
 
-    add_header Strict-Transport-Security "max-age=${HSTS_MAX_AGE}" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "DENY" always;
-    add_header Referrer-Policy "no-referrer" always;
+    # En un archivo aparte porque @rate_limited agrega Retry-After: en Nginx, una location con
+    # add_header propio pierde todos los add_header del server.
+    include /etc/nginx/snippets/security-headers.conf;
 
     proxy_http_version 1.1;
     proxy_hide_header X-Powered-By;
@@ -56,13 +80,30 @@ server {
         return 301 /$1/;
     }
 
-    location ~ ^/(menu|ingame|chameleon|libraries|auth)/ {
+    # Páginas y archivos estáticos: sin límite de tasa (una página carga una decena de archivos).
+    location ~ ^/(menu|ingame|chameleon|libraries)/ {
+        include /etc/nginx/snippets/proxy-headers.conf;
+        proxy_set_header Connection "";
+        proxy_pass http://gateway;
+    }
+
+    location ~ ^/auth/(login|register|password)$ {
+        limit_req zone=auth_cred burst=20 nodelay;
+        include /etc/nginx/snippets/proxy-headers.conf;
+        proxy_set_header Connection "";
+        proxy_pass http://gateway;
+    }
+
+    location /auth/ {
+        limit_req zone=auth burst=30 nodelay;
         include /etc/nginx/snippets/proxy-headers.conf;
         proxy_set_header Connection "";
         proxy_pass http://gateway;
     }
 
     location /api/ {
+        limit_req zone=api burst=40 nodelay;
+        limit_conn perip 100;
         include /etc/nginx/snippets/proxy-headers.conf;
         proxy_set_header Connection "";
         proxy_read_timeout 75s;
@@ -70,6 +111,7 @@ server {
     }
 
     location /ws/games/ {
+        limit_conn perip 100;
         include /etc/nginx/snippets/proxy-headers.conf;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
@@ -81,6 +123,16 @@ server {
     location / {
         default_type application/json;
         return 404 '{"error":"not_found"}\n';
+    }
+
+    # Respuesta de limit_req y limit_conn: se responde aquí, sin llegar al gateway. El menú
+    # muestra "message", y el código distingue este 429 del bloqueo por cuenta de auth.
+    error_page 429 = @rate_limited;
+    location @rate_limited {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Retry-After 10 always;
+        default_type application/json;
+        return 429 '{"error":"rate_limited","message":"Demasiadas peticiones. Espera unos segundos e inténtalo de nuevo."}\n';
     }
 }
 

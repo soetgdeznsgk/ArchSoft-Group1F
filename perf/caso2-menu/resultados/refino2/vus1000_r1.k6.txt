@@ -1,0 +1,75 @@
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=12.44s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=0.00%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=12834
+
+    paginas_completas{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    paginas_degradadas{fase:sostenida}
+    ✓ 'count>=0' count=12834
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 15452   193.943771/s
+    checks_succeeded...: 100.00% 15452 out of 15452
+    checks_failed......: 0.00%   0 out of 15452
+
+    ✓ status 200
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    paginas_completas..............: 393    4.932688/s
+      { fase:sostenida }...........: 0      0/s
+    paginas_degradadas.............: 15059  189.011083/s
+      { fase:sostenida }...........: 12834  161.084284/s
+
+    HTTP
+    http_req_duration..............: avg=3.54s min=9.95ms med=2.4s  max=12.44s p(90)=7.81s p(95)=8.6s  p(99)=10.73s
+      { expected_response:true }...: avg=3.54s min=9.95ms med=2.4s  max=12.44s p(90)=7.81s p(95)=8.6s  p(99)=10.73s
+      { fase:sostenida }...........: avg=3.52s min=1s     med=2.35s max=12.44s p(90)=7.8s  p(95)=8.47s p(99)=10.95s
+    http_req_failed................: 0.00%  0 out of 15452
+      { fase:sostenida }...........: 0.00%  0 out of 12834
+    http_reqs......................: 15452  193.943771/s
+      { fase:sostenida }...........: 12834  161.084284/s
+
+    EXECUTION
+    iteration_duration.............: avg=4.54s min=1.01s  med=3.4s  max=13.44s p(90)=8.82s p(95)=9.61s p(99)=11.73s
+    iterations.....................: 15452  193.943771/s
+    vus............................: 9      min=9          max=1000
+    vus_max........................: 1000   min=1000       max=1000
+
+    NETWORK
+    data_received..................: 21 MB  265 kB/s
+    data_sent......................: 2.4 MB 30 kB/s
+
+
+

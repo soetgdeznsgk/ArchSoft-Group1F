@@ -1,0 +1,163 @@
+{
+    "metrics": {
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 27075,
+            "value": 0
+        },
+        "http_req_sending": {
+            "p(99)": 0.854549999999996,
+            "avg": 0.053647612188365765,
+            "min": 0,
+            "med": 0,
+            "max": 7.2782,
+            "p(90)": 0,
+            "p(95)": 0.5181
+        },
+        "data_sent": {
+            "count": 3492630,
+            "rate": 45954.686557783076
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0.07304890489381347,
+            "min": 0,
+            "med": 0,
+            "max": 39.028,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 4.256603999999991
+        },
+        "vus_max": {
+            "value": 400,
+            "min": 400,
+            "max": 400
+        },
+        "http_req_failed{fase:sostenida}": {
+            "passes": 0,
+            "fails": 23896,
+            "thresholds": {
+                "rate>=0": false
+            },
+            "value": 0
+        },
+        "http_req_waiting": {
+            "med": 3.4884,
+            "max": 19.67,
+            "p(90)": 4.551740000000002,
+            "p(95)": 4.9185,
+            "p(99)": 6.0011,
+            "avg": 3.577924033240952,
+            "min": 0
+        },
+        "http_req_connecting": {
+            "min": 0,
+            "med": 0,
+            "max": 6.2771,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 0.5124779999999995,
+            "avg": 0.0077550212373037825
+        },
+        "http_req_receiving": {
+            "p(99)": 1.235,
+            "avg": 0.11891932409972354,
+            "min": 0,
+            "med": 0,
+            "max": 20.4645,
+            "p(90)": 0.5342,
+            "p(95)": 0.719
+        },
+        "http_req_duration{fase:sostenida}": {
+            "min": 1.0642,
+            "med": 3.7171,
+            "max": 20.1935,
+            "p(90)": 4.7814,
+            "p(95)": 5.1993,
+            "p(99)": 6.436624999999997,
+            "avg": 3.810587696685632,
+            "thresholds": {
+                "max>=0": false
+            }
+        },
+        "checks": {
+            "passes": 54150,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_blocked": {
+            "min": 0,
+            "med": 0,
+            "max": 52.7561,
+            "p(90)": 0,
+            "p(95)": 0,
+            "p(99)": 4.892199999999992,
+            "avg": 0.08359363250230846
+        },
+        "http_reqs": {
+            "rate": 356.24247015915705,
+            "count": 27075
+        },
+        "iteration_duration": {
+            "med": 1004.1605,
+            "max": 1058.4117,
+            "p(90)": 1005.4962800000001,
+            "p(95)": 1006.1876599999999,
+            "p(99)": 1009.331418,
+            "avg": 1004.3747173591784,
+            "min": 1001.3114
+        },
+        "data_received": {
+            "count": 26556525,
+            "rate": 349420.57487879624
+        },
+        "vus": {
+            "value": 20,
+            "min": 20,
+            "max": 400
+        },
+        "iterations": {
+            "rate": 356.24247015915705,
+            "count": 27075
+        },
+        "http_req_duration": {
+            "avg": 3.750490969529068,
+            "min": 1.0611,
+            "med": 3.6655,
+            "max": 23.5421,
+            "p(90)": 4.7314,
+            "p(95)": 5.13514,
+            "p(99)": 6.350775999999996
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 5.13514,
+            "p(99)": 6.350775999999996,
+            "avg": 3.750490969529068,
+            "min": 1.0611,
+            "med": 3.6655,
+            "max": 23.5421,
+            "p(90)": 4.7314
+        }
+    },
+    "root_group": {
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "guest status 201": {
+                "passes": 27075,
+                "fails": 0,
+                "name": "guest status 201",
+                "path": "::guest status 201",
+                "id": "704cc0e1204aa6da0243130436b85909"
+            },
+            "guest trae token": {
+                "id": "7d08ab8aedd663d768ee209743e3b5ea",
+                "passes": 27075,
+                "fails": 0,
+                "name": "guest trae token",
+                "path": "::guest trae token"
+            }
+        },
+        "name": "",
+        "path": ""
+    }
+}

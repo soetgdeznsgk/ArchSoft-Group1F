@@ -1,0 +1,31 @@
+# Cómo responde el borde a quien excede el límite, y qué IP ve el proxy de cada cliente.
+
+$ $ATTACKER bash -c 'for i in $(seq 1 30); do curl -s -o /dev/null $C -X POST https://localhost/auth/login -H "Content-Type: application/json" -d "{\"username\":\"rl_head_$i\",\"password\":\"incorrecta-123\"}"; done; curl -s -i $C -X POST https://localhost/auth/login -H "Content-Type: application/json" -d "{\"username\":\"rl_head_x\",\"password\":\"incorrecta-123\"}"' | tr -d '\r' | grep -viE '^(date|content-length):'
+HTTP/2 401 
+server: nginx
+content-type: application/json
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+expires: 0
+pragma: no-cache
+x-xss-protection: 0
+strict-transport-security: max-age=300
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+
+{"code":"invalid_credentials","message":"Usuario o contraseña incorrectos."}
+
+$ docker compose logs --no-log-prefix reverse-proxy 2>/dev/null | grep '"status":429' | tail -3
+
+$ docker compose logs --no-log-prefix reverse-proxy 2>/dev/null | grep -c '"status":429.*"upstream_status":""'
+0
+
+$ docker compose logs --no-log-prefix reverse-proxy 2>/dev/null | grep -oE '"client":"[^"]+"' | sort | uniq -c
+    141 "client":"172.20.0.1"
+  19131 "client":"172.20.0.3"
+
+$ docker network inspect bololo-integrado_public -f '{{range .IPAM.Config}}subred {{.Subnet}} · gateway {{.Gateway}}{{end}}'
+subred 172.20.0.0/16 · gateway 172.20.0.1
+
+$ docker compose exec -T reverse-proxy sh -c 'grep -hE "limit_(req|conn)|map .* \$rl_key|error_page 429" /etc/nginx/conf.d/*.conf'
+

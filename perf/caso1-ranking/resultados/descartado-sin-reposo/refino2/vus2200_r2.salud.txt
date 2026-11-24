@@ -1,0 +1,3 @@
+13:16:20 /bololo-integrado-ratings-service-1=healthy /bololo-integrado-reverse-proxy-1=healthy /bololo-integrado-traefik-1=healthy 
+13:16:22 /bololo-integrado-ratings-service-1=healthy /bololo-integrado-reverse-proxy-1=healthy /bololo-integrado-traefik-1=healthy 
+13:16:27 /bololo-integrado-ratings-service-1=healthy /bololo-integrado-reverse-proxy-1=healthy /bololo-integrado-traefik-1=healthy 

@@ -1,6 +1,17 @@
 name: bololo-integrado
 
 services:
+  # Tarea de una sola vez: genera, si faltan, las claves de los JWT (secrets/jwt/) y el
+  # certificado TLS (api-gateway/certs/), que no se versionan. Sin red; termina y sale con 0.
+  # Los servicios que usan esos archivos esperan a que termine (service_completed_successfully).
+  init:
+    build: ./bootstrap
+    restart: "no"
+    network_mode: none
+    volumes:
+      - ./scripts:/repo/scripts:ro
+      - ./secrets:/repo/secrets
+      - ./api-gateway:/repo/api-gateway
   reverse-proxy:
     image: nginx:1.30.5-alpine
     restart: unless-stopped
@@ -21,13 +32,17 @@ services:
         hard: 16384
     environment:
       HSTS_MAX_AGE: ${HSTS_MAX_AGE:-300}
-      NGINX_ENVSUBST_FILTER: ^HSTS_MAX_AGE
+      # Límite de tasa por IP (escenario 5). off solo para pruebas de carga desde una sola IP:
+      # RATE_LIMIT=off docker compose up -d reverse-proxy
+      RATE_LIMIT: ${RATE_LIMIT:-on}
+      NGINX_ENVSUBST_FILTER: ^(HSTS_MAX_AGE|RATE_LIMIT)$
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./reverse-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./reverse-proxy/proxy-headers.conf:/etc/nginx/snippets/proxy-headers.conf:ro
+      - ./reverse-proxy/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
       - ./reverse-proxy/templates:/etc/nginx/templates:ro
       - ./api-gateway/certs:/certs:ro
     tmpfs:
@@ -40,6 +55,8 @@ services:
         ipv4_address: 10.250.0.2
       public:
     depends_on:
+      init:
+        condition: service_completed_successfully
       traefik:
         condition: service_healthy
     healthcheck:
@@ -114,6 +131,8 @@ services:
       - "traefik.http.routers.auth.priority=10"
       - "traefik.http.services.auth.loadbalancer.server.port=8080"
     depends_on:
+      init:
+        condition: service_completed_successfully
       auth-postgres:
         condition: service_healthy
     healthcheck:
@@ -151,6 +170,8 @@ services:
       - "traefik.http.routers.lobby.entrypoints=web"
       - "traefik.http.services.lobby.loadbalancer.server.port=8000"
     depends_on:
+      init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       rabbitmq:
@@ -208,6 +229,8 @@ services:
       - "traefik.http.routers.game-ws.entrypoints=web"
       - "traefik.http.services.game-ws.loadbalancer.server.port=8081"
     depends_on:
+      init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       rabbitmq:

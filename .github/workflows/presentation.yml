@@ -1,0 +1,33 @@
+name: presentation
+
+on:
+  push:
+    paths:
+      - "presentation/**"
+      - "presentation-ssr/**"
+      - ".github/workflows/presentation.yml"
+  pull_request:
+    paths:
+      - "presentation/**"
+      - "presentation-ssr/**"
+      - ".github/workflows/presentation.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: presentation-ssr
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: presentation-ssr/package-lock.json
+      - name: install
+        run: npm ci
+      - name: unit tests
+        run: npm run test:unit
+      - name: integration tests
+        run: npm run test:integration

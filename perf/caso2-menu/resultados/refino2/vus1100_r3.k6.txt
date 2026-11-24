@@ -1,0 +1,76 @@
+
+
+  █ THRESHOLDS 
+
+    errores_4xx{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_5xx{fase:sostenida}
+    ✓ 'count>=0' count=913
+
+    errores_cuerpo{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    errores_sin_respuesta{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    http_req_duration{fase:sostenida}
+    ✓ 'max>=0' max=30.57s
+
+    http_req_failed{fase:sostenida}
+    ✓ 'rate>=0' rate=9.71%
+
+    http_reqs{fase:sostenida}
+    ✓ 'count>=0' count=9394
+
+    paginas_completas{fase:sostenida}
+    ✓ 'count>=0' count=0
+
+    paginas_degradadas{fase:sostenida}
+    ✓ 'count>=0' count=8481
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 12609  127.223711/s
+    checks_succeeded...: 92.75% 11696 out of 12609
+    checks_failed......: 7.24%  913 out of 12609
+
+    ✗ status 200
+      ↳  92% — ✓ 11696 / ✗ 913
+
+    CUSTOM
+    errores_4xx....................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_5xx....................: 913    9.21209/s
+      { fase:sostenida }...........: 913    9.21209/s
+    errores_cuerpo.................: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    errores_sin_respuesta..........: 0      0/s
+      { fase:sostenida }...........: 0      0/s
+    paginas_completas..............: 882    8.899303/s
+      { fase:sostenida }...........: 0      0/s
+    paginas_degradadas.............: 10814  109.112318/s
+      { fase:sostenida }...........: 8481   85.572551/s
+
+    HTTP
+    http_req_duration..............: avg=5.96s min=8.55ms med=2.55s max=30.57s p(90)=13.09s p(95)=30.03s p(99)=30.21s
+      { expected_response:true }...: avg=4.07s min=8.55ms med=2.39s max=29.61s p(90)=9.06s  p(95)=11.81s p(99)=16.64s
+      { fase:sostenida }...........: avg=7.12s min=1.16s  med=3.18s max=30.57s p(90)=28.57s p(95)=30.05s p(99)=30.32s
+    http_req_failed................: 7.24%  913 out of 12609
+      { fase:sostenida }...........: 9.71%  913 out of 9394
+    http_reqs......................: 12609  127.223711/s
+      { fase:sostenida }...........: 9394   94.784641/s
+
+    EXECUTION
+    iteration_duration.............: avg=6.96s min=1.01s  med=3.56s max=31.57s p(90)=14.09s p(95)=31.03s p(99)=31.22s
+    iterations.....................: 12609  127.223711/s
+    vus............................: 58     min=41           max=1100
+    vus_max........................: 1100   min=1100         max=1100
+
+    NETWORK
+    data_received..................: 18 MB  183 kB/s
+    data_sent......................: 2.4 MB 25 kB/s
+
+
+
