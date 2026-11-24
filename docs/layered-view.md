@@ -10,14 +10,15 @@ La estructura en capas agrupa las piezas del sistema que ofrecen un conjunto coh
 
 | Elemento | Qué es en Bololó | Cómo se dibuja |
 |---|---|---|
-| **Tier** | Separación **física**: dónde corre el código. Cliente, servidor de aplicación y datos | Banda horizontal punteada |
-| **Layer** | Separación **lógica dentro de un componente**: su subarquitectura (por ejemplo, controladores → servicios → repositorios) | Paquete UML `«layer»` |
-| **Layer segment** | Partición de una capa por función, cuando hay piezas del mismo nivel que no se usan entre sí | Paquete `«segment»` dentro de la capa |
+| **Tier** | Separación **física**: dónde corre el código. Cliente, servidor de aplicación y datos | Franja entre dos líneas punteadas horizontales, con «Tier N» a la derecha |
+| **Layer** | Separación **lógica dentro de un componente**: su subarquitectura (por ejemplo, controladores → servicios → repositorios) | Fila dentro de la caja del componente. Las capas van apiladas y separadas por una línea punteada horizontal |
+| **Layer segment** | Partición de una capa por función, cuando hay piezas del mismo nivel | División punteada vertical dentro de la fila, como *Repos ┆ Modelos* |
+| **Data store** | La capa de persistencia de cada servicio | Cilindro en el Tier 3 |
 
 Relaciones:
 
-- **`«allowed to use»`**: el origen puede usar al destino. Va hacia la capa siguiente o hacia otro componente del mismo tier.
-- **`«allowed to use below»`**: salta una capa intermedia. En Bololó hay un caso, dentro de `bololo_game` (§3.8).
+- **`«allowed to use»`**: el origen puede usar al destino. Dentro de un componente es implícita: cada capa usa la que tiene debajo, por eso no se dibujan flechas entre capas. Entre componentes es una flecha que sale de un **puerto** (cuadrado en el borde) y llega a otro. Va hacia abajo o hacia otro componente del mismo tier.
+- **`«allowed to use below»`**: salta una capa intermedia. Es una flecha punteada. En Bololó hay un caso, dentro de `bololo_game` (§3.8).
 
 Restricciones del estilo:
 
@@ -27,7 +28,7 @@ Restricciones del estilo:
 
 En §5 está cómo se cumple cada una.
 
-Los componentes llevan los nombres de la vista C&C (`bololo_*`) y los colores de la vista de despliegue:
+La notación sigue los apuntes de la clase *Layered and Decomposition*. El jugador va arriba, los tiers se leen de arriba hacia abajo, y cada componente es una caja con sus capas adentro. Los componentes llevan los nombres de la vista C&C (`bololo_*`) y los colores de la vista de despliegue:
 
 | Color | Tipo de componente |
 |---|---|
@@ -116,9 +117,9 @@ No tiene código propio, solo configuración. Las capas son las etapas por las q
 
 | Capa | Segmentos | Piezas |
 |---|---|---|
-| Transporte | — | `internal/server/app.go` (REST `/internal/games`, verifica el JWT de partida) y `websocket.go` |
+| Transporte | — | `internal/server/app.go` (REST `/internal/games`, verifica el JWT de partida) y `websocket.go`. El jugador de cada acción sale del token, no del mensaje (escenario 4) |
 | Aplicación | — | `runner.go`, `engine.go`, `service.go`; los puertos `StateStore` (`app.go:34`) y `ResultPublisher` (`app.go:104`) |
-| Dominio | Clásico · Camaleón | `internal/game` (`Match.ViewFor`) · `internal/chameleon`. No importan ningún otro paquete interno |
+| Dominio | Clásico · Camaleón | `internal/game` (`Game.ViewFor`, `view.go:46`: Limited View, cada jugador recibe solo su mano) · `internal/chameleon` (`Match.ViewFor`: las manos son públicas por diseño). No importan ningún otro paquete interno |
 | Infraestructura | Persistencia · Mensajería | `internal/store/redis` (scripts Lua) · `internal/broker` (AMQP con *confirms*) |
 
 **Aplicación → Infraestructura es `«allowed to use below»`.** Aplicación usa los adaptadores a través de sus puertos sin pasar por el Dominio, y el Dominio no conoce la infraestructura. `cmd/server/main.go` crea los adaptadores y los inyecta.
@@ -205,7 +206,9 @@ La vista del Prototipo 2 tenía 5 capas a nivel de sistema: Presentación-client
 - Las **capas** son la subarquitectura de cada componente: controladores, servicios, repositorios y modelos.
 - Los **segmentos** dividen una capa por función.
 
-Además, incorpora `bololo_reverse_proxy` (escenario 2) y el límite de tasa en su capa de filtros (escenario 5).
+Además, incorpora `bololo_reverse_proxy` (escenario 2), el límite de tasa en su capa de filtros (escenario 5) y la Limited View de `bololo_game` (escenario 4).
+
+La notación se redibujó con el estilo de los apuntes de clase. Antes eran paquetes UML anidados y regiones de colores. Ahora son tiers separados por líneas punteadas, componentes con capas apiladas, segmentos con división vertical, puertos en el borde y cilindros para la persistencia.
 
 ## 8. Cómo editar el diagrama
 

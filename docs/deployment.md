@@ -256,16 +256,11 @@ docker compose ps
 
 `up` crea e inicia todos los servicios del archivo Compose; `-d` los deja ejecutándose en segundo plano; `--build` construye las imágenes del proyecto; `--wait` espera a que los servicios estén en estado `running` o `healthy`. En `docker compose ps`, los servicios con healthcheck deben aparecer como `healthy`.
 
-Antes del primer `up` hay que generar el certificado del borde (sin él el proxy inverso no arranca) y las claves con que se firman los JWT (sin ellas Compose no arranca). Desde Git Bash, macOS o Linux:
-
-```bash
-./scripts/gen-certs.sh --trust
-./scripts/gen-jwt-keys.sh
-```
+No hay que generar nada a mano antes del primer `up`. El servicio `init` ([`bootstrap/`](../bootstrap/)) corre antes que los demás y, si faltan, genera el certificado del borde (`api-gateway/certs/`, con `scripts/gen-certs.sh`) y las claves de los JWT (`secrets/jwt/`, con `scripts/gen-jwt-keys.sh`). Si ya existen no los toca. También borra las carpetas vacías que Docker deja en su lugar cuando el stack se arrancó alguna vez sin ellos (error `is a directory`). Ver su salida: `docker compose logs init`.
 
 `gen-jwt-keys.sh` crea en `secrets/jwt/` (no versionada) un par RSA para las sesiones, que firma Auth, y otro para las partidas, que firma el Lobby. Compose monta en cada contenedor solo las claves que necesita.
 
-`--trust` instala la CA local como confiable para el usuario actual, así el navegador no muestra advertencias. Detalles en [p3/esc1.md §10](p3/esc1.md#10-cómo-usarlo-equipo).
+Lo único manual es confiar una vez en la CA local, para que el navegador no muestre advertencias. En Windows (PowerShell): `certutil -user -addstore Root api-gateway\ca\bololo-dev-ca.crt`. En Git Bash o macOS: `./scripts/gen-certs.sh --trust` y luego `docker compose restart reverse-proxy`. Detalles en [p3/esc1.md §10](p3/esc1.md#10-cómo-usarlo-equipo).
 
 Abrir `https://localhost` en el navegador (`http://localhost` redirige ahí). La dirección lleva al menú de ingreso. Para una partida se necesitan cuatro jugadores, cada uno en una pestaña o navegador distinto y con un nombre diferente.
 

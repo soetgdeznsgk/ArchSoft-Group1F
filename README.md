@@ -63,7 +63,7 @@ Convenciones:
 
 | Carpeta | Estado | Cómo usarlo |
 |---|---|---|
-| [`presentation-ssr/`](presentation-ssr) | HTML inicial SSR y assets de la presentación | `./scripts/gen-certs.sh --trust`, `./scripts/gen-jwt-keys.sh`, `docker compose up --build` y abrir `https://localhost` |
+| [`presentation-ssr/`](presentation-ssr) | HTML inicial SSR y assets de la presentación | `docker compose up --build` y abrir `https://localhost`. El servicio `init` genera solo las claves y el certificado si faltan; confiar una vez en la CA: ver [docs/deployment.md](docs/deployment.md) |
 | [`presentation/`](presentation) | Assets y clientes web (p5.js) | Reutilizados por `presentation-ssr` |
 | [`auth-service/`](auth-service) | Emite todas las sesiones (invitados y cuentas, RS256), registro/login, Spring Security, BCrypt y bloqueo por intentos | Ver [auth-service/README.md](auth-service/README.md) |
 | [`game-logic/`](game-logic) | Motor, API interna, WebSocket y persistencia Redis | Ver [game-logic/README.md](game-logic/README.md) |
