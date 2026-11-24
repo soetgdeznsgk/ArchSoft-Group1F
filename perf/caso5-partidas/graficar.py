@@ -15,36 +15,8 @@ with CSV.open(encoding="utf-8", newline="") as f:
     rows = list(csv.DictReader(f))
 
 x = [int(r["partidas"]) for r in rows]
-terminadas = [int(r["terminadas"]) for r in rows]
-timeouts = [int(r["timeout"]) for r in rows]
-duracion = [float(r["duracion_promedio_ms"]) for r in rows]
 
 plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False})
-
-fig, ax = plt.subplots(figsize=(9.5, 5.2))
-ax.plot(x, terminadas, "o-", color="#16a34a", label="terminadas")
-ax.plot(x, timeouts, "o-", color="#dc2626", label="timeout")
-ax.set_xticks(x)
-ax.set_ylim(0, 11)
-ax.set_xlabel("partidas simultáneas")
-ax.set_ylabel("número de partidas")
-ax.set_title("Caso 5: finalización dentro del timeout")
-ax.legend(loc="upper left", frameon=False)
-fig.tight_layout()
-fig.savefig(IMG / "caso5-finalizacion.png", dpi=150)
-plt.close(fig)
-
-fig, ax = plt.subplots(figsize=(9.5, 5.2))
-ax.plot(x, [v / 1000 for v in duracion], "o-", color="#2563eb")
-ax.axhline(660, color="#dc2626", ls="--", lw=1.5, label="timeout 660 s")
-ax.set_xticks(x)
-ax.set_xlabel("partidas simultáneas")
-ax.set_ylabel("duración promedio (s)")
-ax.set_title("Caso 5: duración de las partidas")
-ax.legend(loc="upper left", frameon=False)
-fig.tight_layout()
-fig.savefig(IMG / "caso5-duracion.png", dpi=150)
-plt.close(fig)
 
 setup = []
 http_avg = []
@@ -58,14 +30,16 @@ setup_y = [y for y in setup if y is not None]
 http_x = [v for v, y in zip(x, http_avg) if y is not None]
 http_y = [y for y in http_avg if y is not None]
 if setup_y:
-    ax.plot(setup_x, setup_y, "o-", color="#ea580c", label="preparación")
+    ax.plot(setup_x, setup_y, "o-", color="#ea580c",
+            label="flujo de preparación (invitado, lobby, bots e inicio)")
 if http_y:
-    ax.plot(http_x, http_y, "s-", color="#7c3aed", label="HTTP promedio")
+    ax.plot(http_x, http_y, "s-", color="#7c3aed",
+            label="HTTP promedio del flujo de preparación")
 ax.set_xticks(x)
 ax.set_xlabel("partidas simultáneas")
-ax.set_ylabel("tiempo (ms)")
-ax.set_title("Caso 5: preparación y operaciones HTTP")
+ax.set_ylabel("latencia (ms)")
+ax.set_title("Caso 5: latencia al preparar e iniciar un lobby")
 ax.legend(loc="upper left", frameon=False)
 fig.tight_layout()
-fig.savefig(IMG / "caso5-preparacion.png", dpi=150)
+fig.savefig(IMG / "caso5-latencia-lobby.png", dpi=150)
 plt.close(fig)
