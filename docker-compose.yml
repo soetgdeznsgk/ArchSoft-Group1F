@@ -76,7 +76,8 @@ services:
     networks:
       edge:
         ipv4_address: 10.250.0.3
-      internal:
+      services:
+        ipv4_address: 10.251.0.2
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s
@@ -93,7 +94,7 @@ services:
     environment:
       RATINGS_URL: http://ratings-service:8000
     networks:
-      - internal
+      - services
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=PathPrefix(`/`)"
@@ -121,7 +122,8 @@ services:
       - session_private_key
       - session_public_key
     networks:
-      - internal
+      - services
+      - auth-data
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth.rule=PathPrefix(`/auth/`)"
@@ -154,12 +156,14 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
       # Uvicorn acepta X-Forwarded-Proto de Traefik (que lo reescribe en cada petición
       # externa). Sin esto cree que la petición llegó por http y redirige a http://.
-      FORWARDED_ALLOW_IPS: "*"
+      FORWARDED_ALLOW_IPS: 10.251.0.2
     secrets:
       - session_public_key
       - game_private_key
     networks:
-      - internal
+      - services
+      - lobby-data
+      - messaging
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.lobby.rule=PathPrefix(`/api/`)"
@@ -190,7 +194,7 @@ services:
     volumes:
       - auth-pg-data:/var/lib/postgresql/data
     networks:
-      - internal
+      - auth-data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -216,7 +220,9 @@ services:
     secrets:
       - game_public_key
     networks:
-      - internal
+      - services
+      - game-data
+      - messaging
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.game-ws.rule=PathPrefix(`/ws/games/`)"
@@ -249,7 +255,7 @@ services:
       BOT_REACT_MIN_MS: ${BOT_REACT_MIN_MS:-400}
       BOT_REACT_MAX_MS: ${BOT_REACT_MAX_MS:-1200}
     networks:
-      - internal
+      - services
     labels:
       - "traefik.enable=true"
       # Más específica que /api/ (lobby-manager): la prioridad la hace ganar.
@@ -282,9 +288,11 @@ services:
       POSTGRES_DB: ${RATINGS_POSTGRES_DB:?Falta RATINGS_POSTGRES_DB en .env}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:?Falta RABBITMQ_USER en .env}:${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD en .env}@rabbitmq:5672/
       # Igual que lobby-manager: las redirecciones salen con https:// detrás de Traefik.
-      FORWARDED_ALLOW_IPS: "*"
+      FORWARDED_ALLOW_IPS: 10.251.0.2
     networks:
-      - internal
+      - services
+      - ratings-data
+      - messaging
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ratings.rule=PathPrefix(`/api/ratings/`)"
@@ -314,7 +322,7 @@ services:
     volumes:
       - ratings-pg-data:/var/lib/postgresql/data
     networks:
-      - internal
+      - ratings-data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -344,7 +352,7 @@ services:
       - rabbitmq-data:/var/lib/rabbitmq
       - ./rabbitmq/topology.json:/etc/rabbitmq/topology.json:ro
     networks:
-      - internal
+      - messaging
     healthcheck:
       test: ["CMD-SHELL", "rabbitmqctl -q list_queues name > /tmp/queues && grep -qx lobby.game-ended /tmp/queues && grep -qx ratings.game-finished /tmp/queues"]
       interval: 10s
@@ -363,7 +371,7 @@ services:
     volumes:
       - pg-data:/var/lib/postgresql/data
     networks:
-      - internal
+      - lobby-data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -388,7 +396,7 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - internal
+      - game-data
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
       interval: 10s
@@ -404,7 +412,21 @@ networks:
     ipam:
       config:
         - subnet: 10.250.0.0/28
-  internal:
+  services:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.251.0.0/24
+          ip_range: 10.251.0.128/25
+  auth-data:
+    internal: true
+  lobby-data:
+    internal: true
+  ratings-data:
+    internal: true
+  game-data:
+    internal: true
+  messaging:
     internal: true
 
 secrets:

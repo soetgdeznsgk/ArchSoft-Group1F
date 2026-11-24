@@ -267,6 +267,34 @@ check "el proxy corre con disco de solo lectura" "true" \
   "$(docker inspect -f '{{.HostConfig.ReadonlyRootfs}}' "$(docker compose ps -q reverse-proxy)")"
 check "el proxy no tiene las claves de los JWT" "0" "$(mounts_of reverse-proxy | grep -c secrets)"
 
+section "Network Segmentation (escenario 3)"
+check "frontend no resuelve postgres" "blocked" \
+  "$(docker compose exec -T frontend node -e 'require("dns").lookup("postgres", err => { console.log(err ? "blocked" : "reachable"); process.exit(err ? 0 : 1) })' 2>&1 | tr -d '\r')"
+check "frontend no resuelve redis" "blocked" \
+  "$(docker compose exec -T frontend node -e 'require("dns").lookup("redis", err => { console.log(err ? "blocked" : "reachable"); process.exit(err ? 0 : 1) })' 2>&1 | tr -d '\r')"
+check "frontend no resuelve rabbitmq" "blocked" \
+  "$(docker compose exec -T frontend node -e 'require("dns").lookup("rabbitmq", err => { console.log(err ? "blocked" : "reachable"); process.exit(err ? 0 : 1) })' 2>&1 | tr -d '\r')"
+check "lobby-manager no resuelve redis" "blocked" \
+  "$(docker compose exec -T lobby-manager python -c "import socket
+try:
+ socket.create_connection(('redis', 6379), 2)
+ print('reachable')
+except OSError:
+ print('blocked')" 2>&1 | tr -d '\r')"
+game_data_members=$(docker network inspect bololo-integrado_game-data --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | tr -d '\r')
+check "game-data contiene solo dos contenedores" "2" "$(wc -w <<<"$game_data_members" | tr -d ' ')"
+check "game-data contiene game-logic" ".*game-logic.*" "$game_data_members"
+check "game-data contiene redis" ".*redis.*" "$game_data_members"
+check "traefik conserva la IP fija en services" "10\.251\.0\.2" \
+  "$(docker inspect -f '{{with index .NetworkSettings.Networks "bololo-integrado_services"}}{{.IPAddress}}{{end}}' "$(docker compose ps -q traefik)")"
+frontend_services_ip=$(docker inspect -f '{{range $network, $settings := .NetworkSettings.Networks}}{{if eq $network "bololo-integrado_services"}}{{$settings.IPAddress}}{{end}}{{end}}' "$(docker compose ps -q frontend)")
+check "la IP dinamica de frontend no ocupa la IP de Traefik" \
+  "10\.251\.0\.(12[89]|1[3-9][0-9]|2[0-4][0-9]|25[0-5])" "$frontend_services_ip"
+check "FORWARDED_ALLOW_IPS del lobby solo confia en Traefik" "10\.251\.0\.2" \
+  "$(docker compose exec -T lobby-manager printenv FORWARDED_ALLOW_IPS | tr -d '\r')"
+check "FORWARDED_ALLOW_IPS de ratings solo confia en Traefik" "10\.251\.0\.2" \
+  "$(docker compose exec -T ratings-service printenv FORWARDED_ALLOW_IPS | tr -d '\r')"
+
 GO_REAL=false
 [[ "$(internal GET /healthz)" == *'"status":"ok"'* ]] && GO_REAL=true
 if $GO_REAL; then

@@ -18,7 +18,7 @@ entryPoints:
 providers:
   docker:
     exposedByDefault: false
-    network: bololo-integrado_internal
+    network: bololo-integrado_services
 
 ping: {}
 
