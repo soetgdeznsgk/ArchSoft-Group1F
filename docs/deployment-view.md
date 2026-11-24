@@ -4,8 +4,8 @@
 |---|---|
 | View type | Allocation (Views and Beyond), **deployment style** |
 | Notation | UML 2.5 deployment diagram (nodes, execution environments, artifacts, communication paths) |
-| Editable diagram | [`deployment-view.drawio`](deployment-view.drawio) (draw.io / diagrams.net or the VS Code "Draw.io Integration" extension) |
-| Source of truth | `docker-compose.yml`, `reverse-proxy/`, `api-gateway/traefik.yml`, `rabbitmq/topology.json`, every component's `Dockerfile`, `pom.xml`, `go.mod`, `mix.lock`, `requirements.txt`, on branch `feature/p3-esc2` |
+| Editable diagram | [`deployment-view.drawio`](deployment-view.drawio) (draw.io / diagrams.net or the VS Code "Draw.io Integration" extension); the `Network Segmentation (P3 Escenario 3)` page maps every service to its networks |
+| Source of truth | `docker-compose.yml`, `reverse-proxy/`, `api-gateway/traefik.yml`, `rabbitmq/topology.json`, every component's `Dockerfile`, `pom.xml`, `go.mod`, `mix.lock`, `requirements.txt`, on branch `feature/mis-cambios` |
 | Related views | C&C view by dependency levels, with decisions 1–7 (component names `bololo_*` and connector IDs C1–C21 are the same) |
 
 ## Contents
@@ -62,21 +62,31 @@ flowchart TB
         RPN["«container» reverse-proxy<br/>nginx:1.30.5-alpine · :443 TLS · :80 → https<br/>read-only · also on edge"]
       end
       subgraph EDGE["NETWORK edge · internal: true · 10.250.0.0/28"]
-        TRN["«container» traefik<br/>traefik:v3.7.14 · :8000 web<br/>no published ports · also on internal"]
+        TRN["«container» traefik<br/>traefik:v3.7.14 · :8000 web<br/>no published ports · also on services"]
       end
       DOCK["«executionEnvironment» Docker Engine<br/>/var/run/docker.sock"]
-      subgraph INT["NETWORK internal · internal: true"]
+      subgraph SERVICES["NETWORK services · internal: true · 10.251.0.0/24 · dynamic range .128/25"]
         FEN["«container» frontend<br/>node:22.14.0-alpine · :3000"]
         RATN["«container» ratings-service<br/>python:3.12-slim · :8000"]
-        MQN["«container» rabbitmq<br/>rabbitmq:3.13.7-management-alpine · :5672"]
         LOBN["«container» lobby-manager<br/>python:3.12-slim · :8000"]
         GAMN["«container» game-logic<br/>distroless/static-debian12:nonroot · :8081"]
         BOTN["«container» bot-service<br/>alpine:3.20.3 · :8090"]
         AUTHN["«container» auth<br/>eclipse-temurin:21-jre-alpine · :8080"]
-        RPGN["«container» ratings-postgres<br/>postgres:16.15-alpine · :5432"]
-        PGN["«container» postgres<br/>postgres:16.15-alpine · :5432"]
-        RDN["«container» redis<br/>redis:7.4.11-alpine · :6379"]
+      end
+      subgraph AUTHDATA["NETWORK auth-data · internal: true"]
         APGN["«container» auth-postgres<br/>postgres:16.15-alpine · :5432"]
+      end
+      subgraph LOBBYDATA["NETWORK lobby-data · internal: true"]
+        PGN["«container» postgres<br/>postgres:16.15-alpine · :5432"]
+      end
+      subgraph RATDATA["NETWORK ratings-data · internal: true"]
+        RPGN["«container» ratings-postgres<br/>postgres:16.15-alpine · :5432"]
+      end
+      subgraph GAMEDATA["NETWORK game-data · internal: true"]
+        RDN["«container» redis<br/>redis:7.4.11-alpine · :6379"]
+      end
+      subgraph MESSAGING["NETWORK messaging · internal: true"]
+        MQN["«container» rabbitmq<br/>rabbitmq:3.13.7-management-alpine · :5672"]
       end
       subgraph VOL["Host storage · Docker named volumes"]
         V1[("auth-pg-data")]
@@ -186,7 +196,12 @@ flowchart TB
 | Docker Engine (dockerd) | «executionEnvironment» | Starts the 13 containers from `docker-compose.yml` + `.env`, runs healthchecks, applies `restart: unless-stopped`, exposes `/var/run/docker.sock` |
 | `public` network | Docker bridge network | `bololo-integrado_public`. Only `reverse-proxy` is attached, and only it publishes ports (`443:443`, and `80:80` that only redirects to https) |
 | `edge` network | Docker bridge network | `bololo-integrado_edge`, `internal: true`, subnet `10.250.0.0/28`. Only `reverse-proxy` (`10.250.0.2`) and `traefik` (`10.250.0.3`). The proxy reaches the gateway and nothing else |
-| `internal` network | Docker bridge network | `bololo-integrado_internal`, `internal: true`: no route to the Internet, no published ports. Docker DNS resolves service names. `reverse-proxy` is not attached |
+| `services` network | Docker bridge network | `bololo-integrado_services`, `internal: true`, subnet `10.251.0.0/24`, dynamic range `10.251.0.128/25`. Contains the gateway and app services; Traefik is fixed at `10.251.0.2`, outside the dynamic range |
+| `auth-data` network | Docker bridge network | `internal: true`; only `auth` and `auth-postgres` |
+| `lobby-data` network | Docker bridge network | `internal: true`; only `lobby-manager` and `postgres` |
+| `ratings-data` network | Docker bridge network | `internal: true`; only `ratings-service` and `ratings-postgres` |
+| `game-data` network | Docker bridge network | `internal: true`; only `game-logic` and `redis` |
+| `messaging` network | Docker bridge network | `internal: true`; `rabbitmq`, `lobby-manager`, `game-logic` and `ratings-service` |
 | 13 containers | «container» | Table below |
 | 5 named volumes | Docker volume | `auth-pg-data`, `pg-data`, `ratings-pg-data`, `redis-data`, `rabbitmq-data` |
 | 4 Compose secrets | Read-only files in `/run/secrets/` | RS256 key pairs from `scripts/gen-jwt-keys.sh` (`secrets/jwt/`, not versioned). Each container gets only the keys it needs ([section 4](#4-connector-catalog)) |
@@ -194,18 +209,18 @@ flowchart TB
 | Container | C&C component | Image (runtime) | Build | Networks | Internal port(s) | Persistent data |
 |---|---|---|---|---|---|---|
 | `reverse-proxy` | `bololo_reverse_proxy` | `nginx:1.30.5-alpine` | pulled | public, edge | 443 (TLS 1.2+, HTTP/2, HSTS), 80 (redirect only), 8080 on loopback (`/healthz`) | none (read-only root filesystem, `tmpfs` for runtime files; read-only bind mounts: `nginx.conf`, `proxy-headers.conf`, `templates/`, `api-gateway/certs/`). All capabilities dropped except five, `no-new-privileges` |
-| `traefik` | `bololo_gat` | `traefik:v3.7.14` | pulled | edge, internal | 8000 (web, from the proxy only), 8080 (ping) | none (read-only bind mounts: `traefik.yml`, `docker.sock`) |
-| `frontend` | `bololo_web_ssr` | `node:22.14.0-alpine` | `presentation-ssr/Dockerfile`, context = repo root | internal | 3000 | none |
-| `auth` | `bololo_auth` | `eclipse-temurin:21-jre-alpine` | `./auth-service`, built in `maven:3.9.9-eclipse-temurin-21-alpine` | internal | 8080 | none (secrets: session private and public keys) |
-| `lobby-manager` | `bololo_lobby` | `python:3.12-slim` | `./lobby-manager` | internal | 8000 | none (state in `postgres`; secrets: session public key, game private key) |
-| `game-logic` | `bololo_game` | `gcr.io/distroless/static-debian12:nonroot` | `./game-logic`, `APP=server`, built in `golang:1.27.2-bookworm` | internal | 8081 (WebSocket + internal REST + `/healthz`) | none (state in `redis`; secret: game public key) |
-| `bot-service` | `bololo_bots` | `alpine:3.20.3` | `./bot-service`, built in `hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3` | internal | 8090 | none (bots live in memory) |
-| `ratings-service` | `bololo_ratings` | `python:3.12-slim` | `./ratings-service` | internal | 8000 | none (state in `ratings-postgres`) |
-| `rabbitmq` | `bololo_mq` | `rabbitmq:3.13.7-management-alpine` | pulled | internal | 5672 (AMQP), 15672 (management, not routed) | `rabbitmq-data` → `/var/lib/rabbitmq`; `rabbitmq/topology.json` (read-only), imported at startup |
-| `auth-postgres` | `bololo_auth_db` | `postgres:16.15-alpine` | pulled | internal | 5432 | `auth-pg-data` → `/var/lib/postgresql/data` |
-| `postgres` | `bololo_lobby_db` | `postgres:16.15-alpine` | pulled | internal | 5432 | `pg-data` → `/var/lib/postgresql/data` |
-| `ratings-postgres` | `bololo_ratings_db` | `postgres:16.15-alpine` | pulled | internal | 5432 | `ratings-pg-data` → `/var/lib/postgresql/data` |
-| `redis` | `bololo_game_db` | `redis:7.4.11-alpine` | pulled | internal | 6379 | `redis-data` → `/data` (AOF) |
+| `traefik` | `bololo_gat` | `traefik:v3.7.14` | pulled | edge, services (`10.251.0.2`) | 8000 (web, from the proxy only), 8080 (ping) | none (read-only bind mounts: `traefik.yml`, `docker.sock`) |
+| `frontend` | `bololo_web_ssr` | `node:22.14.0-alpine` | `presentation-ssr/Dockerfile`, context = repo root | services | 3000 | none |
+| `auth` | `bololo_auth` | `eclipse-temurin:21-jre-alpine` | `./auth-service`, built in `maven:3.9.9-eclipse-temurin-21-alpine` | services, auth-data | 8080 | none (secrets: session private and public keys) |
+| `lobby-manager` | `bololo_lobby` | `python:3.12-slim` | `./lobby-manager` | services, lobby-data, messaging | 8000 | none (state in `postgres`; secrets: session public key, game private key) |
+| `game-logic` | `bololo_game` | `gcr.io/distroless/static-debian12:nonroot` | `./game-logic`, `APP=server`, built in `golang:1.27.2-bookworm` | services, game-data, messaging | 8081 (WebSocket + internal REST + `/healthz`) | none (state in `redis`; secret: game public key) |
+| `bot-service` | `bololo_bots` | `alpine:3.20.3` | `./bot-service`, built in `hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3` | services | 8090 | none (bots live in memory) |
+| `ratings-service` | `bololo_ratings` | `python:3.12-slim` | `./ratings-service` | services, ratings-data, messaging | 8000 | none (state in `ratings-postgres`) |
+| `rabbitmq` | `bololo_mq` | `rabbitmq:3.13.7-management-alpine` | pulled | messaging | 5672 (AMQP), 15672 (management, not routed) | `rabbitmq-data` → `/var/lib/rabbitmq`; `rabbitmq/topology.json` (read-only), imported at startup |
+| `auth-postgres` | `bololo_auth_db` | `postgres:16.15-alpine` | pulled | auth-data | 5432 | `auth-pg-data` → `/var/lib/postgresql/data` |
+| `postgres` | `bololo_lobby_db` | `postgres:16.15-alpine` | pulled | lobby-data | 5432 | `pg-data` → `/var/lib/postgresql/data` |
+| `ratings-postgres` | `bololo_ratings_db` | `postgres:16.15-alpine` | pulled | ratings-data | 5432 | `ratings-pg-data` → `/var/lib/postgresql/data` |
+| `redis` | `bololo_game_db` | `redis:7.4.11-alpine` | pulled | game-data | 6379 | `redis-data` → `/data` (AOF) |
 
 ### 2.2 Software elements and versions
 
@@ -284,6 +299,36 @@ All 21 C&C connectors are deployed with the same IDs, and every deployed connect
 
 ## 6. Networks, ports and volumes
 
+Every network except `public` is `internal: true`. `internal` is removed; `services` has subnet `10.251.0.0/24`, automatic allocation range `10.251.0.128/25`, and Traefik fixed at `10.251.0.2` outside that range.
+
+```mermaid
+flowchart LR
+  RP["reverse-proxy"] --- PUBLIC[public]
+  RP --- EDGE[edge]
+  TR["traefik · 10.251.0.2"] --- EDGE
+  TR --- SERVICES[services]
+  FE["frontend"] --- SERVICES
+  AUTH["auth"] --- SERVICES
+  AUTH --- AUTHDATA[auth-data]
+  APG["auth-postgres"] --- AUTHDATA
+  LOBBY["lobby-manager"] --- SERVICES
+  LOBBY --- LOBBYDATA[lobby-data]
+  PG["postgres"] --- LOBBYDATA
+  LOBBY --- MESSAGING[messaging]
+  GAME["game-logic"] --- SERVICES
+  GAME --- GAMEDATA[game-data]
+  REDIS["redis"] --- GAMEDATA
+  GAME --- MESSAGING
+  BOT["bot-service"] --- SERVICES
+  RATINGS["ratings-service"] --- SERVICES
+  RATINGS --- RATDATA[ratings-data]
+  RPG["ratings-postgres"] --- RATDATA
+  RATINGS --- MESSAGING
+  MQ["rabbitmq"] --- MESSAGING
+```
+
+`services` carries gateway and app traffic. Each data network joins only its service and its database/cache; `messaging` joins RabbitMQ and its three producers/consumers. The container-to-network links in this diagram are the deployment memberships.
+
 | Port | Where it listens | Reachable from |
 |---|---|---|
 | 443/tcp | Host (`0.0.0.0:443`) → `reverse-proxy:443` | User zone (C1 and C3 share it, TLS) |
@@ -291,11 +336,12 @@ All 21 C&C connectors are deployed with the same IDs, and every deployed connect
 | 8080 | `reverse-proxy` `/healthz` on `127.0.0.1` | Inside the container only |
 | 8000 | `traefik` web entrypoint | `edge` only, that is, from `reverse-proxy` (C21) |
 | 8080 | `traefik` ping entrypoint | Inside the container only |
-| 3000, 8080, 8000, 8081, 8090, 8000 | `frontend`, `auth`, `lobby-manager`, `game-logic`, `bot-service`, `ratings-service` | `internal` only (through Traefik or service-to-service) |
-| 5672, 15672 | `rabbitmq` | `internal` only; 15672 has no route |
-| 5432 (×3), 6379 | PostgreSQL containers, `redis` | `internal` only; never routed (`exposedByDefault: false`) |
+| 3000, 8080, 8000, 8081, 8090, 8000 | `frontend`, `auth`, `lobby-manager`, `game-logic`, `bot-service`, `ratings-service` | `services` plus each service's named data/messaging networks |
+| 5672, 15672 | `rabbitmq` | `messaging` only; 15672 has no route |
+| 5432 (×3) | PostgreSQL containers | Their corresponding `auth-data`, `lobby-data` or `ratings-data` only |
+| 6379 | `redis` | `game-data` only; never routed (`exposedByDefault: false`) |
 
-`/internal/*` paths and every `/healthz` have no Traefik router and are not in the proxy allowlist.
+The old `internal` network does not exist. `/internal/*` paths and every `/healthz` have no Traefik router and are not in the proxy allowlist. Traefik selects `bololo-integrado_services` explicitly; Lobby and Ratings trust forwarded headers only from `10.251.0.2`.
 
 ## 7. Startup order and health
 
@@ -345,7 +391,8 @@ flowchart LR
 
 ## 9. Rationale
 
-- **Single entry point, separated from the gateway.** Only `reverse-proxy` publishes ports. It has no privileges and does not see the services; `traefik` has the Docker socket and knows the services, but is no longer reachable from the Internet. `internal: true` on `edge` and `internal` removes Internet egress from every other container.
+- **Single entry point, separated from the gateway.** Only `reverse-proxy` publishes ports. It has no privileges and does not see the services; `traefik` has the Docker socket and knows the services, but is no longer reachable from the Internet. `internal: true` on `edge`, `services`, the four data networks and `messaging` removes Internet egress from every container.
+- **Network segmentation.** The app services share `services`; each data store joins only its owner, and RabbitMQ joins only the three services that exchange events. A compromised `frontend` cannot resolve data-store or broker names.
 - **Database per service.** Auth, Lobby and Ratings each own a PostgreSQL container and volume; Game owns Redis.
 - **One issuer per token type.** Auth signs sessions and the lobby signs game tokens, each with its own private key. A compromised verifier cannot forge tokens.
 - **The broker owns its topology.** Producers depend only on `rabbitmq`, as the C&C view shows; the order in which services start does not matter.
@@ -358,7 +405,7 @@ flowchart LR
 1. **Build context is the repo root without a `.dockerignore`.** Building `frontend` sends `.env`, `.git`, `secrets/` and `lobby-manager/.venv` to the Docker daemon. They do not end up in the image, but the secrets leave the working folder on every build.
 2. **Dead files.** `presentation/Dockerfile` and `presentation/nginx.conf` are unused. `presentation/game/index.html` still loads p5.js 1.11.3 from jsDelivr, but `/ingame/` returns `views/ingame.html`, so that file is only reachable at `/ingame/index.html`.
 3. **`SERVICE_SECRET` is shared** by `lobby-manager` and `game-logic` (C12). `auth` no longer needs it.
-4. **Calls that skip the gateway**: C9, C10, C11 and C20 go straight to the services on the internal network.
+4. **Calls that skip the gateway**: C9, C10, C11 and C20 go straight to the services on `services`.
 5. **Docker socket** mounted read-only is still a privileged path, but since scenario 2 it is on `traefik`, which is not exposed; the Internet-facing container does not have it.
 6. **Go gives up after about 31 s** of failed publishes (for example, broker down) and only republishes `game.ended` when it restarts and restores the match.
 7. **C21 is plain HTTP** inside `edge`. Only the proxy and the gateway are on that network; TLS on internal hops is future work (scenario 3 and beyond).
