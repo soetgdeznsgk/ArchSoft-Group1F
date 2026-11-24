@@ -148,6 +148,13 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 ok ".env existe"
+# El servicio init genera las claves y el certificado si faltan (bootstrap/init.sh).
+if docker compose run --rm --build init >/dev/null 2>&1; then
+  ok "servicio init (claves y certificado)"
+else
+  fail "servicio init (claves y certificado)" "ver docker compose logs init"
+  exit 1
+fi
 if [[ "$BASE_URL" == https://* ]]; then
   if [[ -s "$CA_CERT" && -s api-gateway/certs/bololo.crt && -s api-gateway/certs/bololo.key ]]; then
     ok "certificado del proxy y CA local generados"
@@ -156,10 +163,14 @@ if [[ "$BASE_URL" == https://* ]]; then
     exit 1
   fi
 fi
-if ls secrets/jwt/{session,game}-{private,public}.pem >/dev/null 2>&1; then
+keys_ok=true
+for key in secrets/jwt/{session,game}-{private,public}.pem; do
+  [[ -f $key && -s $key ]] || keys_ok=false
+done
+if $keys_ok; then
   ok "claves de los JWT generadas"
 else
-  fail "claves de los JWT generadas" "ejecuta ./scripts/gen-jwt-keys.sh"
+  fail "claves de los JWT generadas" "ver docker compose logs init"
   exit 1
 fi
 if diff <(env_keys .env) <(env_keys .env.example) >/dev/null; then
